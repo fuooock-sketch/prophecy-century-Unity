@@ -16,12 +16,21 @@ namespace ProphecyCentury.UI
         [SerializeField] private Text stateLabel;
 
         [Header("Meta")]
+        [SerializeField] private GameObject titlePanel;
+        [SerializeField] private GameObject runPanel;
+        [SerializeField] private Dropdown campaignDropdown;
+        [SerializeField] private Dropdown heroDropdown;
+        [SerializeField] private Text campaignDescriptionLabel;
+        [SerializeField] private Text heroDescriptionLabel;
         [SerializeField] private Text campaignLabel;
         [SerializeField] private Text heroLabel;
         [SerializeField] private Text logLabel;
         [SerializeField] private Text shopMetaLabel;
 
         [Header("Panels")]
+        [SerializeField] private Transform shopCardRoot;
+        [SerializeField] private Transform handCardRoot;
+        [SerializeField] private Transform boardCardRoot;
         [SerializeField] private Text shopText;
         [SerializeField] private Text handText;
         [SerializeField] private Text boardText;
@@ -29,6 +38,11 @@ namespace ProphecyCentury.UI
 
         private readonly RunFlowController _flow = new RunFlowController();
         private readonly BattleStubSystem _battleStub = new BattleStubSystem();
+        private int _selectedHandIndex = -1;
+        private string _selectedBoardSlotId;
+        private string _dragSource;
+        private int _dragHandIndex = -1;
+        private string _dragBoardSlotId;
 
         private RunState Run => ProphecyGameSession.Instance.CurrentRun;
 
@@ -40,63 +54,274 @@ namespace ProphecyCentury.UI
                 return;
             }
 
+            InitializeTitleSelectors();
+            ShowTitle();
+        }
+
+        public void ShowTitle()
+        {
+            if (titlePanel != null)
+            {
+                titlePanel.SetActive(true);
+            }
+
+            if (runPanel != null)
+            {
+                runPanel.SetActive(false);
+            }
+        }
+
+        public void StartSelectedRun()
+        {
+            var data = ProphecyGameSession.Instance.Data;
+            var campaignId = data.Campaigns.Count > 0
+                ? data.Campaigns[Mathf.Clamp(campaignDropdown != null ? campaignDropdown.value : 0, 0, data.Campaigns.Count - 1)].id
+                : null;
+            var heroId = data.Heroes.Count > 0
+                ? data.Heroes[Mathf.Clamp(heroDropdown != null ? heroDropdown.value : 0, 0, data.Heroes.Count - 1)].id
+                : null;
+
+            _flow.PrepareNewRun(campaignId, heroId);
+            EnsureShopInitialized();
+            if (titlePanel != null)
+            {
+                titlePanel.SetActive(false);
+            }
+
+            if (runPanel != null)
+            {
+                runPanel.SetActive(true);
+            }
+
+            WriteLog("已开始所选战役。");
+            RefreshView();
+        }
+
+        private void InitializeTitleSelectors()
+        {
+            var data = ProphecyGameSession.Instance.Data;
+            if (campaignDropdown != null)
+            {
+                campaignDropdown.ClearOptions();
+                campaignDropdown.AddOptions(data.Campaigns.Select(item => item.name).ToList());
+                campaignDropdown.onValueChanged.AddListener(_ => RefreshTitlePreview());
+            }
+
+            if (heroDropdown != null)
+            {
+                heroDropdown.ClearOptions();
+                heroDropdown.AddOptions(data.Heroes.Select(item => item.name).ToList());
+                heroDropdown.onValueChanged.AddListener(_ => RefreshTitlePreview());
+            }
+
+            RefreshTitlePreview();
+        }
+
+        private void RefreshTitlePreview()
+        {
+            var data = ProphecyGameSession.Instance.Data;
+            if (campaignDescriptionLabel != null)
+            {
+                var campaign = data.Campaigns.Count > 0
+                    ? data.Campaigns[Mathf.Clamp(campaignDropdown != null ? campaignDropdown.value : 0, 0, data.Campaigns.Count - 1)]
+                    : null;
+                campaignDescriptionLabel.text = campaign == null
+                    ? "未加载战役数据。"
+                    : $"{campaign.name}\n{campaign.desc}";
+            }
+
+            if (heroDescriptionLabel != null)
+            {
+                var hero = data.Heroes.Count > 0
+                    ? data.Heroes[Mathf.Clamp(heroDropdown != null ? heroDropdown.value : 0, 0, data.Heroes.Count - 1)]
+                    : null;
+                heroDescriptionLabel.text = hero == null
+                    ? "未加载英雄数据。"
+                    : $"{hero.name}  {hero.title}\n{hero.short_text}\n{hero.passive_text}\n{hero.active_text}";
+            }
+        }
+
+        private void StartRunIfNeeded()
+        {
             if (!ProphecyGameSession.Instance.HasCurrentRun)
             {
                 _flow.PrepareNewRun(null, null);
             }
 
             EnsureShopInitialized();
-            WriteLog("Run scene ready.");
-            RefreshView();
         }
 
         public void RefreshShop()
         {
             var success = _flow.RefreshShop();
-            WriteLog(success ? "Shop refreshed for 1 gold." : "Could not refresh shop.");
+            WriteLog(success ? "已花费 1 金币刷新商店。" : "无法刷新商店。");
             RefreshView();
         }
 
         public void UpgradeShop()
         {
             var success = _flow.UpgradeShop();
-            WriteLog(success ? "Shop upgraded." : "Could not upgrade shop.");
+            WriteLog(success ? "商店已升级。" : "无法升级商店。");
             RefreshView();
         }
 
         public void ToggleShopLock()
         {
             var locked = _flow.ToggleShopLock();
-            WriteLog(locked ? "Shop locked for next round." : "Shop unlocked.");
+            WriteLog(locked ? "商店已锁定到下一回合。" : "商店已解锁。");
             RefreshView();
         }
 
         public void BuyFirstCard()
         {
-            var success = _flow.BuyUnit(0);
-            WriteLog(success ? "Bought the first shop card." : "Could not buy the first shop card.");
-            RefreshView();
+            BuyShopCard(Run.shopCards.FindIndex(card => card != null));
         }
 
         public void DeployFirstCard()
         {
-            var success = _flow.DeployUnit(0);
-            WriteLog(success ? "Deployed the first hand card." : "Could not deploy the first hand card.");
+            DeployHandCard(0);
+        }
+
+        private void BuyShopCard(int index)
+        {
+            var success = _flow.BuyUnit(index);
+            WriteLog(success ? $"已购买商店第 {index + 1} 张。" : $"无法购买商店第 {index + 1} 张。");
             RefreshView();
+        }
+
+        private void DeployHandCard(int index)
+        {
+            var targetSlot = GetSelectedEmptyBoardSlot();
+            var success = _flow.DeployUnit(index, targetSlot);
+            if (success)
+            {
+                _selectedHandIndex = -1;
+                _selectedBoardSlotId = null;
+            }
+            WriteLog(success ? $"已部署手牌第 {index + 1} 张。" : $"无法部署手牌第 {index + 1} 张。");
+            RefreshView();
+        }
+
+        private void DeployHandCardToSlot(int index, string boardSlotId)
+        {
+            var success = _flow.DeployUnit(index, boardSlotId);
+            if (success)
+            {
+                _selectedHandIndex = -1;
+                _selectedBoardSlotId = null;
+            }
+
+            WriteLog(success ? $"已部署手牌第 {index + 1} 张到 {boardSlotId}。" : $"无法部署手牌第 {index + 1} 张到 {boardSlotId}。");
+            RefreshView();
+        }
+
+        private void MoveBoardUnitToSlot(string fromSlotId, string toSlotId)
+        {
+            var success = _flow.MoveBoardUnit(fromSlotId, toSlotId);
+            if (success)
+            {
+                _selectedBoardSlotId = null;
+            }
+
+            WriteLog(success ? $"已移动棋盘单位：{fromSlotId} -> {toSlotId}。" : $"无法移动棋盘单位：{fromSlotId} -> {toSlotId}。");
+            RefreshView();
+        }
+
+        private void SelectHandCard(int index)
+        {
+            if (index < 0 || index >= Run.handCards.Count)
+            {
+                return;
+            }
+
+            _selectedHandIndex = index;
+            _selectedBoardSlotId = null;
+            WriteLog($"已选择手牌第 {index + 1} 张，点击空棋盘格部署。");
+            RefreshView();
+        }
+
+        private void HandleBoardSlotClicked(string boardSlotId)
+        {
+            if (string.IsNullOrWhiteSpace(boardSlotId))
+            {
+                return;
+            }
+
+            var unit = Run.boardUnits.FirstOrDefault(item => item.boardSlotId == boardSlotId);
+            if (_selectedHandIndex >= 0)
+            {
+                DeployHandCardToSlot(_selectedHandIndex, boardSlotId);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_selectedBoardSlotId) && _selectedBoardSlotId != boardSlotId)
+            {
+                MoveBoardUnitToSlot(_selectedBoardSlotId, boardSlotId);
+                return;
+            }
+
+            _selectedBoardSlotId = unit == null ? boardSlotId : unit.boardSlotId;
+            WriteLog(unit == null ? $"已选择空格 {boardSlotId}。" : $"已选择棋盘单位：{unit.name}（{boardSlotId}）。");
+            RefreshView();
+        }
+
+        public void BeginRuntimeDrag(string source, int handIndex, string boardSlotId)
+        {
+            _dragSource = source;
+            _dragHandIndex = handIndex;
+            _dragBoardSlotId = boardSlotId;
+        }
+
+        public void EndRuntimeDrag()
+        {
+            _dragSource = null;
+            _dragHandIndex = -1;
+            _dragBoardSlotId = null;
+        }
+
+        public void DropRuntimeDragOnBoardSlot(string boardSlotId)
+        {
+            if (_dragSource == "hand")
+            {
+                DeployHandCardToSlot(_dragHandIndex, boardSlotId);
+            }
+            else if (_dragSource == "board")
+            {
+                MoveBoardUnitToSlot(_dragBoardSlotId, boardSlotId);
+            }
+
+            EndRuntimeDrag();
         }
 
         public void SellLastHandCard()
         {
-            var success = _flow.SellHandUnit(Run.handCards.Count - 1);
-            WriteLog(success ? "Sold the last hand card." : "Could not sell a hand card.");
-            RefreshView();
+            SellHandCard(Run.handCards.Count - 1);
         }
 
         public void SellLastBoardUnit()
         {
-            var target = Run.boardUnits.LastOrDefault()?.boardSlotId;
+            SellBoardCard(Run.boardUnits.Count - 1);
+        }
+
+        private void SellHandCard(int index)
+        {
+            var success = _flow.SellHandUnit(index);
+            WriteLog(success ? $"已出售手牌第 {index + 1} 张。" : $"无法出售手牌第 {index + 1} 张。");
+            RefreshView();
+        }
+
+        private void SellBoardCard(int index)
+        {
+            var target = index >= 0 && index < Run.boardUnits.Count ? Run.boardUnits[index].boardSlotId : null;
             var success = !string.IsNullOrWhiteSpace(target) && _flow.SellBoardUnit(target);
-            WriteLog(success ? "Sold the last board unit." : "Could not sell a board unit.");
+            WriteLog(success ? $"已出售棋盘第 {index + 1} 个单位。" : $"无法出售棋盘第 {index + 1} 个单位。");
+            RefreshView();
+        }
+
+        private void SellBoardSlot(string boardSlotId)
+        {
+            var success = !string.IsNullOrWhiteSpace(boardSlotId) && _flow.SellBoardUnit(boardSlotId);
+            WriteLog(success ? $"已出售棋盘 {boardSlotId} 的单位。" : $"无法出售棋盘 {boardSlotId} 的单位。");
             RefreshView();
         }
 
@@ -106,14 +331,13 @@ namespace ProphecyCentury.UI
             var result = _battleStub.Resolve(Run);
             _flow.FinishBattlePhase();
 
-            if (result.Victory)
-            {
-                _flow.NextRound();
-            }
-
             if (Run.playerHp <= 0)
             {
                 Run.state = "gameover";
+            }
+            else
+            {
+                _flow.NextRound();
             }
 
             Run.lastBattleSummary = result.Summary;
@@ -123,9 +347,7 @@ namespace ProphecyCentury.UI
 
         public void StartNewRun()
         {
-            _flow.PrepareNewRun(null, null);
-            WriteLog("Started a new run.");
-            RefreshView();
+            ShowTitle();
         }
 
         public void ReturnToTitle()
@@ -135,25 +357,27 @@ namespace ProphecyCentury.UI
 
         public void RefreshView()
         {
+            StartRunIfNeeded();
             var data = ProphecyGameSession.Instance.Data;
-            goldLabel.text = $"Gold: {Run.gold}";
-            roundLabel.text = $"Round: {Run.round}";
-            hpLabel.text = $"HP: {Run.playerHp}";
-            stateLabel.text = $"State: {Run.state}";
+            goldLabel.text = $"金币：{Run.gold}";
+            roundLabel.text = $"回合：{Run.round}";
+            hpLabel.text = $"生命：{Run.playerHp}";
+            stateLabel.text = $"阶段：{FormatRunState(Run.state)}";
             if (shopMetaLabel != null)
             {
-                shopMetaLabel.text = $"Shop L{Run.shopLevel}  Upgrade {_flow.ShopSystem.GetCurrentShopUpgradeCost(Run)}g  {(Run.isShopLocked ? "Locked" : "Unlocked")}";
+                shopMetaLabel.text = $"商店 L{Run.shopLevel}  升级 {_flow.ShopSystem.GetCurrentShopUpgradeCost(Run)} 金币  {(Run.isShopLocked ? "已锁定" : "未锁定")}";
             }
 
             var campaign = data.Campaigns.FirstOrDefault(item => item.id == Run.campaignId);
             var hero = data.Heroes.FirstOrDefault(item => item.id == Run.heroId);
-            campaignLabel.text = $"Campaign: {(campaign != null ? campaign.name : Run.campaignId)}";
-            heroLabel.text = $"Hero: {(hero != null ? hero.name : Run.heroId)}";
+            campaignLabel.text = $"战役：{(campaign != null ? campaign.name : Run.campaignId)}";
+            heroLabel.text = $"英雄：{(hero != null ? hero.name : Run.heroId)}";
 
             shopText.text = FormatShop();
             handText.text = FormatHand();
             boardText.text = FormatBoard();
             battlePreviewText.text = FormatBattlePreview();
+            RefreshCardLists();
         }
 
         private void EnsureShopInitialized()
@@ -161,53 +385,396 @@ namespace ProphecyCentury.UI
             _flow.ShopSystem.InitializeShop(Run);
         }
 
+        private string GetSelectedEmptyBoardSlot()
+        {
+            if (string.IsNullOrWhiteSpace(_selectedBoardSlotId))
+            {
+                return null;
+            }
+
+            return Run.boardUnits.Any(unit => unit.boardSlotId == _selectedBoardSlotId) ? null : _selectedBoardSlotId;
+        }
+
         private void WriteLog(string message)
         {
-            logLabel.text = $"Log:\n{message}";
+            if (logLabel == null)
+            {
+                return;
+            }
+
+            logLabel.text = $"日志：\n{message}";
+        }
+
+        private void RefreshCardLists()
+        {
+            RebuildUnitCardList(shopCardRoot, Run.shopCards, (card, _) => FormatUnitCardLabel(card), "购买", BuyShopCard, null, null);
+            RebuildUnitCardList(handCardRoot, Run.handCards, (card, index) => FormatUnitCardLabel(card, _selectedHandIndex == index ? ">" : null), "部署", DeployHandCard, "出售", SellHandCard, "hand");
+            RebuildBoardSlotGrid();
+        }
+
+        private string FormatUnitCardLabel(UnitCardState card, string prefix = null)
+        {
+            if (card == null)
+            {
+                return "已售出";
+            }
+
+            var unit = ProphecyGameSession.Instance.Data.FindUnit(card.unitId);
+            var title = string.IsNullOrWhiteSpace(prefix) ? card.name : $"{prefix}  {card.name}";
+            var goldSuffix = card.isGolden ? " 金色" : string.Empty;
+            if (unit == null)
+            {
+                return $"{title}  {card.star}*{goldSuffix}";
+            }
+
+            var tags = $"{unit.race} / {unit.faith} / {unit.typeLabel}";
+            var attack = unit.attack + card.shopBuffAttack;
+            var hp = unit.hp + card.shopBuffHp;
+            var defense = unit.defense + card.shopBuffDefense;
+            var buffSuffix = card.shopBuffAttack > 0 ? $" +{card.shopBuffAttack}攻" : string.Empty;
+            var poolSuffix = card.fromShopPurchase ? " 池" : string.Empty;
+            var stats = $"攻 {attack}  血 {hp}  防 {defense}{buffSuffix}{poolSuffix}";
+            return $"{title}  {unit.star}*{goldSuffix}\n{tags}  {stats}";
+        }
+
+        private void RebuildUnitCardList<T>(
+            Transform root,
+            System.Collections.Generic.IReadOnlyList<T> cards,
+            System.Func<T, int, string> labelFactory,
+            string primaryLabel,
+            System.Action<int> primaryAction,
+            string secondaryLabel,
+            System.Action<int> secondaryAction,
+            string dragSource = null)
+            where T : UnitCardState
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            for (var i = root.childCount - 1; i >= 0; i -= 1)
+            {
+                Destroy(root.GetChild(i).gameObject);
+            }
+
+            for (var i = 0; i < cards.Count; i += 1)
+            {
+                CreateUnitCard(root, cards[i], labelFactory(cards[i], i), i, primaryLabel, primaryAction, secondaryLabel, secondaryAction, dragSource, null);
+            }
+        }
+
+        private void CreateUnitCard(
+            Transform root,
+            UnitCardState card,
+            string label,
+            int index,
+            string primaryLabel,
+            System.Action<int> primaryAction,
+            string secondaryLabel,
+            System.Action<int> secondaryAction,
+            string dragSource,
+            string boardSlotId)
+        {
+            var cardObject = new GameObject("UnitCard", typeof(Image), typeof(Button));
+            cardObject.transform.SetParent(root, false);
+            var rect = cardObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.sizeDelta = new Vector2(0f, 82f);
+
+            var background = cardObject.GetComponent<Image>();
+            background.color = new Color32(42, 58, 74, 245);
+            var cardButton = cardObject.GetComponent<Button>();
+            cardButton.targetGraphic = background;
+            if (dragSource == "hand" && card != null)
+            {
+                cardButton.onClick.AddListener(() => SelectHandCard(index));
+            }
+            else if (dragSource == "board" && !string.IsNullOrWhiteSpace(boardSlotId))
+            {
+                cardButton.onClick.AddListener(() => HandleBoardSlotClicked(boardSlotId));
+            }
+
+            var iconObject = new GameObject("Icon", typeof(Image));
+            iconObject.transform.SetParent(cardObject.transform, false);
+            var iconRect = iconObject.GetComponent<RectTransform>();
+            iconRect.anchorMin = new Vector2(0f, 0.5f);
+            iconRect.anchorMax = new Vector2(0f, 0.5f);
+            iconRect.anchoredPosition = new Vector2(36f, 0f);
+            iconRect.sizeDelta = new Vector2(52f, 52f);
+            RuntimeUnitIconCache.ApplyTo(iconObject.GetComponent<Image>(), card?.name);
+
+            var labelObject = new GameObject("Label", typeof(Text));
+            labelObject.transform.SetParent(cardObject.transform, false);
+            var labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.anchorMin = new Vector2(0f, 0f);
+            labelRect.anchorMax = new Vector2(1f, 1f);
+            labelRect.offsetMin = new Vector2(74f, 0f);
+            labelRect.offsetMax = new Vector2(-170f, 0f);
+
+            var text = labelObject.GetComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.fontSize = 16;
+            text.color = Color.white;
+            text.alignment = TextAnchor.MiddleLeft;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            text.text = label;
+
+            if (card != null && !string.IsNullOrWhiteSpace(dragSource))
+            {
+                var dragItem = cardObject.AddComponent<RuntimeUnitDragItem>();
+                dragItem.Controller = this;
+                dragItem.Source = dragSource;
+                dragItem.HandIndex = dragSource == "hand" ? index : -1;
+                dragItem.BoardSlotId = boardSlotId;
+            }
+
+            if (card != null && !string.IsNullOrWhiteSpace(primaryLabel) && primaryAction != null)
+            {
+                CreateCardActionButton(cardObject.transform, primaryLabel, new Vector2(-116f, 16f), () => primaryAction(index));
+            }
+
+            if (card != null && !string.IsNullOrWhiteSpace(secondaryLabel) && secondaryAction != null)
+            {
+                CreateCardActionButton(cardObject.transform, secondaryLabel, new Vector2(-52f, 16f), () => secondaryAction(index));
+            }
+        }
+
+        private void RebuildBoardSlotGrid()
+        {
+            if (boardCardRoot == null)
+            {
+                return;
+            }
+
+            for (var i = boardCardRoot.childCount - 1; i >= 0; i -= 1)
+            {
+                Destroy(boardCardRoot.GetChild(i).gameObject);
+            }
+
+            var rows = ProphecyGameSession.Instance.Data.Config?.boardLayout;
+            if (rows == null || rows.Length == 0)
+            {
+                return;
+            }
+
+            foreach (var row in rows.Reverse())
+            {
+                if (row?.slots == null || row.slots.Length == 0)
+                {
+                    continue;
+                }
+
+                var rowObject = new GameObject("BoardRow", typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+                rowObject.transform.SetParent(boardCardRoot, false);
+                var rowLayout = rowObject.GetComponent<HorizontalLayoutGroup>();
+                rowLayout.spacing = 8f;
+                rowLayout.childControlWidth = true;
+                rowLayout.childControlHeight = true;
+                rowLayout.childForceExpandWidth = true;
+                rowLayout.childForceExpandHeight = true;
+                rowLayout.childAlignment = TextAnchor.MiddleCenter;
+                rowObject.GetComponent<LayoutElement>().preferredHeight = 66f;
+
+                foreach (var slotId in row.slots)
+                {
+                    CreateBoardSlotCell(rowObject.transform, slotId);
+                }
+            }
+        }
+
+        private void CreateBoardSlotCell(Transform parent, string slotId)
+        {
+            var unit = Run.boardUnits.FirstOrDefault(item => item.boardSlotId == slotId);
+            var isSelected = _selectedBoardSlotId == slotId;
+            var cellObject = new GameObject("BoardSlot_" + slotId, typeof(Image), typeof(Button), typeof(LayoutElement), typeof(RuntimeBoardSlotDropTarget));
+            cellObject.transform.SetParent(parent, false);
+            var layout = cellObject.GetComponent<LayoutElement>();
+            layout.preferredWidth = 124f;
+            layout.preferredHeight = 64f;
+            layout.flexibleWidth = 1f;
+
+            var image = cellObject.GetComponent<Image>();
+            image.color = isSelected
+                ? new Color32(92, 125, 72, 255)
+                : unit == null
+                    ? new Color32(34, 48, 60, 255)
+                    : new Color32(48, 67, 84, 255);
+
+            var button = cellObject.GetComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(() => HandleBoardSlotClicked(slotId));
+
+            var dropTarget = cellObject.GetComponent<RuntimeBoardSlotDropTarget>();
+            dropTarget.Controller = this;
+            dropTarget.BoardSlotId = slotId;
+
+            if (unit != null)
+            {
+                var dragItem = cellObject.AddComponent<RuntimeUnitDragItem>();
+                dragItem.Controller = this;
+                dragItem.Source = "board";
+                dragItem.BoardSlotId = slotId;
+            }
+
+            var unitDefinition = unit == null ? null : ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
+            var stats = unitDefinition == null ? string.Empty : $"攻{unitDefinition.attack + unit.shopBuffAttack} 血{unitDefinition.hp + unit.shopBuffHp} 防{unitDefinition.defense + unit.shopBuffDefense}";
+            var title = unit == null ? $"{slotId}\n空位" : $"{slotId}  {unit.name}\n{unit.star}*  {stats}";
+            var text = CreateChildText(cellObject.transform, title, 13, TextAnchor.MiddleCenter, new Vector2(6f, 2f), new Vector2(-6f, -20f));
+            text.color = Color.white;
+
+            if (unit != null)
+            {
+                CreateSmallBoardActionButton(cellObject.transform, "出售", () => SellBoardSlot(slotId));
+            }
+            else if (_selectedHandIndex >= 0)
+            {
+                CreateSmallBoardActionButton(cellObject.transform, "部署", () => DeployHandCardToSlot(_selectedHandIndex, slotId));
+            }
+            else if (!string.IsNullOrWhiteSpace(_selectedBoardSlotId))
+            {
+                CreateSmallBoardActionButton(cellObject.transform, "移动", () => MoveBoardUnitToSlot(_selectedBoardSlotId, slotId));
+            }
+        }
+
+        private static void CreateSmallBoardActionButton(Transform parent, string label, UnityEngine.Events.UnityAction callback)
+        {
+            var buttonObject = new GameObject(label + "Button", typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+            var rect = buttonObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0f);
+            rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = new Vector2(0f, 4f);
+            rect.sizeDelta = new Vector2(56f, 20f);
+
+            var image = buttonObject.GetComponent<Image>();
+            image.color = new Color32(72, 104, 132, 255);
+            var button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(callback);
+
+            var text = CreateChildText(buttonObject.transform, label, 12, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
+            text.color = Color.white;
+        }
+
+        private static Text CreateChildText(Transform parent, string value, int fontSize, TextAnchor alignment, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            var textObject = new GameObject("Label", typeof(Text));
+            textObject.transform.SetParent(parent, false);
+            var rect = textObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
+
+            var text = textObject.GetComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.fontSize = fontSize;
+            text.color = Color.white;
+            text.alignment = alignment;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            text.text = value;
+            return text;
+        }
+
+        private static void CreateCardActionButton(Transform parent, string label, Vector2 anchoredPosition, UnityEngine.Events.UnityAction callback)
+        {
+            var buttonObject = new GameObject(label + "Button", typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+            var rect = buttonObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 0.5f);
+            rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = new Vector2(58f, 30f);
+
+            var image = buttonObject.GetComponent<Image>();
+            image.color = new Color32(72, 104, 132, 255);
+            var button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(callback);
+
+            var labelObject = new GameObject("Label", typeof(Text));
+            labelObject.transform.SetParent(buttonObject.transform, false);
+            var labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = Vector2.zero;
+            labelRect.offsetMax = Vector2.zero;
+
+            var text = labelObject.GetComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.fontSize = 14;
+            text.color = Color.white;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            text.text = label;
         }
 
         private string FormatShop()
         {
             if (Run.shopCards.Count == 0)
             {
-                return "Shop\n(empty)";
+                return "商店\n（空）";
             }
 
             var lines = Run.shopCards.Select((card, index) =>
                 card == null
-                    ? $"{index + 1}. SOLD"
-                    : $"{index + 1}. {card.name}  {card.star}*{(card.isGolden ? " GOLD" : string.Empty)}");
-            return "Shop\n" + string.Join("\n", lines);
+                    ? $"{index + 1}. 已售出"
+                    : $"{index + 1}. {card.name}  {card.star}*{(card.isGolden ? " 金色" : string.Empty)}");
+            return "商店\n" + string.Join("\n", lines);
         }
 
         private string FormatHand()
         {
             if (Run.handCards.Count == 0)
             {
-                return "Hand\n(empty)";
+                return "手牌\n（空）";
             }
 
-            var lines = Run.handCards.Select((card, index) => $"{index + 1}. {card.name}  {card.star}*{(card.isGolden ? " GOLD" : string.Empty)}");
-            return "Hand\n" + string.Join("\n", lines);
+            var lines = Run.handCards.Select((card, index) => $"{index + 1}. {card.name}  {card.star}*{(card.isGolden ? " 金色" : string.Empty)}");
+            return "手牌\n" + string.Join("\n", lines);
         }
 
         private string FormatBoard()
         {
             if (Run.boardUnits.Count == 0)
             {
-                return "Board\n(empty)";
+                return "棋盘\n（空）";
             }
 
-            var lines = Run.boardUnits.Select(unit => $"{unit.boardSlotId}: {unit.name}  {unit.star}*{(unit.isGolden ? " GOLD" : string.Empty)}");
-            return "Board\n" + string.Join("\n", lines);
+            var lines = Run.boardUnits.Select(unit => $"{unit.boardSlotId}: {unit.name}  {unit.star}*{(unit.isGolden ? " 金色" : string.Empty)}");
+            return "棋盘\n" + string.Join("\n", lines);
         }
 
         private string FormatBattlePreview()
         {
-            var unitCount = Run.boardUnits.Count;
-            var playerScore = Run.boardUnits.Sum(unit => unit.star * 80 + 140) + unitCount * 25;
-            var enemyScore = 180 + (Run.round - 1) * 90;
-            return $"Battle Preview\nPlayer score: {playerScore}\nEnemy score: {enemyScore}\nLast battle: {Run.lastBattleSummary ?? "None"}";
+            var playerScore = BattleStubSystem.EstimatePlayerScore(Run);
+            var enemyScore = BattleStubSystem.EstimateEnemyScore(Run);
+            return $"战斗预览\n我方战力：{playerScore}\n敌方战力：{enemyScore}\n上次战斗：{Run.lastBattleSummary ?? "无"}";
+        }
+
+        private static string FormatRunState(string state)
+        {
+            switch (state)
+            {
+                case "manage":
+                    return "经营";
+                case "battle":
+                    return "战斗";
+                case "settle":
+                    return "结算";
+                case "gameover":
+                    return "失败";
+                default:
+                    return string.IsNullOrWhiteSpace(state) ? "未知" : state;
+            }
         }
     }
 }

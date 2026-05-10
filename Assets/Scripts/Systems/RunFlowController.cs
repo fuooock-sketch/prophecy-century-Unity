@@ -1,3 +1,4 @@
+using System.Linq;
 using ProphecyCentury.Core;
 
 namespace ProphecyCentury.Systems
@@ -6,6 +7,13 @@ namespace ProphecyCentury.Systems
     {
         public readonly ShopSystem ShopSystem = new ShopSystem();
         public readonly BoardSystem BoardSystem = new BoardSystem();
+        public readonly SynthesisSystem SynthesisSystem = new SynthesisSystem();
+        public readonly ManageEventResolver ManageEventResolver;
+
+        public RunFlowController()
+        {
+            ManageEventResolver = new ManageEventResolver(ShopSystem);
+        }
 
         public void PrepareNewRun(string campaignId, string heroId)
         {
@@ -19,7 +27,10 @@ namespace ProphecyCentury.Systems
 
         public void EnterBattlePhase()
         {
-            ProphecyGameSession.Instance.CurrentRun.state = "battle";
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            ManageEventResolver.ResolveRoundEnd(run);
+            SynthesisSystem.TrySynthesizeAll(run);
+            run.state = "battle";
         }
 
         public void FinishBattlePhase()
@@ -30,10 +41,12 @@ namespace ProphecyCentury.Systems
         public void NextRound()
         {
             var run = ProphecyGameSession.Instance.CurrentRun;
-            var income = ProphecyGameSession.Instance.Data.Config?.roundIncomeBase ?? 2;
             run.round += 1;
-            run.gold += income;
+            var income = (ProphecyGameSession.Instance.Data.Config?.roundIncomeBase ?? 2) + run.round;
+            run.gold = income;
             run.state = "manage";
+            ManageEventResolver.ResolveRoundStart(run);
+            SynthesisSystem.TrySynthesizeAll(run);
             ShopSystem.RefreshForNewRound(run);
         }
 
@@ -54,22 +67,66 @@ namespace ProphecyCentury.Systems
 
         public bool BuyUnit(int shopIndex)
         {
-            return ShopSystem.BuyFromShop(ProphecyGameSession.Instance.CurrentRun, shopIndex);
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var success = ShopSystem.BuyFromShop(run, shopIndex);
+            if (success)
+            {
+                var bought = run.handCards.Count > 0 ? run.handCards[run.handCards.Count - 1] : null;
+                ManageEventResolver.ResolveGainUnit(run, bought);
+                SynthesisSystem.TrySynthesizeAll(run);
+            }
+
+            return success;
         }
 
-        public bool DeployUnit(int handIndex)
+        public bool DeployUnit(int handIndex, string boardSlotId = null)
         {
-            return BoardSystem.DeployFromHand(ProphecyGameSession.Instance.CurrentRun, handIndex);
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var success = BoardSystem.DeployFromHand(run, handIndex, boardSlotId);
+            if (success)
+            {
+                var deployed = string.IsNullOrWhiteSpace(boardSlotId)
+                    ? run.boardUnits.LastOrDefault()
+                    : run.boardUnits.LastOrDefault(unit => unit.boardSlotId == boardSlotId);
+                ManageEventResolver.ResolveEntry(run, deployed);
+                SynthesisSystem.TrySynthesizeAll(run);
+            }
+
+            return success;
+        }
+
+        public bool MoveBoardUnit(string fromSlotId, string toSlotId)
+        {
+            return BoardSystem.MoveBoardUnit(ProphecyGameSession.Instance.CurrentRun, fromSlotId, toSlotId);
         }
 
         public bool SellHandUnit(int handIndex)
         {
-            return BoardSystem.SellFromHand(ProphecyGameSession.Instance.CurrentRun, handIndex);
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var target = handIndex >= 0 && handIndex < run.handCards.Count ? run.handCards[handIndex] : null;
+            ManageEventResolver.ResolveSell(run, target);
+            var success = BoardSystem.SellFromHand(run, handIndex);
+            if (success)
+            {
+                SynthesisSystem.TrySynthesizeAll(run);
+            }
+
+            return success;
         }
 
         public bool SellBoardUnit(string boardSlotId)
         {
-            return BoardSystem.SellFromBoard(ProphecyGameSession.Instance.CurrentRun, boardSlotId);
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var target = run.boardUnits.LastOrDefault(unit => unit.boardSlotId == boardSlotId);
+            ManageEventResolver.ResolveSell(run, target);
+            var success = BoardSystem.SellFromBoard(run, boardSlotId);
+            if (success)
+            {
+                ManageEventResolver.ResolveLeave(run, target, "sell");
+                SynthesisSystem.TrySynthesizeAll(run);
+            }
+
+            return success;
         }
     }
 }

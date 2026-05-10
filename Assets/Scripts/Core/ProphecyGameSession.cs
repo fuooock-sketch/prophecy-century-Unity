@@ -46,7 +46,8 @@ namespace ProphecyCentury.Core
                 gold = Data.Config?.startGold ?? 3,
                 round = 1,
                 playerHp = Data.Config?.playerStartHp ?? 100,
-                shopLevel = 1
+                shopLevel = 1,
+                shopUpgradeAnchorRound = 1
             };
         }
     }
