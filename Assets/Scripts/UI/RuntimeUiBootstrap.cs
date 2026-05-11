@@ -58,6 +58,8 @@ namespace ProphecyCentury.UI
             scaler.dynamicPixelsPerUnit = 3f;
             canvasObject.AddComponent<AudioSource>();
             canvasObject.AddComponent<RuntimeBgmPlayer>();
+            var sfxObject = new GameObject("RuntimeSfxPlayer", typeof(AudioSource), typeof(RuntimeSfxPlayer));
+            sfxObject.transform.SetParent(canvasObject.transform, false);
 
             var controllerObject = new GameObject("RunSceneController");
             controllerObject.transform.SetParent(canvasObject.transform, false);
@@ -74,40 +76,39 @@ namespace ProphecyCentury.UI
             var heroDescription = CreateText("HeroDescription", titlePanel.transform, string.Empty, 20, TextAnchor.UpperLeft, new Vector2(0.52f, 0.26f), new Vector2(0.78f, 0.42f), Vector2.zero, Vector2.zero);
             CreateButton("StartSelectedRunButton", titlePanel.transform, "开始游戏", new Vector2(900f, 300f), new Vector2(260f, 64f), controller.StartSelectedRun);
 
-            var runPanel = CreatePanel("RunPanel", canvasObject.transform, new Color32(20, 27, 35, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var topBar = CreatePanel("TopBar", runPanel.transform, new Color32(28, 37, 49, 255), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -80f), Vector2.zero);
-            var gold = CreateIconText("GoldLabel", topBar.transform, "\u91d1\u5e01", "金币：0", 24, new Vector2(0f, 0f), new Vector2(0.25f, 1f), new Vector2(12f, 0f), Vector2.zero);
-            var round = CreateIconText("RoundLabel", topBar.transform, "\u65f6\u95f4", "回合：1", 24, new Vector2(0.25f, 0f), new Vector2(0.5f, 1f), new Vector2(12f, 0f), Vector2.zero);
-            var hp = CreateIconText("HpLabel", topBar.transform, "\u8840\u74f6", "生命：100", 24, new Vector2(0.5f, 0f), new Vector2(0.75f, 1f), new Vector2(12f, 0f), Vector2.zero);
-            var state = CreateIconText("StateLabel", topBar.transform, "\u9f7f\u8f6e", "阶段：经营", 24, new Vector2(0.75f, 0f), new Vector2(1f, 1f), new Vector2(12f, 0f), new Vector2(-12f, 0f));
+            var runPanel = CreatePanel("RunPanel", canvasObject.transform, new Color32(18, 24, 31, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var topBar = CreatePanel("TopBar", runPanel.transform, new Color32(25, 34, 44, 255), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -72f), Vector2.zero);
+            var gold = CreateIconText("GoldLabel", topBar.transform, "\u91d1\u5e01", "金币：0", 20, new Vector2(0f, 0f), new Vector2(0.13f, 1f), new Vector2(12f, 0f), Vector2.zero);
+            var round = CreateIconText("RoundLabel", topBar.transform, "\u65f6\u95f4", "回合：1", 20, new Vector2(0.13f, 0f), new Vector2(0.26f, 1f), new Vector2(4f, 0f), Vector2.zero);
+            var hp = CreateIconText("HpLabel", topBar.transform, "\u8840\u74f6", "生命：100", 20, new Vector2(0.26f, 0f), new Vector2(0.39f, 1f), new Vector2(4f, 0f), Vector2.zero);
+            var state = CreateIconText("StateLabel", topBar.transform, "\u9f7f\u8f6e", "阶段：经营", 20, new Vector2(0.39f, 0f), new Vector2(0.52f, 1f), new Vector2(4f, 0f), Vector2.zero);
 
-            var leftPanel = CreatePanel("ShopPanel", runPanel.transform, new Color32(30, 43, 57, 255), new Vector2(0f, 0.2f), new Vector2(0.3f, 0.9f), Vector2.zero, new Vector2(-12f, 0f));
-            var centerPanel = CreatePanel("CenterPanel", runPanel.transform, new Color32(35, 50, 63, 255), new Vector2(0.3f, 0.2f), new Vector2(0.68f, 0.9f), new Vector2(12f, 0f), new Vector2(-12f, 0f));
-            var rightPanel = CreatePanel("InfoPanel", runPanel.transform, new Color32(25, 34, 45, 255), new Vector2(0.68f, 0.2f), new Vector2(1f, 0.9f), new Vector2(12f, 0f), Vector2.zero);
-            var bottomBar = CreatePanel("BottomBar", runPanel.transform, new Color32(28, 37, 49, 255), new Vector2(0f, 0f), new Vector2(1f, 0.18f), Vector2.zero, Vector2.zero);
+            CreateButton("RefreshShopButton", topBar.transform, "刷新", new Vector2(910f, 0f), new Vector2(110f, 42f), controller.RefreshShop, "\u5546\u5e97");
+            CreateButton("UpgradeShopButton", topBar.transform, "升级", new Vector2(1030f, 0f), new Vector2(110f, 42f), controller.UpgradeShop, "\u94bb\u77f3");
+            CreateButton("LockShopButton", topBar.transform, "锁定", new Vector2(1150f, 0f), new Vector2(110f, 42f), controller.ToggleShopLock, "\u94c1\u9501");
+            CreateButton("BattleButton", topBar.transform, "战斗", new Vector2(1288f, 0f), new Vector2(138f, 48f), controller.StartBattle, "\u957f\u5251");
+            CreateButton("SaveGameButton", topBar.transform, "保存", new Vector2(1430f, 0f), new Vector2(98f, 38f), controller.SaveGame, "\u7fbd\u6bdb");
+            CreateButton("LoadGameButton", topBar.transform, "读取", new Vector2(1538f, 0f), new Vector2(98f, 38f), controller.LoadGame, "\u5377\u8f74");
 
-            var shopMetaText = CreateText("ShopMetaText", leftPanel.transform, "商店 L1", 20, TextAnchor.UpperLeft, new Vector2(0f, 0.85f), Vector2.one, new Vector2(18f, -12f), new Vector2(-18f, 8f));
-            var shopText = CreateText("ShopText", leftPanel.transform, "商店", 18, TextAnchor.UpperLeft, new Vector2(0f, 0.74f), new Vector2(1f, 0.85f), new Vector2(18f, 0f), new Vector2(-18f, -8f));
-            var shopCardRoot = CreateCardListRoot("ShopCardRoot", leftPanel.transform, new Vector2(0f, 0f), new Vector2(1f, 0.74f), new Vector2(18f, 18f), new Vector2(-18f, -8f));
-            var handText = CreateText("HandText", centerPanel.transform, "手牌", 18, TextAnchor.UpperLeft, new Vector2(0f, 0.88f), new Vector2(1f, 1f), new Vector2(18f, -18f), new Vector2(-18f, 8f));
-            var handCardRoot = CreateCardListRoot("HandCardRoot", centerPanel.transform, new Vector2(0f, 0.53f), new Vector2(1f, 0.88f), new Vector2(18f, 0f), new Vector2(-18f, -8f));
-            var boardText = CreateText("BoardText", centerPanel.transform, "棋盘", 18, TextAnchor.UpperLeft, new Vector2(0f, 0.43f), new Vector2(1f, 0.53f), new Vector2(18f, 0f), new Vector2(-18f, -8f));
-            var boardCardRoot = CreateCardListRoot("BoardCardRoot", centerPanel.transform, new Vector2(0f, 0f), new Vector2(1f, 0.43f), new Vector2(18f, 18f), new Vector2(-18f, -8f));
-            var campaignText = CreateText("CampaignText", rightPanel.transform, "战役", 20, TextAnchor.UpperLeft, new Vector2(0f, 0.8f), new Vector2(1f, 1f), new Vector2(18f, -18f), new Vector2(-18f, 18f));
-            var heroText = CreateText("HeroText", rightPanel.transform, "英雄", 20, TextAnchor.UpperLeft, new Vector2(0f, 0.65f), new Vector2(1f, 0.8f), new Vector2(18f, -8f), new Vector2(-18f, 8f));
-            var battlePreviewText = CreateText("BattlePreviewText", rightPanel.transform, "战斗预览", 20, TextAnchor.UpperLeft, new Vector2(0f, 0.3f), new Vector2(1f, 0.65f), new Vector2(18f, -8f), new Vector2(-18f, 8f));
-            var logText = CreateText("LogText", rightPanel.transform, "日志", 20, TextAnchor.UpperLeft, new Vector2(0f, 0f), new Vector2(1f, 0.3f), new Vector2(18f, 18f), new Vector2(-18f, -18f));
+            var shopPanel = CreatePanel("ShopPanel", runPanel.transform, new Color32(24, 30, 48, 245), new Vector2(0f, 0.675f), new Vector2(1f, 0.91f), new Vector2(20f, 0f), new Vector2(-20f, 0f));
+            var boardPanel = CreatePanel("BoardPanel", runPanel.transform, new Color32(16, 24, 38, 180), new Vector2(0.015f, 0.16f), new Vector2(0.62f, 0.65f), Vector2.zero, Vector2.zero);
+            var handPanel = CreatePanel("HandPanel", runPanel.transform, new Color32(24, 30, 48, 245), new Vector2(0.63f, 0.34f), new Vector2(0.985f, 0.65f), Vector2.zero, Vector2.zero);
+            var logPanel = CreatePanel("CombatLogPanel", runPanel.transform, new Color32(13, 18, 30, 235), new Vector2(0.63f, 0.045f), new Vector2(0.985f, 0.325f), Vector2.zero, Vector2.zero);
 
-            const float buttonWidth = 220f;
-            const float gap = 12f;
-            const float firstButtonX = 120f;
-            CreateButton("RefreshShopButton", bottomBar.transform, "刷新商店", new Vector2(firstButtonX, 50f), new Vector2(buttonWidth, 56f), controller.RefreshShop, "\u5546\u5e97");
-            CreateButton("BuyButton", bottomBar.transform, "快速购买", new Vector2(firstButtonX + (buttonWidth + gap) * 1f, 50f), new Vector2(buttonWidth, 56f), controller.BuyFirstCard, "\u91d1\u5e01");
-            CreateButton("DeployButton", bottomBar.transform, "快速部署", new Vector2(firstButtonX + (buttonWidth + gap) * 2f, 50f), new Vector2(buttonWidth, 56f), controller.DeployFirstCard, "\u519b\u65d7");
-            CreateButton("BattleButton", bottomBar.transform, "结算战斗", new Vector2(firstButtonX + (buttonWidth + gap) * 3f, 50f), new Vector2(buttonWidth, 56f), controller.StartBattle, "\u957f\u5251");
-            CreateButton("NewRunButton", bottomBar.transform, "新开一局", new Vector2(firstButtonX + (buttonWidth + gap) * 4f, 50f), new Vector2(buttonWidth, 56f), controller.StartNewRun, "\u7687\u51a0");
-            CreateButton("UpgradeShopButton", bottomBar.transform, "升级商店", new Vector2(firstButtonX + (buttonWidth + gap) * 5f, 50f), new Vector2(buttonWidth, 56f), controller.UpgradeShop, "\u94bb\u77f3");
-            CreateButton("LockShopButton", bottomBar.transform, "锁定商店", new Vector2(firstButtonX + (buttonWidth + gap) * 6f, 50f), new Vector2(buttonWidth, 56f), controller.ToggleShopLock, "\u94c1\u9501");
+            var shopMetaText = CreateText("ShopMetaText", shopPanel.transform, "商店 L1", 18, TextAnchor.UpperLeft, new Vector2(0f, 0.77f), Vector2.one, new Vector2(18f, -12f), new Vector2(-18f, 0f));
+            var shopText = CreateText("ShopText", shopPanel.transform, "商店", 16, TextAnchor.UpperLeft, new Vector2(0f, 0.77f), new Vector2(1f, 0.92f), new Vector2(220f, -12f), new Vector2(-18f, 0f));
+            var shopCardRoot = CreateHorizontalCardListRoot("ShopCardRoot", shopPanel.transform, new Vector2(0f, 0f), new Vector2(1f, 0.76f), new Vector2(18f, 12f), new Vector2(-18f, -4f));
+
+            var boardText = CreateText("BoardText", boardPanel.transform, "棋盘", 18, TextAnchor.UpperLeft, new Vector2(0f, 0.88f), Vector2.one, new Vector2(14f, -10f), new Vector2(-14f, 0f));
+            var boardCardRoot = CreateBoardGridRoot("BoardCardRoot", boardPanel.transform, new Vector2(0f, 0f), new Vector2(1f, 0.86f), new Vector2(18f, 18f), new Vector2(-18f, -8f));
+
+            var handText = CreateText("HandText", handPanel.transform, "手牌区", 18, TextAnchor.UpperLeft, new Vector2(0f, 0.84f), Vector2.one, new Vector2(14f, -10f), new Vector2(-14f, 0f));
+            var handCardRoot = CreateGridCardRoot("HandCardRoot", handPanel.transform, new Vector2(0f, 0f), new Vector2(1f, 0.82f), new Vector2(14f, 14f), new Vector2(-14f, -8f));
+
+            var campaignText = CreateText("CampaignText", logPanel.transform, "战役", 15, TextAnchor.UpperLeft, new Vector2(0f, 0.72f), Vector2.one, new Vector2(12f, -8f), new Vector2(-12f, -2f));
+            var heroText = CreateText("HeroText", logPanel.transform, "英雄", 15, TextAnchor.UpperLeft, new Vector2(0f, 0.58f), new Vector2(1f, 0.74f), new Vector2(12f, 0f), new Vector2(-12f, 0f));
+            var battlePreviewText = CreateText("BattlePreviewText", logPanel.transform, "战斗预览", 15, TextAnchor.UpperLeft, new Vector2(0f, 0.28f), new Vector2(1f, 0.58f), new Vector2(12f, 0f), new Vector2(-12f, 0f));
+            var logText = CreateText("LogText", logPanel.transform, "日志", 15, TextAnchor.UpperLeft, Vector2.zero, new Vector2(1f, 0.28f), new Vector2(12f, 8f), new Vector2(-12f, -4f));
 
             AssignField(controller, "goldLabel", gold);
             AssignField(controller, "roundLabel", round);
@@ -223,6 +224,65 @@ namespace ProphecyCentury.UI
             return root.transform;
         }
 
+        private static Transform CreateHorizontalCardListRoot(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            var root = new GameObject(name, typeof(HorizontalLayoutGroup));
+            root.transform.SetParent(parent, false);
+            var rect = root.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
+
+            var layout = root.GetComponent<HorizontalLayoutGroup>();
+            layout.spacing = 14f;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            return root.transform;
+        }
+
+        private static Transform CreateGridCardRoot(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            var root = new GameObject(name, typeof(GridLayoutGroup));
+            root.transform.SetParent(parent, false);
+            var rect = root.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
+
+            var layout = root.GetComponent<GridLayoutGroup>();
+            layout.cellSize = new Vector2(108f, 138f);
+            layout.spacing = new Vector2(10f, 10f);
+            layout.startAxis = GridLayoutGroup.Axis.Horizontal;
+            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.constraint = GridLayoutGroup.Constraint.Flexible;
+            return root.transform;
+        }
+
+        private static Transform CreateBoardGridRoot(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            var root = new GameObject(name, typeof(HorizontalLayoutGroup));
+            root.transform.SetParent(parent, false);
+            var rect = root.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
+
+            var layout = root.GetComponent<HorizontalLayoutGroup>();
+            layout.spacing = 14f;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            return root.transform;
+        }
+
         private static void CreateButton(string name, Transform parent, string label, Vector2 anchoredPosition, Vector2 size, UnityEngine.Events.UnityAction callback, string iconName = null)
         {
             var buttonObject = new GameObject(name, typeof(Image), typeof(Button));
@@ -237,6 +297,7 @@ namespace ProphecyCentury.UI
             image.color = new Color32(70, 108, 145, 255);
             var button = buttonObject.GetComponent<Button>();
             button.targetGraphic = image;
+            button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
             button.onClick.AddListener(callback);
 
             if (!string.IsNullOrWhiteSpace(iconName))

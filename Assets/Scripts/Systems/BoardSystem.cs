@@ -134,6 +134,7 @@ namespace ProphecyCentury.Systems
                 manageGiftActionBucket = card.manageGiftActionBucket,
                 manageReceiveGiftPowerBucket = card.manageReceiveGiftPowerBucket,
                 manageReceiveGiftDiscoverTriggered = card.manageReceiveGiftDiscoverTriggered,
+                battleProgressCounters = card.battleProgressCounters?.Select(counter => new BattleProgressCounterState { key = counter.key, value = counter.value }).ToList() ?? new System.Collections.Generic.List<BattleProgressCounterState>(),
                 boardSlotId = boardSlotId
             };
         }

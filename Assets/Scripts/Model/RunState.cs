@@ -14,14 +14,20 @@ namespace ProphecyCentury.Model
         public int playerHp;
         public int shopLevel;
         public int shopUpgradeAnchorRound;
+        public int campaignRoundLimit;
+        public int campaignWins;
+        public int campaignLosses;
+        public bool campaignCompleted;
         public bool isShopLocked;
         public string lastBattleSummary;
+        public List<BattleHistoryEntryState> battleHistory = new List<BattleHistoryEntryState>();
         public List<BoardUnitState> boardUnits = new List<BoardUnitState>();
         public List<UnitCardState> handCards = new List<UnitCardState>();
         public List<UnitCardState> shopCards = new List<UnitCardState>();
         public List<ShopPoolEntryState> shopPool = new List<ShopPoolEntryState>();
         public HeroRuntimeState heroState = new HeroRuntimeState();
         public ManageResourceState manageResources = new ManageResourceState();
+        public BattleRewardState pendingBattleRewards = new BattleRewardState();
     }
 
     [Serializable]
@@ -51,6 +57,14 @@ namespace ProphecyCentury.Model
         public int manageGiftActionBucket;
         public int manageReceiveGiftPowerBucket;
         public bool manageReceiveGiftDiscoverTriggered;
+        public int pendingNextRoundTempAttack;
+        public int pendingNextRoundTempPower;
+        public int pendingNextRoundPermanentHp;
+        public int pendingNextRoundPermanentPower;
+        public int pendingNextRoundPermanentLuck;
+        public int pendingNextRoundForestGems;
+        public string pendingNextRoundEvolveTo;
+        public List<BattleProgressCounterState> battleProgressCounters = new List<BattleProgressCounterState>();
     }
 
     [Serializable]
@@ -83,5 +97,42 @@ namespace ProphecyCentury.Model
         public int forestGiftRoundTotal;
         public int forestGiftRoundActions;
         public int shopGeneratedBuffAttack;
+    }
+
+    [Serializable]
+    public sealed class BattleRewardState
+    {
+        public int nextRoundGold;
+        public int nextRoundShopBuffAttack;
+        public List<DiscoverFaithRewardState> discoverFaithRewards = new List<DiscoverFaithRewardState>();
+    }
+
+    [Serializable]
+    public sealed class DiscoverFaithRewardState
+    {
+        public string faith;
+        public string race;
+        public int count;
+        public string label;
+    }
+
+    [Serializable]
+    public sealed class BattleHistoryEntryState
+    {
+        public int round;
+        public bool victory;
+        public int playerScore;
+        public int enemyScore;
+        public int hpDelta;
+        public int playerDamage;
+        public int enemyDamage;
+        public string summary;
+    }
+
+    [Serializable]
+    public sealed class BattleProgressCounterState
+    {
+        public string key;
+        public int value;
     }
 }

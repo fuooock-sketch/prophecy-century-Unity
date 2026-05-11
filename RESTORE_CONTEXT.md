@@ -346,23 +346,413 @@ Continue restoring/migrating the original `prophecy-century-ChatGpt/work_v1_fina
 - Verification:
   - Unity Editor log showed a fresh `Tundra build success` after these edits.
 
+### 2026-05-11 - Process 22: First battle skill resolver pass
+
+- User requested continuing after reviewing the migration context.
+- Expanded `Assets/Scripts/Data/UnitDefinition.cs` skill parsing fields so imported battle skill JSON parameters are retained, including:
+  - shield layers, target counts, value-per-faith, summon/transform ids
+  - chance/duration/delay/reduce/ratio/radius
+  - attack multipliers, stun/invincible timing, speed multipliers, forced crit flags, direct damage
+- Updated `Assets/Scripts/Systems/BattleStubSystem.cs` with a lightweight battle skill resolver inside the existing headless simulator.
+- Newly handled battle-start effects:
+  - team shield and self refreshing shield
+  - self/team faith-count attack/stat buffs
+  - adjacent-faith attack buff
+  - first-attack crit/speedup setup
+  - stealth first-attack crit approximation
+  - speed-threshold attack interval reduction/halving
+  - lowest-power ally gains source power
+  - self temporary morale
+  - start summons and start-plus-death summons
+  - summon-and-buff-type
+  - pounce nearest enemy damage/stun/invincibility approximation
+  - lock highest-HP targets as a stun/lock approximation
+- Newly handled attack/death effects:
+  - chance self shield on attack
+  - attack-count summon
+  - multi-nearest-target attacks
+  - chance forced crit and every-Nth forced crit
+  - ally-crit self temporary power
+  - death summon
+  - death explosion damage approximation
+- Continuous aura handling was narrowed to the configured `targetUnitId` instead of syncing every same-id unit indiscriminately.
+- Known boundaries:
+  - This is still a headless approximation of `BattleSkillManager.js`, not a full visual battle manager.
+  - Next-round battle rewards, kill/counter milestone rewards, discover/evolve rewards, fire rain DOT, delayed snipe, true stealth targeting, mount-transform, and full post-battle state application still need dedicated migration.
+  - The current death explosion next-round reward skill only applies explosion damage; its future-round attack reward is still pending.
+- Verification:
+  - `git diff --check` reported no whitespace errors, only existing LF-to-CRLF warnings.
+  - Sampled Unity Editor log search showed no current `error CS` matches after the edit; if Unity was not actively refreshing, let the Editor compile once before Play testing.
+
+### 2026-05-11 - Process 23: Battle post-reward pending flow
+
+- User requested continuing from the battle skill resolver pass.
+- Added pending battle reward state to `Assets/Scripts/Model/RunState.cs`:
+  - run-level `pendingBattleRewards`
+  - next-round gold
+  - next-round shop generated attack buff
+  - next-round faith/race discover rewards
+  - per-unit pending next-round temp attack/power
+  - per-unit pending permanent HP/power/luck
+  - per-unit pending forest gems
+  - per-unit pending evolve target
+- Updated `Assets/Scripts/Systems/BattleStubSystem.cs` so battle runtime units retain their source `UnitCardState` and write battle results back as pending rewards.
+- Added first pass post-battle reward support:
+  - `on_extra_attack_once_next_round_gold`
+  - `on_counter_count_next_round_gain_forest_gem`
+  - `on_attack_mark_target_next_round_forest_gem_on_death`
+  - `on_kill_count_next_round_evolve`
+  - `battle_start_if_team_faith_count_next_round_discover`
+  - `battle_start_team_temp_defense_if_win_next_round_self_hp`
+  - `battle_end_survivors_next_round_team_temp_attack`
+  - `on_death_explode_if_hits_next_round_team_attack`
+  - `on_death_next_round_shop_cards_gain_attack`
+  - `on_death_next_round_forest_gem`
+- Updated `Assets/Scripts/Systems/RunFlowController.cs`:
+  - `NextRound()` now consumes pending battle rewards after round-start temp reset.
+  - next-round gold is added on top of normal round income.
+  - next-round shop attack buff is added before the new shop refresh.
+  - pending unit temp/permanent stat rewards are applied to board units.
+  - pending forest gem rewards are added to manage resources.
+  - pending evolve rewards update the unit definition id/name/star.
+  - pending discover rewards add random matching units to hand.
+- Expanded `Assets/Scripts/Data/UnitDefinition.cs` for `hitThreshold` and `nextRoundAttack`.
+- Known boundaries:
+  - Kill-count evolve currently uses this battle's kill count only; original persistent progression counters are still pending.
+  - Discover rewards are added directly to hand as a simple random grant; original modal/discover-choice UX is still pending.
+  - Round-start ordering may still need tuning if original behavior requires pending battle rewards to apply before manage `on_round_start` talent dispatch.
+- Verification:
+  - `git diff --check` reported no whitespace errors, only LF-to-CRLF warnings.
+  - Sampled Unity Editor log search showed no current `error CS` matches after the edit.
+
+### 2026-05-11 - Process 24: Complete roadmap items 1-3 first-pass
+
+- User requested directly completing remaining roadmap items 1, 2, and 3.
+
+#### Item 1 - Battle Skill Resolver Completion Pass
+
+- Expanded `Assets/Scripts/Data/UnitDefinition.cs` for additional battle parameters:
+  - `targetId`
+  - `selfHpLoss`
+  - `giftThreshold`
+  - `interval`
+- Updated `Assets/Scripts/Systems/BattleStubSystem.cs` with additional battle behavior:
+  - timed skill ticking before each attack step
+  - summon duration expiry
+  - delayed snipe/backline targeting
+  - stealth-assassinate lowest-HP targeting approximation
+  - mount-transform into hidden transform units
+  - periodic temporary power
+  - periodic self HP loss plus team attack buff
+  - periodic nearby enemy damage
+  - on-damaged count temporary morale
+  - fire-rain attack-count AOE approximation
+  - team forest-gift total AOE approximation
+  - persistent kill-count evolve counters stored on source unit state
+- Updated `BoardSystem` and `SynthesisSystem` to preserve/merge battle progression counters across deploy and golden synthesis.
+
+#### Item 2 - Enemy Plan And Campaign Progression
+
+- Added campaign progression fields to `RunState`:
+  - campaign round limit
+  - wins/losses
+  - completed flag
+  - battle history
+- Updated `ProphecyGameSession.StartNewRun()` to assign a campaign round limit:
+  - `south_town_adventure`: 20 rounds
+  - `snow_peak_defense`: 18 rounds
+  - `song_of_sang_city`: 24 rounds
+- Updated enemy generation in `BattleStubSystem`:
+  - campaign-specific enemy scaling
+  - round-limit progress scaling
+  - stronger milestone rounds every 5 rounds
+  - higher max-star allowance on milestones
+- Added `RunFlowController.ResolveBattleOutcome()`:
+  - appends battle history
+  - tracks wins/losses
+  - handles gameover
+  - handles campaign victory when the round limit is cleared
+  - advances to next round otherwise
+- Updated `RunSceneController.StartBattle()` to use the new battle outcome flow.
+
+#### Item 3 - Save/Load Persistence
+
+- Added `Assets/Scripts/Systems/SaveGameSystem.cs` and `.meta`.
+- Saves current `RunState` as pretty JSON to:
+  - `Application.persistentDataPath/prophecy_century_run.json`
+- Loads and normalizes saved `RunState`, including lists and nested state that may be absent in older saves.
+- Added `ProphecyGameSession.RestoreRun()` for save restoration.
+- Added runtime UI actions:
+  - `RunSceneController.SaveGame()`
+  - `RunSceneController.LoadGame()`
+  - generated bottom-bar Save and Load buttons in `RuntimeUiBootstrap`.
+
+- Known boundaries:
+  - Battle skill item 1 is now a broad first-pass resolver, but still headless and approximate compared with the original canvas battle manager.
+  - Original discover-choice modal is represented as direct random hand grants.
+  - Campaign definitions still do not contain authored enemy rosters, so enemy plans are deterministic procedural plans derived from campaign id, round, and milestone status.
+  - Save/load currently persists one local run slot; multi-slot saves and versioned migrations are not implemented.
+- Verification:
+  - `git diff --check` reported no whitespace errors, only LF-to-CRLF warnings.
+  - Sampled Unity Editor log search showed no current `error CS` matches.
+
+### 2026-05-11 - Process 25: Complete roadmap items 4-5 first-pass
+
+- User requested completing remaining roadmap items 4 and 5.
+
+#### Item 4 - UI Parity Pass
+
+- Confirmed `RuntimeUiBootstrap.cs` and `RunSceneController.cs` now show normal Chinese runtime strings in the current file view.
+- Improved runtime UI flow and readability:
+  - top shop meta now shows shop level, upgrade cost, lock state, campaign wins, and losses
+  - battle preview now shows campaign progress, win/loss count, player/enemy score, pending rewards, recent battle history, and last battle summary
+  - runtime log now keeps the latest 7 messages instead of replacing the log every time
+  - victory run state is displayed as `胜利`
+  - Save/Load buttons remain in the bottom action bar
+- Improved card/board readability:
+  - golden unit cards now use a distinct gold/brown card background
+  - board slots now show unit portrait icons using `RuntimeUnitIconCache`
+  - board slot text offsets now account for the icon area
+- This keeps the first screen as the actual playable runtime, not a landing page.
+
+#### Item 5 - Asset/Audio/Battle Presentation Polish
+
+- Added `Assets/Scripts/UI/RuntimeSfxPlayer.cs` and `.meta`.
+- `RuntimeSfxPlayer` loads imported MP3 files from `Assets/Audio` on demand and caches clips.
+- Runtime UI now creates a dedicated SFX audio source.
+- Button clicks now play a light imported audio cue.
+- Battle result now plays imported victory/defeat audio:
+  - victory: `Win Battle.mp3`
+  - defeat: `LoseCombat.mp3`
+- Save/load feedback now plays imported success/failure audio cues.
+- Existing title background, unit icons, feature icons, and looped manage BGM remain bound from earlier processes.
+
+- Known boundaries:
+  - UI is now clearer and more complete, but still a runtime-generated Unity UI rather than a scene-authored replica of the original Web/Electron layout.
+  - Battle presentation is still headless; audio and result/history presentation are bound, but no animated battle field or floating combat text has been authored yet.
+  - Imported art/audio are used in the primary runtime loop, but not every original effect has a one-to-one binding.
+- Verification:
+  - `git diff --check` reported no whitespace errors, only LF-to-CRLF warnings.
+  - Sampled Unity Editor log search showed no current `error CS` matches.
+
+### 2026-05-11 - Process 26: Formal UI Direction Planning
+
+- User asked what should be done next and said they want the UI to look more formal.
+- User explicitly requested not to rush into code changes and to update this context document first.
+
+#### Current UI Assessment
+
+- The game now has a playable runtime-generated Unity UI with title selection, shop, hand, board, battle preview, logs, save/load, icons, BGM, and SFX.
+- The current UI is still best understood as a functional migration/debug UI, not a formal product UI.
+- Main reasons it still feels informal:
+  - layout is generated entirely in code and uses mostly flat panels
+  - information density is not yet prioritized by player task flow
+  - typography, spacing, hierarchy, and button grouping are utilitarian
+  - card presentation is readable but not yet polished enough for a card-battler/auto-battler
+  - battle preview is text-heavy and does not yet feel like a dedicated battle/reward surface
+  - title/manage/battle/result flows are present but not yet visually differentiated enough
+
+#### Recommended Next Priority
+
+The next best step should be **UI foundation and interaction design**, before adding more gameplay systems.
+
+Recommended first UI task:
+
+1. Create a formal runtime UI layout spec for the main manage screen.
+   - Define stable regions:
+     - top status bar
+     - left shop column
+     - center hand and board area
+     - right run/battle/history panel
+     - bottom action bar
+   - Define visual hierarchy:
+     - primary action: start/resolve battle
+     - economy actions: refresh, upgrade, lock
+     - card actions: buy, deploy, sell
+     - utility actions: save, load, new run
+   - Define card component rules:
+     - unit portrait
+     - name/star/gold state
+     - race/faith/type
+     - attack/hp/defense/power/speed
+     - action buttons
+     - selected/drag/empty/sold states
+   - Define board slot states:
+     - empty
+     - selected empty
+     - occupied
+     - selected occupied
+     - valid drop target
+     - invalid drop target
+
+Recommended second UI task:
+
+2. Replace the current bottom action strip with a more formal command bar.
+   - Group shop commands together.
+   - Keep battle as the dominant button.
+   - Move save/load/new-run to a utility group.
+   - Reduce button crowding at 1600x900 and common laptop aspect ratios.
+
+Recommended third UI task:
+
+3. Redesign the right panel into tabs or stacked sections.
+   - Run summary
+   - Battle preview
+   - Rewards/pending effects
+   - Recent battle history
+   - Log
+
+Recommended fourth UI task:
+
+4. Upgrade unit cards and board cells.
+   - Use consistent card height and icon sizing.
+   - Make gold cards visibly premium but not noisy.
+   - Add compact stat chips or aligned stat rows.
+   - Avoid text overlap and truncation at smaller Game View sizes.
+
+Recommended fifth UI task:
+
+5. Only after the manage screen is formalized, do title/result/battle presentation polish.
+   - Title screen can use imported background more intentionally.
+   - Battle result should become a clear result panel instead of only log text.
+   - Animated battle field/floating combat text can come after layout stability.
+
+#### Proposed UI Style Direction
+
+- Treat the game as a fantasy strategy/card-battler management interface.
+- Prefer a polished tactical dashboard over a decorative landing-page feel.
+- Visual tone:
+  - dark neutral base
+  - restrained gold accents for economy/golden units
+  - muted blue/steel panels for system surfaces
+  - clear red/green feedback only for damage/loss/victory states
+- Avoid:
+  - oversized hero marketing sections
+  - excessive gradients or decorative blobs
+  - text-heavy buttons where icons or grouped controls are clearer
+  - nested cards inside cards
+  - one-note color palettes
+
+#### Implementation Guidance For The Next Coding Pass
+
+- Do not start by rewriting every UI surface.
+- Start with the manage screen because it is the highest-frequency player surface.
+- Keep `RuntimeUiBootstrap` if speed matters, but consider splitting generated UI helpers into smaller builder methods/classes before adding more polish.
+- If the UI grows further, consider moving toward scene/prefab-authored UI for maintainability.
+- Before editing code, capture the target layout in this document or a separate `UI_FORMALIZATION_PLAN.md`.
+- After UI edits, verify in Play Mode at minimum:
+  - 1600x900
+  - 1366x768
+  - 1920x1080
+  - a narrow-ish Game View size
+  - no button/card text overlap
+  - card icons and action buttons remain readable
+  - battle preview/log/history do not crowd each other
+
+#### Immediate Recommendation
+
+The next concrete action should be:
+
+1. Draft `UI_FORMALIZATION_PLAN.md` with a manage-screen wireframe and component rules.
+2. Then implement only the manage screen layout refactor.
+3. Then Play Mode screenshot/check the layout before touching title or battle-result visuals.
+
+### 2026-05-11 - Process 27: UI formalization plan and first layout pass
+
+- Added `UI_FORMALIZATION_PLAN.md`.
+- The plan defines:
+  - target manage-screen regions: top status bar, left shop column, center hand/board area, right intelligence panel, bottom command bar
+  - visual direction: dark neutral base, muted steel panels, restrained gold accents, clear red/green feedback only where meaningful
+  - command grouping: shop economy, primary battle, and utility groups
+  - card component rules, board slot states, right-panel sections, implementation passes, and Play Mode verification checklist
+- Updated `Assets/Scripts/UI/RuntimeUiBootstrap.cs` first-pass manage layout:
+  - adjusted main region proportions to give the command bar and right panel more deliberate structure
+  - renamed the bottom runtime surface to `CommandBar`
+  - split the right panel into `RunInfoSection`, `BattlePreviewSection`, and `LogSection`
+  - replaced the single crowded bottom strip with grouped command panels:
+    - `ShopCommandGroup`: refresh, upgrade, lock, quick buy
+    - `BattleCommandGroup`: dominant battle button plus quick deploy
+    - `UtilityCommandGroup`: save, load, new run
+- Verification:
+  - `git diff --check` reported no whitespace errors, only existing LF-to-CRLF warnings.
+  - Unity Play Mode visual verification is still pending and should be the next step.
+
+### 2026-05-11 - Process 28: Pivot UI layout toward original HTML manage screen
+
+- User clarified the goal is to restore the previous HTML/Web/Electron UI layout.
+- Compared Unity runtime UI against original source files:
+  - `work_v1_final/index.html`
+  - `work_v1_final/style.css`
+  - `work_v1_final/Game.js`
+- Key original manage-screen layout found:
+  - `status-bar` at the top contains economy/status and core buttons
+  - `shop-area` is a horizontal full-width panel below the top bar
+  - `board-area` sits below the shop on the left
+  - `hand-area` sits below the shop on the right
+  - `combat-log` sits below the hand area on the right
+- Updated `UI_FORMALIZATION_PLAN.md` so the target is now HTML layout restoration rather than a generic formal dashboard.
+- Updated `Assets/Scripts/UI/RuntimeUiBootstrap.cs`:
+  - moved main command buttons back into the top status/action bar, matching the original HTML direction
+  - replaced the left-shop/center/right-panel structure with HTML-like panels:
+    - `ShopPanel` full-width top shop strip
+    - `BoardPanel` lower-left formation area
+    - `HandPanel` lower-right hand area
+    - `CombatLogPanel` lower-right log/info area
+  - added horizontal shop card root helper and grid hand card root helper
+- Updated `Assets/Scripts/UI/RunSceneController.cs`:
+  - shop cards now use fixed card dimensions suitable for horizontal display
+  - hand cards now use fixed grid-card dimensions
+  - compact card action buttons now anchor at the bottom of shop/hand cards instead of right-side list buttons
+- Verification:
+  - `git diff --check` reported no whitespace errors, only existing LF-to-CRLF warnings.
+  - Unity Play Mode visual verification is still pending; this pass is a structural layout pass and may need spacing/font tuning after seeing the actual Game View.
+
+### 2026-05-11 - Process 29: HTML layout spacing and slot parity pass
+
+- User confirmed Unity reported no errors after the HTML-layout pass and requested continuing.
+- Continued matching original HTML manage-screen proportions:
+  - original board is a horizontal set of vertical columns, not a row list
+  - original board cells are square, roughly `88x88`
+  - original shop always displays six shop slots
+  - original hand area keeps visible empty slots, at least nine positions
+- Updated `Assets/Scripts/UI/RuntimeUiBootstrap.cs`:
+  - added `CreateBoardGridRoot()` so the board root uses a horizontal layout suitable for column-based board rendering
+- Updated `Assets/Scripts/UI/RunSceneController.cs`:
+  - `RebuildBoardSlotGrid()` now renders the original `4-3-2-1` column layout:
+    - column 1: `4-1`, `4-2`, `4-3`, `4-4`
+    - column 2: `3-1`, `3-2`, `3-3`
+    - column 3: `2-1`, `2-2`
+    - column 4: `1-1`
+  - board cells now use fixed `88x88` dimensions
+  - board unit icons are centered in the cell and larger
+  - board cell text is compacted to name/star/attack/defense so it fits the smaller original-style square
+  - shop card lists now render at least six slots
+  - hand card grids now render at least nine slots
+  - empty card slots use a subdued background and no actions
+- Verification:
+  - `git diff --check` reported no whitespace errors, only existing LF-to-CRLF warnings.
+  - Unity Editor log showed a fresh `Tundra build success` with no sampled `error CS`.
+  - Play Mode visual verification is still needed for card text overlap and board readability.
+
 ## Next Suggested Work
 
 Recommended next steps:
 
-1. Let Unity refresh scripts, then Play test a small manage-flow loop: buy/deploy/sell/start battle/next round.
-2. Start replacing `BattleStubSystem` with the real battle simulator core from the original project.
-3. Keep `while_on_board_*` continuous aura behavior in mind for the battle simulator/battle skill steps.
+1. Play Mode visual check the manage screen against the original HTML layout: top status/action bar, horizontal shop strip, lower-left board, right hand, right log.
+2. Tune card spacing/fonts after the first Play Mode visual check, especially shop card text, hand grid buttons, and board cell readability.
+3. Add the original HTML enemy preview panel above/near the board once the manage layout is stable.
+4. Play test the full run loop after card/board polish: title selection, buy/deploy/sell, save, load, several battles, milestone round, gameover, and campaign victory.
+5. Verify audio playback in Play Mode: manage BGM, button click, battle victory/defeat, save/load.
+6. Compare representative original units against Unity behavior and tune approximations where gameplay diverges too much.
 
 ## Remaining Migration Roadmap Estimate
 
-As of 2026-05-11 after Process 21, the full migration likely needs about 5 remaining major implementation steps:
+As of 2026-05-11 after Process 29, roadmap items 1-5 have first-pass implementations. The next priority is original HTML UI layout restoration verification and card/board polish, then QA and tuning:
 
-1. Battle skill resolver: port `BattleSkillManager.js` triggers and post-battle rewards, including next-round gold, next-round buffs, evolves, discover rewards, death effects, once-per-battle guards, summons, shields/locks, and continuous `while_on_board_*` aura effects.
-2. Enemy plan and campaign progression: enemy budget/scaling, roster generation, round milestones, victory round, rewards, defeat/gameover flow, battle history.
-3. Save/load persistence: serialize run state, shop pool state, history, options, selected campaign/hero, and restore compatibility.
-4. UI parity pass: replace first-pass runtime UI with closer original title/manage/shop/hand/board/battle/reward modal flows, including Chinese text encoding cleanup.
-5. Asset/audio/battle presentation polish: bind remaining imported art/audio, battle visuals, sound effects, animations/floats, and final Play Mode regression checks.
+1. Formal UI foundation: manage-screen layout spec, command grouping, card components, board slot states, right-panel information hierarchy.
+2. Play Mode regression: full run loop, save/load restore, campaign victory/gameover, and battle-heavy unit teams.
+3. Combat tuning: compare original combat edge cases, campaign difficulty, and unit-specific skill behavior.
+4. Optional exact-parity authoring: scene-authored UI, authored campaign rosters, animated battle field, floating combat text, and one-to-one SFX mapping.
 
 Completed from the previous roadmap:
 
@@ -371,5 +761,16 @@ Completed from the previous roadmap:
 - Synthesis parity: three-copy merge, golden unit creation, inherited stats, pool contribution carryover, and post-buy/post-deploy auto-synthesis.
 - Manage-phase skill parity: event bus and handlers for current one-shot manage talents, including entry/leave/round/gain/gift/devour/sell chains.
 - Battle simulator core: deterministic headless combat using board units, generated enemies, attack cadence, targeting, damage, crit, morale extra attacks/counters, timeout resolution, and HP loss.
+- Battle skill first pass: battle-start shields/summons/buffs/pounce/locks, attack shields/summons/multi-target/crit, death summons/explosions, and target-id attack sync aura.
+- Battle post-reward first pass: next-round gold, shop buffs, temp/permanent unit rewards, forest gems, discover grants, evolve grants, death-triggered future rewards.
+- Battle resolver completion pass: timed skills, summon durations, delayed snipe, stealth targeting approximation, mount transform, periodic effects, on-damaged triggers, fire-rain/gift AOE, and persistent kill-evolve counters.
+- Enemy/campaign progression first pass: procedural enemy plan, milestone rounds, campaign round limits, victory/gameover flow, and battle history.
+- Save/load persistence first pass: one local JSON save slot, run restore, and runtime Save/Load UI buttons.
+- UI parity first pass: readable Chinese runtime UI, richer battle preview/history/reward text, rolling log, victory state, golden-card styling, board portraits.
+- Asset/audio polish first pass: runtime SFX loader, button audio, battle result audio, save/load feedback audio, retained title art/BGM/icon bindings.
+- Formal UI direction planning: next step should be a manage-screen UI plan/spec before code changes, then focused layout refactor and Play Mode visual verification.
+- UI formalization first layout pass: `UI_FORMALIZATION_PLAN.md`, grouped command bar, and right-side section split.
+- HTML manage layout pivot: top action/status bar, horizontal shop strip, lower-left board, right hand area, and right combat log/info area.
+- HTML slot/board parity pass: six shop slots, nine hand slots, and original `4-3-2-1` board column layout with square cells.
 
 Risk note: remaining battle steps 1-2 are the largest and may split further because original combat and skill code has many trigger-specific edge cases.

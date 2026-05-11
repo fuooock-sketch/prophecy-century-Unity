@@ -46,20 +46,30 @@ namespace ProphecyCentury.Data
         public string faith;
         public string race;
         public string tag;
+        public string type;
         public string entryRace;
         public string targetTag;
         public string unitId;
         public string targetUnitId;
+        public string targetId;
         public string mode;
         public string targetMode;
         public int attack;
         public int defense;
         public int hp;
+        public int selfHpLoss;
+        public int damage;
         public int power;
         public int speed;
         public int morale;
+        public int valuePerFaith;
+        public int hitThreshold;
+        public int nextRoundAttack;
+        public int giftThreshold;
         public int count;
         public int times;
+        public int layers;
+        public int targets;
         public int gift;
         public int gain;
         public int multiplier;
@@ -75,10 +85,24 @@ namespace ProphecyCentury.Data
         public int goldGain;
         public int goldAttackValue;
         public int goldDefenseValue;
+        public float chance;
+        public float duration;
+        public float delay;
+        public float interval;
+        public float reduce;
+        public float ratio;
+        public float attackMultiplier;
+        public float stunSeconds;
+        public float invincibleSeconds;
+        public float speedMultiplier;
+        public float radius;
+        public string summonUnitId;
+        public string transformUnitId;
         public string[] targetTags;
         public string[] excludeUnitIds;
         public StatDeltaDefinition stats;
         public bool oncePerBattle;
+        public bool forceCrit;
     }
 
     [Serializable]

@@ -105,8 +105,20 @@ namespace ProphecyCentury.Systems
                 forestGemsReceived = sourceUnits.Sum(unit => Math.Max(0, unit.forestGemsReceived)),
                 manageGiftActionBucket = sourceUnits.Max(unit => unit.manageGiftActionBucket),
                 manageReceiveGiftPowerBucket = sourceUnits.Max(unit => unit.manageReceiveGiftPowerBucket),
-                manageReceiveGiftDiscoverTriggered = sourceUnits.Any(unit => unit.manageReceiveGiftDiscoverTriggered)
+                manageReceiveGiftDiscoverTriggered = sourceUnits.Any(unit => unit.manageReceiveGiftDiscoverTriggered),
+                battleProgressCounters = MergeBattleProgress(sourceUnits)
             };
+        }
+
+        private static List<BattleProgressCounterState> MergeBattleProgress(IEnumerable<UnitCardState> sourceUnits)
+        {
+            return sourceUnits
+                .Where(unit => unit.battleProgressCounters != null)
+                .SelectMany(unit => unit.battleProgressCounters)
+                .Where(counter => counter != null && !string.IsNullOrWhiteSpace(counter.key))
+                .GroupBy(counter => counter.key)
+                .Select(group => new BattleProgressCounterState { key = group.Key, value = group.Max(counter => counter.value) })
+                .ToList();
         }
 
         private static GoldInheritedStats ComputeGoldInheritedStats(UnitDefinition definition, IReadOnlyList<UnitCardState> units)

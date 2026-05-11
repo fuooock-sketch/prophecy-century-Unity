@@ -47,8 +47,27 @@ namespace ProphecyCentury.Core
                 round = 1,
                 playerHp = Data.Config?.playerStartHp ?? 100,
                 shopLevel = 1,
-                shopUpgradeAnchorRound = 1
+                shopUpgradeAnchorRound = 1,
+                campaignRoundLimit = ResolveCampaignRoundLimit(campaign)
             };
+        }
+
+        public void RestoreRun(RunState runState)
+        {
+            CurrentRun = runState;
+        }
+
+        private static int ResolveCampaignRoundLimit(string campaignId)
+        {
+            switch (campaignId)
+            {
+                case "snow_peak_defense":
+                    return 18;
+                case "song_of_sang_city":
+                    return 24;
+                default:
+                    return 20;
+            }
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using ProphecyCentury.Core;
 using ProphecyCentury.Model;
@@ -38,11 +39,13 @@ namespace ProphecyCentury.UI
 
         private readonly RunFlowController _flow = new RunFlowController();
         private readonly BattleStubSystem _battleStub = new BattleStubSystem();
+        private readonly SaveGameSystem _saveGame = new SaveGameSystem();
         private int _selectedHandIndex = -1;
         private string _selectedBoardSlotId;
         private string _dragSource;
         private int _dragHandIndex = -1;
         private string _dragBoardSlotId;
+        private readonly List<string> _recentLogs = new List<string>();
 
         private RunState Run => ProphecyGameSession.Instance.CurrentRun;
 
@@ -68,6 +71,19 @@ namespace ProphecyCentury.UI
             if (runPanel != null)
             {
                 runPanel.SetActive(false);
+            }
+        }
+
+        public void ShowRun()
+        {
+            if (titlePanel != null)
+            {
+                titlePanel.SetActive(false);
+            }
+
+            if (runPanel != null)
+            {
+                runPanel.SetActive(true);
             }
         }
 
@@ -331,16 +347,8 @@ namespace ProphecyCentury.UI
             var result = _battleStub.Resolve(Run);
             _flow.FinishBattlePhase();
 
-            if (Run.playerHp <= 0)
-            {
-                Run.state = "gameover";
-            }
-            else
-            {
-                _flow.NextRound();
-            }
-
-            Run.lastBattleSummary = result.Summary;
+            _flow.ResolveBattleOutcome(result);
+            RuntimeSfxPlayer.PlayBattleResult(result.Victory);
             WriteLog(result.Summary);
             RefreshView();
         }
@@ -348,6 +356,29 @@ namespace ProphecyCentury.UI
         public void StartNewRun()
         {
             ShowTitle();
+        }
+
+        public void SaveGame()
+        {
+            var success = _saveGame.SaveCurrentRun();
+            RuntimeSfxPlayer.PlaySaveLoad(success);
+            WriteLog(success ? $"已保存：{_saveGame.SavePath}" : "保存失败");
+            RefreshView();
+        }
+
+        public void LoadGame()
+        {
+            var success = _saveGame.LoadCurrentRun();
+            RuntimeSfxPlayer.PlaySaveLoad(success);
+            if (success)
+            {
+                _selectedHandIndex = -1;
+                _selectedBoardSlotId = null;
+                ShowRun();
+            }
+
+            WriteLog(success ? $"已读取：{_saveGame.SavePath}" : "读取失败：没有可用存档");
+            RefreshView();
         }
 
         public void ReturnToTitle()
@@ -365,7 +396,7 @@ namespace ProphecyCentury.UI
             stateLabel.text = $"阶段：{FormatRunState(Run.state)}";
             if (shopMetaLabel != null)
             {
-                shopMetaLabel.text = $"商店 L{Run.shopLevel}  升级 {_flow.ShopSystem.GetCurrentShopUpgradeCost(Run)} 金币  {(Run.isShopLocked ? "已锁定" : "未锁定")}";
+                shopMetaLabel.text = $"商店 L{Run.shopLevel}  升级 {_flow.ShopSystem.GetCurrentShopUpgradeCost(Run)} 金币  {(Run.isShopLocked ? "已锁定" : "未锁定")}  胜 {Run.campaignWins} / 负 {Run.campaignLosses}";
             }
 
             var campaign = data.Campaigns.FirstOrDefault(item => item.id == Run.campaignId);
@@ -402,13 +433,23 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            logLabel.text = $"日志：\n{message}";
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                _recentLogs.Insert(0, message);
+            }
+
+            while (_recentLogs.Count > 7)
+            {
+                _recentLogs.RemoveAt(_recentLogs.Count - 1);
+            }
+
+            logLabel.text = "日志：\n" + string.Join("\n", _recentLogs);
         }
 
         private void RefreshCardLists()
         {
             RebuildUnitCardList(shopCardRoot, Run.shopCards, (card, _) => FormatUnitCardLabel(card), "购买", BuyShopCard, null, null);
-            RebuildUnitCardList(handCardRoot, Run.handCards, (card, index) => FormatUnitCardLabel(card, _selectedHandIndex == index ? ">" : null), "部署", DeployHandCard, "出售", SellHandCard, "hand");
+            RebuildUnitCardList(handCardRoot, Run.handCards, (card, index) => card == null ? string.Empty : FormatUnitCardLabel(card, _selectedHandIndex == index ? ">" : null), "部署", DeployHandCard, "出售", SellHandCard, "hand");
             RebuildBoardSlotGrid();
         }
 
@@ -458,9 +499,22 @@ namespace ProphecyCentury.UI
                 Destroy(root.GetChild(i).gameObject);
             }
 
-            for (var i = 0; i < cards.Count; i += 1)
+            var isGridRoot = root.GetComponent<GridLayoutGroup>() != null;
+            var isHorizontalRoot = root.GetComponent<HorizontalLayoutGroup>() != null;
+            var displayCount = cards.Count;
+            if (isGridRoot)
             {
-                CreateUnitCard(root, cards[i], labelFactory(cards[i], i), i, primaryLabel, primaryAction, secondaryLabel, secondaryAction, dragSource, null);
+                displayCount = Mathf.Max(9, displayCount);
+            }
+            else if (isHorizontalRoot)
+            {
+                displayCount = Mathf.Max(6, displayCount);
+            }
+
+            for (var i = 0; i < displayCount; i += 1)
+            {
+                var card = i < cards.Count ? cards[i] : null;
+                CreateUnitCard(root, card, labelFactory(card, i), i, primaryLabel, primaryAction, secondaryLabel, secondaryAction, dragSource, null);
             }
         }
 
@@ -476,16 +530,28 @@ namespace ProphecyCentury.UI
             string dragSource,
             string boardSlotId)
         {
-            var cardObject = new GameObject("UnitCard", typeof(Image), typeof(Button));
+            var cardObject = new GameObject("UnitCard", typeof(Image), typeof(Button), typeof(LayoutElement));
             cardObject.transform.SetParent(root, false);
             var rect = cardObject.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
-            rect.sizeDelta = new Vector2(0f, 82f);
+            var isShopCard = string.IsNullOrWhiteSpace(dragSource);
+            var isGridCard = root != null && root.GetComponent<GridLayoutGroup>() != null;
+            var cardWidth = isShopCard ? 124f : isGridCard ? 108f : 0f;
+            var cardHeight = isShopCard ? 148f : isGridCard ? 138f : 82f;
+            rect.sizeDelta = new Vector2(cardWidth, cardHeight);
+            var layoutElement = cardObject.GetComponent<LayoutElement>();
+            layoutElement.preferredWidth = cardWidth > 0f ? cardWidth : -1f;
+            layoutElement.preferredHeight = cardHeight;
+            layoutElement.flexibleWidth = cardWidth > 0f ? 0f : 1f;
 
             var background = cardObject.GetComponent<Image>();
-            background.color = new Color32(42, 58, 74, 245);
+            background.color = card == null
+                ? new Color32(20, 29, 42, 160)
+                : card.isGolden
+                    ? new Color32(96, 78, 34, 245)
+                    : new Color32(42, 58, 74, 245);
             var cardButton = cardObject.GetComponent<Button>();
             cardButton.targetGraphic = background;
             if (dragSource == "hand" && card != null)
@@ -502,8 +568,8 @@ namespace ProphecyCentury.UI
             var iconRect = iconObject.GetComponent<RectTransform>();
             iconRect.anchorMin = new Vector2(0f, 0.5f);
             iconRect.anchorMax = new Vector2(0f, 0.5f);
-            iconRect.anchoredPosition = new Vector2(36f, 0f);
-            iconRect.sizeDelta = new Vector2(52f, 52f);
+            iconRect.anchoredPosition = isShopCard || isGridCard ? new Vector2(62f, 18f) : new Vector2(36f, 0f);
+            iconRect.sizeDelta = isShopCard || isGridCard ? new Vector2(58f, 58f) : new Vector2(52f, 52f);
             RuntimeUnitIconCache.ApplyTo(iconObject.GetComponent<Image>(), card?.name);
 
             var labelObject = new GameObject("Label", typeof(Text));
@@ -511,14 +577,14 @@ namespace ProphecyCentury.UI
             var labelRect = labelObject.GetComponent<RectTransform>();
             labelRect.anchorMin = new Vector2(0f, 0f);
             labelRect.anchorMax = new Vector2(1f, 1f);
-            labelRect.offsetMin = new Vector2(74f, 0f);
-            labelRect.offsetMax = new Vector2(-170f, 0f);
+            labelRect.offsetMin = isShopCard || isGridCard ? new Vector2(8f, 4f) : new Vector2(74f, 0f);
+            labelRect.offsetMax = isShopCard || isGridCard ? new Vector2(-8f, -74f) : new Vector2(-170f, 0f);
 
             var text = labelObject.GetComponent<Text>();
             text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            text.fontSize = 16;
+            text.fontSize = isShopCard || isGridCard ? 12 : 16;
             text.color = Color.white;
-            text.alignment = TextAnchor.MiddleLeft;
+            text.alignment = isShopCard || isGridCard ? TextAnchor.LowerCenter : TextAnchor.MiddleLeft;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.verticalOverflow = VerticalWrapMode.Truncate;
             text.text = label;
@@ -534,12 +600,12 @@ namespace ProphecyCentury.UI
 
             if (card != null && !string.IsNullOrWhiteSpace(primaryLabel) && primaryAction != null)
             {
-                CreateCardActionButton(cardObject.transform, primaryLabel, new Vector2(-116f, 16f), () => primaryAction(index));
+                CreateCardActionButton(cardObject.transform, primaryLabel, isShopCard || isGridCard ? new Vector2(isGridCard ? -32f : 0f, 14f) : new Vector2(-116f, 16f), () => primaryAction(index), isShopCard || isGridCard);
             }
 
             if (card != null && !string.IsNullOrWhiteSpace(secondaryLabel) && secondaryAction != null)
             {
-                CreateCardActionButton(cardObject.transform, secondaryLabel, new Vector2(-52f, 16f), () => secondaryAction(index));
+                CreateCardActionButton(cardObject.transform, secondaryLabel, isGridCard ? new Vector2(32f, 14f) : new Vector2(-52f, 16f), () => secondaryAction(index), isShopCard || isGridCard);
             }
         }
 
@@ -555,33 +621,32 @@ namespace ProphecyCentury.UI
                 Destroy(boardCardRoot.GetChild(i).gameObject);
             }
 
-            var rows = ProphecyGameSession.Instance.Data.Config?.boardLayout;
-            if (rows == null || rows.Length == 0)
+            var displayColumns = new[]
             {
-                return;
-            }
+                new[] { "4-1", "4-2", "4-3", "4-4" },
+                new[] { "3-1", "3-2", "3-3" },
+                new[] { "2-1", "2-2" },
+                new[] { "1-1" }
+            };
 
-            foreach (var row in rows.Reverse())
+            foreach (var column in displayColumns)
             {
-                if (row?.slots == null || row.slots.Length == 0)
-                {
-                    continue;
-                }
+                var columnObject = new GameObject("BoardColumn", typeof(VerticalLayoutGroup), typeof(LayoutElement));
+                columnObject.transform.SetParent(boardCardRoot, false);
+                var columnLayout = columnObject.GetComponent<VerticalLayoutGroup>();
+                columnLayout.spacing = 14f;
+                columnLayout.childControlWidth = false;
+                columnLayout.childControlHeight = false;
+                columnLayout.childForceExpandWidth = false;
+                columnLayout.childForceExpandHeight = false;
+                columnLayout.childAlignment = TextAnchor.MiddleCenter;
+                var columnElement = columnObject.GetComponent<LayoutElement>();
+                columnElement.preferredWidth = 92f;
+                columnElement.flexibleWidth = 0f;
 
-                var rowObject = new GameObject("BoardRow", typeof(HorizontalLayoutGroup), typeof(LayoutElement));
-                rowObject.transform.SetParent(boardCardRoot, false);
-                var rowLayout = rowObject.GetComponent<HorizontalLayoutGroup>();
-                rowLayout.spacing = 8f;
-                rowLayout.childControlWidth = true;
-                rowLayout.childControlHeight = true;
-                rowLayout.childForceExpandWidth = true;
-                rowLayout.childForceExpandHeight = true;
-                rowLayout.childAlignment = TextAnchor.MiddleCenter;
-                rowObject.GetComponent<LayoutElement>().preferredHeight = 66f;
-
-                foreach (var slotId in row.slots)
+                foreach (var slotId in column)
                 {
-                    CreateBoardSlotCell(rowObject.transform, slotId);
+                    CreateBoardSlotCell(columnObject.transform, slotId);
                 }
             }
         }
@@ -593,9 +658,9 @@ namespace ProphecyCentury.UI
             var cellObject = new GameObject("BoardSlot_" + slotId, typeof(Image), typeof(Button), typeof(LayoutElement), typeof(RuntimeBoardSlotDropTarget));
             cellObject.transform.SetParent(parent, false);
             var layout = cellObject.GetComponent<LayoutElement>();
-            layout.preferredWidth = 124f;
-            layout.preferredHeight = 64f;
-            layout.flexibleWidth = 1f;
+            layout.preferredWidth = 88f;
+            layout.preferredHeight = 88f;
+            layout.flexibleWidth = 0f;
 
             var image = cellObject.GetComponent<Image>();
             image.color = isSelected
@@ -614,6 +679,15 @@ namespace ProphecyCentury.UI
 
             if (unit != null)
             {
+                var iconObject = new GameObject("Icon", typeof(Image));
+                iconObject.transform.SetParent(cellObject.transform, false);
+                var iconRect = iconObject.GetComponent<RectTransform>();
+                iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+                iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+                iconRect.anchoredPosition = new Vector2(0f, 10f);
+                iconRect.sizeDelta = new Vector2(46f, 46f);
+                RuntimeUnitIconCache.ApplyTo(iconObject.GetComponent<Image>(), unit.name);
+
                 var dragItem = cellObject.AddComponent<RuntimeUnitDragItem>();
                 dragItem.Controller = this;
                 dragItem.Source = "board";
@@ -621,9 +695,9 @@ namespace ProphecyCentury.UI
             }
 
             var unitDefinition = unit == null ? null : ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
-            var stats = unitDefinition == null ? string.Empty : $"攻{unitDefinition.attack + unit.shopBuffAttack} 血{unitDefinition.hp + unit.shopBuffHp} 防{unitDefinition.defense + unit.shopBuffDefense}";
-            var title = unit == null ? $"{slotId}\n空位" : $"{slotId}  {unit.name}\n{unit.star}*  {stats}";
-            var text = CreateChildText(cellObject.transform, title, 13, TextAnchor.MiddleCenter, new Vector2(6f, 2f), new Vector2(-6f, -20f));
+            var stats = unitDefinition == null ? string.Empty : $"攻{unitDefinition.attack + unit.shopBuffAttack} 防{unitDefinition.defense + unit.shopBuffDefense}";
+            var title = unit == null ? $"{slotId}\n空位" : $"{unit.name}\n{unit.star}* {stats}";
+            var text = CreateChildText(cellObject.transform, title, 11, TextAnchor.MiddleCenter, new Vector2(4f, 2f), new Vector2(-4f, -22f));
             text.color = Color.white;
 
             if (unit != null)
@@ -682,16 +756,16 @@ namespace ProphecyCentury.UI
             return text;
         }
 
-        private static void CreateCardActionButton(Transform parent, string label, Vector2 anchoredPosition, UnityEngine.Events.UnityAction callback)
+        private static void CreateCardActionButton(Transform parent, string label, Vector2 anchoredPosition, UnityEngine.Events.UnityAction callback, bool bottomAnchored = false)
         {
             var buttonObject = new GameObject(label + "Button", typeof(Image), typeof(Button));
             buttonObject.transform.SetParent(parent, false);
             var rect = buttonObject.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(1f, 0.5f);
-            rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.anchorMin = bottomAnchored ? new Vector2(0.5f, 0f) : new Vector2(1f, 0.5f);
+            rect.anchorMax = bottomAnchored ? new Vector2(0.5f, 0f) : new Vector2(1f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = anchoredPosition;
-            rect.sizeDelta = new Vector2(58f, 30f);
+            rect.sizeDelta = bottomAnchored ? new Vector2(58f, 24f) : new Vector2(58f, 30f);
 
             var image = buttonObject.GetComponent<Image>();
             image.color = new Color32(72, 104, 132, 255);
@@ -709,7 +783,7 @@ namespace ProphecyCentury.UI
 
             var text = labelObject.GetComponent<Text>();
             text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            text.fontSize = 14;
+            text.fontSize = bottomAnchored ? 12 : 14;
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -757,7 +831,24 @@ namespace ProphecyCentury.UI
         {
             var playerScore = BattleStubSystem.EstimatePlayerScore(Run);
             var enemyScore = BattleStubSystem.EstimateEnemyScore(Run);
-            return $"战斗预览\n我方战力：{playerScore}\n敌方战力：{enemyScore}\n上次战斗：{Run.lastBattleSummary ?? "无"}";
+            var limit = Run.campaignRoundLimit > 0 ? Run.campaignRoundLimit : 20;
+            var rewards = Run.pendingBattleRewards;
+            var rewardLine = rewards == null
+                ? "待结算奖励：无"
+                : $"待结算奖励：金币 +{rewards.nextRoundGold}，商店攻击 +{rewards.nextRoundShopBuffAttack}，发现 {rewards.discoverFaithRewards?.Count ?? 0}";
+            var lastEntries = Run.battleHistory == null
+                ? Enumerable.Empty<string>()
+                : Run.battleHistory
+                    .OrderByDescending(item => item.round)
+                    .Take(3)
+                    .Select(item => $"R{item.round} {(item.victory ? "胜" : "败")}  {item.playerScore}:{item.enemyScore}  {item.hpDelta}");
+            var history = string.Join("\n", lastEntries);
+            if (string.IsNullOrWhiteSpace(history))
+            {
+                history = "无";
+            }
+
+            return $"战斗预览\n进度：{Run.round}/{limit}  胜 {Run.campaignWins} / 负 {Run.campaignLosses}\n我方战力：{playerScore}\n敌方战力：{enemyScore}\n{rewardLine}\n最近战斗：\n{history}\n上次战斗：{Run.lastBattleSummary ?? "无"}";
         }
 
         private static string FormatRunState(string state)
@@ -772,6 +863,8 @@ namespace ProphecyCentury.UI
                     return "结算";
                 case "gameover":
                     return "失败";
+                case "victory":
+                    return "胜利";
                 default:
                     return string.IsNullOrWhiteSpace(state) ? "未知" : state;
             }
