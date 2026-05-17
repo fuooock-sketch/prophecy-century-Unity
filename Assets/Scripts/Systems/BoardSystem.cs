@@ -132,8 +132,10 @@ namespace ProphecyCentury.Systems
                 forestGemsReceived = card.forestGemsReceived,
                 manageEntryEffectTriggerCount = card.manageEntryEffectTriggerCount,
                 manageGiftActionBucket = card.manageGiftActionBucket,
+                manageAttackGainBucket = card.manageAttackGainBucket,
                 manageReceiveGiftPowerBucket = card.manageReceiveGiftPowerBucket,
                 manageReceiveGiftDiscoverTriggered = card.manageReceiveGiftDiscoverTriggered,
+                manageRoundAttackRewardTriggered = card.manageRoundAttackRewardTriggered,
                 battleProgressCounters = card.battleProgressCounters?.Select(counter => new BattleProgressCounterState { key = counter.key, value = counter.value }).ToList() ?? new System.Collections.Generic.List<BattleProgressCounterState>(),
                 boardSlotId = boardSlotId
             };

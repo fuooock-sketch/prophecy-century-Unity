@@ -13,6 +13,17 @@ namespace ProphecyCentury.Core
         public RunState CurrentRun { get; private set; }
         public bool HasCurrentRun => CurrentRun != null;
 
+        public static ProphecyGameSession EnsureInstance()
+        {
+            if (Instance != null)
+            {
+                return Instance;
+            }
+
+            var sessionObject = new GameObject("ProphecyGameSession");
+            return sessionObject.AddComponent<ProphecyGameSession>();
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)

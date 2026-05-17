@@ -8,14 +8,8 @@ namespace ProphecyCentury.Core
 
         private void Awake()
         {
-            if (ProphecyGameSession.Instance != null)
-            {
-                return;
-            }
-
-            var sessionObject = new GameObject("ProphecyGameSession");
-            var session = sessionObject.AddComponent<ProphecyGameSession>();
-            if (!createRunOnStart)
+            var session = ProphecyGameSession.EnsureInstance();
+            if (!createRunOnStart || session.HasCurrentRun)
             {
                 return;
             }

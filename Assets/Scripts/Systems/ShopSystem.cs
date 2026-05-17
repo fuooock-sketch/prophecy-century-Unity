@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using ProphecyCentury.Core;
@@ -9,30 +9,9 @@ namespace ProphecyCentury.Systems
 {
     public sealed class ShopSystem
     {
-        private const int HandMaxCount = 10;
+        private const int HandMaxCount = 9;
         private readonly Random _random = new Random();
-        private static readonly Dictionary<string, int> ShopLimitByUnitName = new Dictionary<string, int>
-        {
-            { "冰霜魔灵", 12 }, { "刺客", 8 }, { "打手", 12 }, { "大魔灵", 3 },
-            { "低级元素使", 8 }, { "飞毯法师", 5 }, { "风元素", 5 }, { "高翎守望者", 8 },
-            { "格尔步兵", 12 }, { "格尔巨兽", 3 }, { "格尔军官", 3 }, { "格尔兽", 12 },
-            { "弓箭手", 8 }, { "光明导师", 5 }, { "光明武士", 12 }, { "河边队长", 8 },
-            { "幻影射手", 5 }, { "皇家剑士", 3 }, { "火元素", 12 }, { "机警后援", 8 },
-            { "犟嘴学徒", 12 }, { "叫唤者", 12 }, { "精灵", 12 }, { "精锐游骑兵", 12 },
-            { "酒鬼", 3 }, { "掘地鼠", 5 }, { "苦工", 12 }, { "苦嚎叫兽", 3 },
-            { "傀儡魔灵", 5 }, { "莱特的回响", 3 }, { "莱特使者", 3 }, { "劣徒", 8 },
-            { "猎豹", 3 }, { "林地将军", 3 }, { "林地密探", 12 }, { "林地卫兵", 12 },
-            { "流浪者", 8 }, { "蘑菇夸库", 12 }, { "魔导师", 3 }, { "魔法龙", 3 },
-            { "魔尊", 3 }, { "牧师", 8 }, { "骑士", 12 }, { "驱魔师坐骑", 5 },
-            { "僧侣", 12 }, { "神剑游侠", 8 }, { "兽骑兵", 5 }, { "双塔术士", 3 },
-            { "水元素", 8 }, { "铁匠", 12 }, { "痛苦火苗", 5 }, { "土元素", 5 },
-            { "卫戍协兵", 3 }, { "巫兽师", 3 }, { "无魔者", 5 }, { "武学大师", 5 },
-            { "席林迪翁", 3 }, { "小商人", 2 }, { "邪恶女巫", 3 }, { "学院园丁", 5 },
-            { "雪狮", 8 }, { "血淤魔", 3 }, { "驯兽师", 8 }, { "阴暗屠夫", 3 },
-            { "佣兵队长", 5 }, { "游骑兵", 12 }, { "游侠", 12 }, { "淤魔", 3 },
-            { "鱼人奴仆", 12 }, { "羽卫", 5 }, { "元素大师", 3 }
-        };
-
+        private static readonly Dictionary<string, int> ShopLimitByUnitName = new Dictionary<string, int>();
         public void InitializeShop(RunState runState)
         {
             InitializeShopPool(runState);

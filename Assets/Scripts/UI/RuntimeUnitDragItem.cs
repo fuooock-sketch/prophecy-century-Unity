@@ -12,16 +12,17 @@ namespace ProphecyCentury.UI
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            Controller?.BeginRuntimeDrag(Source, HandIndex, BoardSlotId);
+            Controller?.BeginRuntimeDrag(Source, HandIndex, BoardSlotId, eventData, transform as RectTransform);
         }
 
         public void OnDrag(PointerEventData eventData)
         {
+            Controller?.UpdateRuntimeDrag(eventData);
         }
 
         public void OnEndDrag(PointerEventData eventData)
         {
-            Controller?.EndRuntimeDrag();
+            Controller?.CompleteRuntimeDrag(eventData);
         }
     }
 }

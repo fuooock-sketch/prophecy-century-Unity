@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using ProphecyCentury.Core;
@@ -10,6 +10,8 @@ namespace ProphecyCentury.Systems
     public sealed class BattleStubSystem
     {
         private const float StepSeconds = 0.1f;
+        private const float TargetSearchInterval = 1f;
+        private const int MaxBattleEvents = 600;
 
         public BattleStubResult Resolve(RunState runState)
         {
@@ -18,8 +20,10 @@ namespace ProphecyCentury.Systems
             var battleTime = Math.Max(5, config?.battleTime ?? 20);
             var players = BuildPlayerUnits(runState);
             var enemies = BuildEnemyUnits(runState, random);
-            ResolveBattleStart(players, enemies, random);
-            ResolveBattleStart(enemies, players, random);
+            var events = new List<BattleEvent>();
+            AddEvent(events, 0f, "start", null, null, 0, "Battle start");
+            ResolveBattleStart(players, enemies, random, events, 0f);
+            ResolveBattleStart(enemies, players, random, events, 0f);
             ApplyContinuousAuras(players);
             ApplyContinuousAuras(enemies);
             var playerScore = EstimateScore(players);
@@ -27,17 +31,17 @@ namespace ProphecyCentury.Systems
 
             if (players.Count == 0)
             {
-                return Finish(runState, false, playerScore, enemyScore, 15, 0, players, enemies);
+                return Finish(runState, false, playerScore, enemyScore, 15, 0, players, enemies, events);
             }
 
             var elapsed = 0f;
             var attacks = 0;
             while (elapsed < battleTime && players.Any(unit => unit.IsAlive) && enemies.Any(unit => unit.IsAlive))
             {
-                TickTimedSkills(players, enemies, random);
-                TickTimedSkills(enemies, players, random);
-                TickSide(players, enemies, random, ref attacks);
-                TickSide(enemies, players, random, ref attacks);
+                TickTimedSkills(players, enemies, random, events, elapsed);
+                TickTimedSkills(enemies, players, random, events, elapsed);
+                TickSide(players, enemies, random, ref attacks, events, elapsed);
+                TickSide(enemies, players, random, ref attacks, events, elapsed);
                 TickBattleState(players);
                 TickBattleState(enemies);
                 ApplyContinuousAuras(players);
@@ -54,7 +58,26 @@ namespace ProphecyCentury.Systems
             }
 
             var damage = victory ? 0 : CalculateHpLoss(runState, enemies);
-            return Finish(runState, victory, playerScore, enemyScore, damage, attacks, players, enemies);
+            return Finish(runState, victory, playerScore, enemyScore, damage, attacks, players, enemies, events);
+        }
+
+        public BattlePreviewResult CreatePreview(RunState runState)
+        {
+            var random = new Random(runState.round * 7919 + runState.boardUnits.Count * 131);
+            var players = BuildPlayerUnits(runState);
+            var enemies = BuildEnemyUnits(runState, random);
+            ResolveBattleStart(players, enemies, random);
+            ResolveBattleStart(enemies, players, random);
+            ApplyContinuousAuras(players);
+            ApplyContinuousAuras(enemies);
+
+            return new BattlePreviewResult
+            {
+                PlayerScore = EstimateScore(players),
+                EnemyScore = EstimateScore(enemies),
+                PlayerUnits = players.Select(CreateSnapshot).ToList(),
+                EnemyUnits = enemies.Select(CreateSnapshot).ToList()
+            };
         }
 
         public static int EstimatePlayerScore(RunState runState)
@@ -74,10 +97,11 @@ namespace ProphecyCentury.Systems
             return EstimateScore(units);
         }
 
-        private static void TickSide(List<BattleRuntimeUnit> attackers, List<BattleRuntimeUnit> defenders, Random random, ref int attacks)
+        private static void TickSide(List<BattleRuntimeUnit> attackers, List<BattleRuntimeUnit> defenders, Random random, ref int attacks, List<BattleEvent> events = null, float elapsed = 0f)
         {
             foreach (var attacker in attackers.Where(unit => unit.IsAlive))
             {
+                var target = ResolveTarget(attacker, defenders);
                 attacker.Cooldown -= StepSeconds;
                 if (attacker.Cooldown > 0f)
                 {
@@ -90,20 +114,19 @@ namespace ProphecyCentury.Systems
                     continue;
                 }
 
-                var target = PickTarget(attacker, defenders);
                 if (target == null)
                 {
                     continue;
                 }
 
-                ApplyAttack(attacker, target, attackers, defenders, random, false, false, true);
+                ApplyAttack(attacker, target, attackers, defenders, random, false, false, true, events, elapsed);
                 attacks += 1;
                 attacker.Cooldown += Math.Max(0.2f, attacker.AttackInterval);
 
                 var moraleExtraChance = Clamp01(attacker.Morale * (ProphecyGameSession.Instance.Data.Config?.moraleExtraAttackRate ?? 0.06f));
                 if (target.IsAlive && random.NextDouble() < moraleExtraChance)
                 {
-                    ApplyAttack(attacker, target, attackers, defenders, random, false, true, false);
+                    ApplyAttack(attacker, target, attackers, defenders, random, false, true, false, events, elapsed);
                     attacker.MoraleExtraCount += 1;
                     attacks += 1;
                 }
@@ -113,7 +136,7 @@ namespace ProphecyCentury.Systems
                     var counterChance = Clamp01(target.Morale * (ProphecyGameSession.Instance.Data.Config?.moraleCounterRate ?? 0.04f));
                     if (random.NextDouble() < counterChance)
                     {
-                        ApplyAttack(target, attacker, defenders, attackers, random, true, false, false);
+                        ApplyAttack(target, attacker, defenders, attackers, random, true, false, false, events, elapsed);
                         target.CounterCount += 1;
                         attacks += 1;
                     }
@@ -125,15 +148,33 @@ namespace ProphecyCentury.Systems
         {
             return defenders
                 .Where(unit => unit.IsAlive)
-                .OrderBy(unit => attacker.PreferLowestHp ? unit.CurrentHp : 0)
+                .OrderBy(unit => Distance(attacker, unit))
+                .ThenBy(unit => attacker.PreferLowestHp ? unit.CurrentHp : 0)
                 .ThenByDescending(unit => attacker.PreferBackline ? unit.Row : 0)
-                .ThenBy(unit => Distance(attacker, unit))
                 .ThenByDescending(unit => unit.Row)
                 .ThenBy(unit => unit.CurrentHp)
                 .FirstOrDefault();
         }
 
-        private static void ApplyAttack(BattleRuntimeUnit attacker, BattleRuntimeUnit target, List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> enemies, Random random, bool isCounter, bool isMoraleExtra, bool isPrimaryAttack)
+        private static BattleRuntimeUnit ResolveTarget(BattleRuntimeUnit attacker, IEnumerable<BattleRuntimeUnit> defenders)
+        {
+            attacker.TargetSearchTimer = Math.Max(0f, attacker.TargetSearchTimer - StepSeconds);
+            if (attacker.CurrentTarget != null && attacker.CurrentTarget.IsAlive)
+            {
+                return attacker.CurrentTarget;
+            }
+
+            if (attacker.TargetSearchTimer > 0f)
+            {
+                return null;
+            }
+
+            attacker.CurrentTarget = PickTarget(attacker, defenders);
+            attacker.TargetSearchTimer = TargetSearchInterval;
+            return attacker.CurrentTarget;
+        }
+
+        private static void ApplyAttack(BattleRuntimeUnit attacker, BattleRuntimeUnit target, List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> enemies, Random random, bool isCounter, bool isMoraleExtra, bool isPrimaryAttack, List<BattleEvent> events = null, float elapsed = 0f)
         {
             if (attacker == null || target == null || !attacker.IsAlive || !target.IsAlive)
             {
@@ -141,6 +182,8 @@ namespace ProphecyCentury.Systems
             }
 
             ResolvePreAttack(attacker, random, out var forceCrit, out var critMultiplier);
+            var attackType = isCounter ? "counter" : isMoraleExtra ? "morale attack" : "attack";
+            AddEvent(events, elapsed, "attack", attacker, target, 0, $"{attacker.Name} {attackType} {target.Name}");
             var damage = Math.Max(1, attacker.Attack + attacker.Power * 8 - target.Defense);
             var critRate = Math.Min(ProphecyGameSession.Instance.Data.Config?.critRateCap ?? 0.6f, Math.Max(0f, attacker.Luck * 0.025f));
             var didCrit = forceCrit || random.NextDouble() < critRate;
@@ -157,26 +200,28 @@ namespace ProphecyCentury.Systems
                 }
             }
 
-            var actualDamage = DealDamage(attacker, target, damage, allies, enemies, random);
+            var actualDamage = DealDamage(attacker, target, damage, allies, enemies, random, events, elapsed, didCrit);
             if (actualDamage <= 0)
             {
                 return;
             }
 
             attacker.AttackCount += isPrimaryAttack ? 1 : 0;
-            ResolveOnAttack(attacker, target, allies, enemies, random, actualDamage, isPrimaryAttack);
+            ResolveOnAttack(attacker, target, allies, enemies, random, actualDamage, isPrimaryAttack, events, elapsed);
         }
 
-        private static int DealDamage(BattleRuntimeUnit source, BattleRuntimeUnit target, int damage, List<BattleRuntimeUnit> sourceAllies, List<BattleRuntimeUnit> targetAllies, Random random)
+        private static int DealDamage(BattleRuntimeUnit source, BattleRuntimeUnit target, int damage, List<BattleRuntimeUnit> sourceAllies, List<BattleRuntimeUnit> targetAllies, Random random, List<BattleEvent> events = null, float elapsed = 0f, bool critical = false)
         {
             if (target.ShieldLayers > 0)
             {
                 target.ShieldLayers -= 1;
+                AddEvent(events, elapsed, "block", source, target, 0, $"{target.Name} shield blocks damage");
                 return 0;
             }
 
             if (target.InvincibleRemaining > 0f)
             {
+                AddEvent(events, elapsed, "immune", source, target, 0, $"{target.Name} is immune");
                 return 0;
             }
 
@@ -186,21 +231,24 @@ namespace ProphecyCentury.Systems
             source.DamageDone += actualDamage;
             if (actualDamage > 0)
             {
+                AddEvent(events, elapsed, critical ? "critical_damage" : "damage", source, target, actualDamage, $"{source.Name} deals {actualDamage} damage to {target.Name}");
                 target.DamagedCount += 1;
                 ResolveDamaged(target);
+                ResolveFirstHitsCounterattack(target, source, targetAllies, sourceAllies, random, events, elapsed);
             }
 
             if (target.CurrentHp <= 0 && before > 0)
             {
                 source.KillCount += 1;
                 ResolveKill(source);
-                ResolveDeath(target, source, targetAllies, sourceAllies, random);
+                AddEvent(events, elapsed, "death", source, target, 0, $"{target.Name} dies");
+                ResolveDeath(target, source, targetAllies, sourceAllies, random, events, elapsed);
             }
 
             return actualDamage;
         }
 
-        private static BattleStubResult Finish(RunState runState, bool victory, int playerScore, int enemyScore, int hpLoss, int attacks, IReadOnlyList<BattleRuntimeUnit> players, IReadOnlyList<BattleRuntimeUnit> enemies)
+        private static BattleStubResult Finish(RunState runState, bool victory, int playerScore, int enemyScore, int hpLoss, int attacks, IReadOnlyList<BattleRuntimeUnit> players, IReadOnlyList<BattleRuntimeUnit> enemies, List<BattleEvent> events)
         {
             if (hpLoss > 0)
             {
@@ -213,8 +261,10 @@ namespace ProphecyCentury.Systems
             var playerDamage = players.Sum(unit => unit.DamageDone);
             var enemyDamage = enemies.Sum(unit => unit.DamageDone);
             var summary = victory
-                ? $"胜利。我方战力 {playerScore}，敌方战力 {enemyScore}，剩余 {playerAlive} 个单位，总攻击次数 {attacks}。"
-                : $"失败。我方战力 {playerScore}，敌方战力 {enemyScore}，敌方剩余 {enemyAlive} 个单位，失去 {hpLoss} 点生命。";
+                ? $"Victory. Player score {playerScore}, enemy score {enemyScore}, player units alive {playerAlive}, attacks {attacks}."
+                : $"Defeat. Player score {playerScore}, enemy score {enemyScore}, enemy units alive {enemyAlive}, lost {hpLoss} HP.";
+            var finishTime = events != null && events.Count > 0 ? events[events.Count - 1].Time + StepSeconds : 0f;
+            AddEvent(events, finishTime, victory ? "victory" : "defeat", null, null, hpLoss, summary);
             return new BattleStubResult
             {
                 Victory = victory,
@@ -223,7 +273,62 @@ namespace ProphecyCentury.Systems
                 HpDelta = -hpLoss,
                 PlayerDamage = playerDamage,
                 EnemyDamage = enemyDamage,
-                Summary = summary
+                Summary = summary,
+                Events = events ?? new List<BattleEvent>(),
+                PlayerUnits = players.Select(CreateSnapshot).ToList(),
+                EnemyUnits = enemies.Select(CreateSnapshot).ToList()
+            };
+        }
+
+        private static void AddEvent(List<BattleEvent> events, float time, string kind, BattleRuntimeUnit source, BattleRuntimeUnit target, int amount, string message)
+        {
+            if (events == null || events.Count >= MaxBattleEvents)
+            {
+                return;
+            }
+
+            events.Add(new BattleEvent
+            {
+                Time = Math.Max(0f, time),
+                Kind = kind,
+                SourceUnitId = source?.UnitId,
+                SourceName = source?.Name,
+                SourcePlayerSide = source?.PlayerSide ?? false,
+                SourceSlotId = source?.SlotId,
+                SourceHp = source?.CurrentHp ?? 0,
+                SourceMaxHp = source?.MaxHp ?? 0,
+                TargetUnitId = target?.UnitId,
+                TargetName = target?.Name,
+                TargetPlayerSide = target?.PlayerSide ?? false,
+                TargetSlotId = target?.SlotId,
+                TargetHp = target?.CurrentHp ?? 0,
+                TargetMaxHp = target?.MaxHp ?? 0,
+                Amount = amount,
+                Message = message
+            });
+        }
+
+        private static BattleUnitSnapshot CreateSnapshot(BattleRuntimeUnit unit)
+        {
+            return new BattleUnitSnapshot
+            {
+                UnitId = unit.UnitId,
+                Name = unit.Name,
+                Star = unit.Definition?.star ?? 1,
+                IsGolden = unit.IsGolden,
+                SlotId = unit.SlotId,
+                MaxHp = unit.MaxHp,
+                CurrentHp = unit.CurrentHp,
+                Attack = unit.Attack,
+                Defense = unit.Defense,
+                Power = unit.Power,
+                Speed = unit.Speed,
+                Range = Math.Max(1f, unit.Definition?.range ?? 1f),
+                Size = Math.Max(20, unit.Definition?.size ?? 35),
+                AttackInterval = unit.AttackInterval,
+                DamageDone = unit.DamageDone,
+                Kills = unit.KillCount,
+                Summoned = unit.Summoned
             };
         }
 
@@ -239,43 +344,140 @@ namespace ProphecyCentury.Systems
         {
             var data = ProphecyGameSession.Instance.Data;
             var campaignMultiplier = CampaignEnemyMultiplier(runState.campaignId);
-            var milestone = runState.round % 5 == 0;
-            var budget = Math.Max(6, (int)Math.Round((runState.round * 3 + (milestone ? runState.round : 0)) * campaignMultiplier));
-            var maxStar = Math.Min(6, 1 + runState.round / 3 + (milestone ? 1 : 0));
-            var pool = data.Units
-                .Where(unit => unit != null && !unit.hidden && unit.star <= maxStar && unit.id != "light_illusion")
-                .OrderBy(unit => unit.star)
+            var budget = Math.Max(6, (int)Math.Round(GetCumulativeGoldForRound(runState.round) * 0.88f + runState.round * 0.7f));
+            var maxStar = Math.Min(6, 1 + Math.Max(0, runState.round - 1) / 2);
+            var maxUnits = Math.Min(10, Math.Max(2, 2 + (int)Math.Floor(runState.round * 0.85f)));
+            var meleePool = data.Units
+                .Where(unit => IsEnemyCandidate(unit, maxStar) && unit.type == "melee")
                 .ToList();
-            var slots = data.Config?.GetBoardOrder() ?? new List<string>();
+            var rangedPool = data.Units
+                .Where(unit => IsEnemyCandidate(unit, maxStar) && unit.type == "range")
+                .ToList();
+            var fallbackPool = data.Units
+                .Where(unit => IsEnemyCandidate(unit, maxStar))
+                .ToList();
+            var frontPositions = new[] { "1-1", "2-1", "2-2", "3-2" };
+            var rearPositions = new[] { "3-1", "3-3", "4-2", "4-1", "4-3", "4-4" };
             var enemies = new List<BattleRuntimeUnit>();
-            var roundLimit = runState.campaignRoundLimit > 0 ? runState.campaignRoundLimit : 20;
-            var progress = Math.Min(1f, runState.round / (float)Math.Max(1, roundLimit));
-            var multiplier = (0.72f + runState.round * 0.045f + progress * 0.35f) * campaignMultiplier;
+            var roster = new List<UnitDefinition>();
+            var remaining = budget;
+            var desiredTotal = Math.Min(maxUnits, Math.Max(2, (int)Math.Round(budget / 7.2f)));
+            var desiredFront = Math.Max(1, (int)Math.Ceiling(desiredTotal * 0.45f));
 
-            while (budget > 0 && pool.Count > 0 && enemies.Count < Math.Min(10, slots.Count))
+            while (roster.Count < desiredTotal && remaining >= 3)
             {
-                var affordable = pool.Where(unit => Math.Max(1, unit.star) <= budget).ToList();
-                if (affordable.Count == 0)
+                var fillingFront = roster.Count(unit => unit.type == "melee") < desiredFront;
+                var pool = fillingFront
+                    ? (meleePool.Count > 0 ? meleePool : fallbackPool)
+                    : (rangedPool.Count > 0 ? rangedPool : meleePool.Count > 0 ? meleePool : fallbackPool);
+                var picked = PickEnemyCandidate(pool, remaining, random);
+                if (picked == null)
                 {
                     break;
                 }
 
-                var picked = affordable[random.Next(affordable.Count)];
-                budget -= Math.Max(1, picked.star);
-                var slot = enemies.Count < slots.Count ? slots[slots.Count - 1 - enemies.Count] : $"{enemies.Count + 1}-1";
-                var runtime = CreateRuntimeUnit(null, false, picked, slot, multiplier);
+                roster.Add(picked);
+                remaining -= Math.Max(3, GetThreatCost(picked));
+                if (remaining < 3 && roster.Count < 2)
+                {
+                    remaining = 3;
+                }
+            }
+
+            if (roster.Count == 0)
+            {
+                roster.Add(data.FindUnit("bright_warrior") ?? fallbackPool.FirstOrDefault());
+                roster.Add(data.FindUnit("monk") ?? fallbackPool.FirstOrDefault());
+            }
+
+            var ordered = roster
+                .Where(unit => unit != null)
+                .OrderBy(unit => unit.type == "melee" ? 0 : 1)
+                .ToList();
+            var usedSlots = new HashSet<string>();
+            foreach (var picked in ordered)
+            {
+                var slotPool = picked.type == "range" ? rearPositions : frontPositions;
+                var slot = slotPool.FirstOrDefault(position => usedSlots.Add(position));
+                if (string.IsNullOrWhiteSpace(slot))
+                {
+                    slot = frontPositions.Concat(rearPositions).FirstOrDefault(position => usedSlots.Add(position)) ?? "4-1";
+                }
+
+                var runtime = CreateEnemyRuntimeUnit(picked, slot, runState.round, GetThreatCost(picked), campaignMultiplier);
                 if (runtime != null)
                 {
                     enemies.Add(runtime);
                 }
             }
 
-            if (enemies.Count == 0 && pool.Count > 0)
+            return enemies;
+        }
+
+        private static bool IsEnemyCandidate(UnitDefinition unit, int maxStar)
+        {
+            return unit != null && !unit.hidden && unit.star <= maxStar && unit.id != "light_illusion";
+        }
+
+        private static int GetCumulativeGoldForRound(int round)
+        {
+            return (int)Math.Round((round * (round + 5)) / 2f);
+        }
+
+        private static int GetThreatCost(UnitDefinition unit)
+        {
+            return Math.Max(3, Math.Max(1, unit?.star ?? 1) * 3);
+        }
+
+        private static UnitDefinition PickEnemyCandidate(IReadOnlyList<UnitDefinition> pool, int remaining, Random random)
+        {
+            if (pool == null || pool.Count == 0)
             {
-                enemies.Add(CreateRuntimeUnit(null, false, pool[0], "4-1", multiplier));
+                return null;
             }
 
-            return enemies;
+            var source = pool.Where(unit => GetThreatCost(unit) <= Math.Max(remaining, 3)).ToList();
+            if (source.Count == 0)
+            {
+                source = pool.ToList();
+            }
+
+            var weighted = new List<UnitDefinition>();
+            foreach (var unit in source)
+            {
+                var starBias = Math.Max(1, unit.star);
+                var rangeBias = unit.type == "range" ? 1 : 2;
+                var valueBias = Math.Max(1, (int)Math.Round((remaining + 5) / (float)Math.Max(4, GetThreatCost(unit))));
+                var weight = starBias + rangeBias + Math.Min(4, valueBias);
+                for (var i = 0; i < weight; i += 1)
+                {
+                    weighted.Add(unit);
+                }
+            }
+
+            return weighted.Count == 0 ? null : weighted[random.Next(weighted.Count)];
+        }
+
+        private static BattleRuntimeUnit CreateEnemyRuntimeUnit(UnitDefinition definition, string slotId, int round, int threatCost, float campaignMultiplier)
+        {
+            var enemy = CreateRuntimeUnit(null, false, definition, slotId, 1f);
+            if (enemy == null)
+            {
+                return null;
+            }
+
+            var t = Math.Max(0, round - 1);
+            var hpScale = (1f + t * 0.06f + Math.Min(0.12f, threatCost * 0.003f)) * campaignMultiplier;
+            var attackScale = (1f + t * 0.035f + Math.Min(0.10f, threatCost * 0.002f)) * campaignMultiplier;
+            enemy.MaxHp = Math.Max(1, (int)Math.Ceiling(enemy.MaxHp * hpScale));
+            enemy.CurrentHp = enemy.MaxHp;
+            enemy.Attack = Math.Max(1, (int)Math.Ceiling(enemy.Attack * attackScale));
+            enemy.Defense = Math.Max(0, (int)Math.Ceiling(enemy.Defense + t * 0.4f));
+            enemy.Power = Math.Max(1, enemy.Power + t / 3);
+            enemy.Speed = Math.Max(0, (int)Math.Ceiling(enemy.Speed + t * 0.15f));
+            enemy.Luck = Math.Max(0, (int)Math.Ceiling(enemy.Luck + t * 0.12f));
+            enemy.Morale = Math.Max(0, (int)Math.Ceiling(enemy.Morale + t * 0.12f));
+            return enemy;
         }
 
         private static float CampaignEnemyMultiplier(string campaignId)
@@ -361,7 +563,7 @@ namespace ProphecyCentury.Systems
             unit.AttackInterval = definition.attackInterval > 0 ? Math.Max(0.2f, definition.attackInterval) : unit.AttackInterval;
         }
 
-        private static void ResolveBattleStart(List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> enemies, Random random)
+        private static void ResolveBattleStart(List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> enemies, Random random, List<BattleEvent> events = null, float elapsed = 0f)
         {
             for (var i = 0; i < allies.Count; i += 1)
             {
@@ -501,11 +703,11 @@ namespace ProphecyCentury.Systems
                             break;
                         case "battle_start_summon_units":
                         case "battle_start_and_death_summon_units":
-                            SummonUnits(allies, unit, skill, random);
+                            SummonUnits(allies, unit, skill, random, events, elapsed);
                             unit.SkillTriggers += 1;
                             break;
                         case "battle_start_summon_and_buff_type":
-                            SummonUnits(allies, unit, skill, random);
+                            SummonUnits(allies, unit, skill, random, events, elapsed);
                             foreach (var ally in allies.Where(ally => ally.IsAlive && (ally.Type == skill.type || HasTag(ally, skill.type))))
                             {
                                 AddBattleStats(ally, skill, 1);
@@ -528,8 +730,14 @@ namespace ProphecyCentury.Systems
                                     damage = (int)Math.Ceiling(damage * (ProphecyGameSession.Instance.Data.Config?.critDamageMultiple ?? 1.5f));
                                 }
 
-                                DealDamage(unit, pounceTarget, damage, allies, enemies, random);
+                                AddEvent(events, elapsed, "skill", unit, pounceTarget, 0, $"{unit.Name} pounces {pounceTarget.Name}");
+                                DealDamage(unit, pounceTarget, damage, allies, enemies, random, events, elapsed, skill.forceCrit);
                                 pounceTarget.StunRemaining = Math.Max(pounceTarget.StunRemaining, skill.stunSeconds);
+                                if (skill.stunSeconds > 0f)
+                                {
+                                    AddEvent(events, elapsed, "control", unit, pounceTarget, (int)Math.Round(skill.stunSeconds * 1000f), $"{pounceTarget.Name} stunned for {skill.stunSeconds:0.#}s");
+                                }
+
                                 unit.SkillTriggers += 1;
                             }
                             break;
@@ -537,6 +745,7 @@ namespace ProphecyCentury.Systems
                             foreach (var locked in enemies.Where(enemy => enemy.IsAlive).OrderByDescending(enemy => enemy.CurrentHp).Take(Math.Max(1, skill.count)))
                             {
                                 locked.StunRemaining = Math.Max(locked.StunRemaining, skill.duration);
+                                AddEvent(events, elapsed, "control", unit, locked, (int)Math.Round(Math.Max(0.1f, skill.duration) * 1000f), $"{locked.Name} locked for {skill.duration:0.#}s");
                             }
                             unit.SkillTriggers += 1;
                             break;
@@ -545,7 +754,7 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private static void ResolveOnAttack(BattleRuntimeUnit attacker, BattleRuntimeUnit target, List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> enemies, Random random, int damage, bool isPrimaryAttack)
+        private static void ResolveOnAttack(BattleRuntimeUnit attacker, BattleRuntimeUnit target, List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> enemies, Random random, int damage, bool isPrimaryAttack, List<BattleEvent> events = null, float elapsed = 0f)
         {
             if (!isPrimaryAttack)
             {
@@ -567,7 +776,7 @@ namespace ProphecyCentury.Systems
                         if (IncrementSkillCounter(attacker, skill.kind) >= Math.Max(1, skill.count))
                         {
                             attacker.SkillCounters[skill.kind] = 0;
-                            SummonUnits(allies, attacker, skill, random);
+                            SummonUnits(allies, attacker, skill, random, events, elapsed);
                             attacker.SkillTriggers += 1;
                         }
                         break;
@@ -575,7 +784,8 @@ namespace ProphecyCentury.Systems
                         foreach (var extraTarget in enemies.Where(enemy => enemy.IsAlive && enemy != target).OrderBy(enemy => Distance(target, enemy)).Take(Math.Max(0, skill.targets - 1)).ToList())
                         {
                             var extraDamage = Math.Max(1, attacker.Attack + attacker.Power * 8 - extraTarget.Defense);
-                            DealDamage(attacker, extraTarget, extraDamage, allies, enemies, random);
+                            AddEvent(events, elapsed, "skill", attacker, extraTarget, 0, $"{attacker.Name} 追加攻击 {extraTarget.Name}");
+                            DealDamage(attacker, extraTarget, extraDamage, allies, enemies, random, events, elapsed);
                         }
                         attacker.SkillTriggers += Math.Max(0, skill.targets - 1) > 0 ? 1 : 0;
                         break;
@@ -586,7 +796,22 @@ namespace ProphecyCentury.Systems
                             foreach (var areaTarget in enemies.Where(enemy => enemy.IsAlive && Distance(enemy, target) <= Math.Max(1f, skill.radius)).ToList())
                             {
                                 var areaDamage = Math.Max(1, (int)Math.Round((attacker.Attack + attacker.Power * 8) * Math.Max(0.35f, skill.attackMultiplier)));
-                                DealDamage(attacker, areaTarget, areaDamage, allies, enemies, random);
+                                AddEvent(events, elapsed, "skill", attacker, areaTarget, 0, $"{attacker.Name} triggers fire rain");
+                                DealDamage(attacker, areaTarget, areaDamage, allies, enemies, random, events, elapsed);
+                            }
+
+                            attacker.SkillTriggers += 1;
+                        }
+                        break;
+                    case "on_attack_count_formula_aoe":
+                        if (IncrementSkillCounter(attacker, skill.kind) >= Math.Max(1, skill.count))
+                        {
+                            attacker.SkillCounters[skill.kind] = 0;
+                            foreach (var areaTarget in enemies.Where(enemy => enemy.IsAlive && enemy != target && Distance(enemy, target) <= Math.Max(1f, skill.radius)).ToList())
+                            {
+                                var areaDamage = Math.Max(1, attacker.Attack + attacker.Power * 8 - areaTarget.Defense);
+                                AddEvent(events, elapsed, "skill", attacker, areaTarget, 0, $"{attacker.Name} 触发范围攻击");
+                                DealDamage(attacker, areaTarget, areaDamage, allies, enemies, random, events, elapsed);
                             }
 
                             attacker.SkillTriggers += 1;
@@ -597,7 +822,8 @@ namespace ProphecyCentury.Systems
                         {
                             foreach (var areaTarget in enemies.Where(enemy => enemy.IsAlive && enemy != target && Distance(enemy, target) <= Math.Max(1f, skill.radius)).ToList())
                             {
-                                DealDamage(attacker, areaTarget, Math.Max(1, damage), allies, enemies, random);
+                                AddEvent(events, elapsed, "skill", attacker, areaTarget, 0, $"{attacker.Name} triggers gift area attack");
+                                DealDamage(attacker, areaTarget, Math.Max(1, damage), allies, enemies, random, events, elapsed);
                             }
 
                             attacker.SkillTriggers += 1;
@@ -645,7 +871,7 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private static void ResolveDeath(BattleRuntimeUnit unit, BattleRuntimeUnit killer, List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> enemies, Random random)
+        private static void ResolveDeath(BattleRuntimeUnit unit, BattleRuntimeUnit killer, List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> enemies, Random random, List<BattleEvent> events = null, float elapsed = 0f)
         {
             if (unit.DeathProcessed)
             {
@@ -653,6 +879,7 @@ namespace ProphecyCentury.Systems
             }
 
             unit.DeathProcessed = true;
+            ResolveAllyDeathTaggedPower(unit, allies);
             if (unit.ForestGemDeathMarkSource != null && unit.ForestGemDeathMarkSource.PlayerSide)
             {
                 unit.ForestGemDeathMarkSource.PendingRoundForestGems += Math.Max(1, unit.ForestGemDeathMarkAmount);
@@ -663,7 +890,7 @@ namespace ProphecyCentury.Systems
                 switch (skill.kind)
                 {
                     case "battle_start_and_death_summon_units":
-                        SummonUnits(allies, unit, skill, random);
+                        SummonUnits(allies, unit, skill, random, events, elapsed);
                         unit.SkillTriggers += 1;
                         break;
                     case "on_death_explode":
@@ -672,7 +899,8 @@ namespace ProphecyCentury.Systems
                         foreach (var enemy in enemies.Where(enemy => enemy.IsAlive && Distance(unit, enemy) <= Math.Max(1, skill.radius)).ToList())
                         {
                             var damage = Math.Max(1, skill.damage > 0 ? skill.damage : (int)Math.Round((unit.Attack + unit.Power * 8) * Math.Max(1f, skill.attackMultiplier)));
-                            DealDamage(unit, enemy, damage, allies, enemies, random);
+                            AddEvent(events, elapsed, "skill", unit, enemy, 0, $"{unit.Name} 死亡爆炸");
+                            DealDamage(unit, enemy, damage, allies, enemies, random, events, elapsed);
                             hitCount += 1;
                         }
 
@@ -719,7 +947,7 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private static void TickTimedSkills(List<BattleRuntimeUnit> units, List<BattleRuntimeUnit> enemies, Random random)
+        private static void TickTimedSkills(List<BattleRuntimeUnit> units, List<BattleRuntimeUnit> enemies, Random random, List<BattleEvent> events = null, float elapsed = 0f)
         {
             foreach (var unit in units.Where(unit => unit.IsAlive).ToList())
             {
@@ -739,13 +967,15 @@ namespace ProphecyCentury.Systems
                     if (unit.DelayedSnipeTimer <= 0f)
                     {
                         var target = enemies.Where(enemy => enemy.IsAlive)
-                            .OrderBy(enemy => unit.PreferLowestHp ? enemy.CurrentHp : 0)
+                            .OrderBy(enemy => Distance(unit, enemy))
+                            .ThenBy(enemy => unit.PreferLowestHp ? enemy.CurrentHp : 0)
                             .ThenByDescending(enemy => enemy.Row)
                             .FirstOrDefault();
                         if (target != null)
                         {
                             var damage = Math.Max(1, (int)Math.Round((unit.Attack + unit.Power * 8 - target.Defense) * Math.Max(1f, unit.DelayedSnipeMultiplier)));
-                            DealDamage(unit, target, damage, units, enemies, random);
+                            AddEvent(events, elapsed, "skill", unit, target, 0, $"{unit.Name} 寤惰繜鐙欏嚮 {target.Name}");
+                            DealDamage(unit, target, damage, units, enemies, random, events, elapsed);
                             unit.SkillTriggers += 1;
                         }
                     }
@@ -781,7 +1011,8 @@ namespace ProphecyCentury.Systems
                             foreach (var target in enemies.Where(enemy => enemy.IsAlive && Distance(unit, enemy) <= Math.Max(1f, skill.radius)).ToList())
                             {
                                 var damage = Math.Max(1, (int)Math.Round((unit.Attack + unit.Power * 8 - target.Defense) * Math.Max(1f, skill.attackMultiplier)));
-                                DealDamage(unit, target, damage, units, enemies, random);
+                                AddEvent(events, elapsed, "skill", unit, target, 0, $"{unit.Name} 周期攻击 {target.Name}");
+                                DealDamage(unit, target, damage, units, enemies, random, events, elapsed);
                             }
                             unit.SkillTriggers += 1;
                         }
@@ -952,6 +1183,66 @@ namespace ProphecyCentury.Systems
 
         private static void ApplyContinuousAuras(IReadOnlyList<BattleRuntimeUnit> units)
         {
+            foreach (var unit in units)
+            {
+                if (unit.AuraAttackBonus != 0)
+                {
+                    unit.Attack = Math.Max(1, unit.Attack - unit.AuraAttackBonus);
+                    unit.AuraAttackBonus = 0;
+                }
+
+                if (unit.AuraSpeedBonus != 0)
+                {
+                    unit.Speed = Math.Max(0, unit.Speed - unit.AuraSpeedBonus);
+                    unit.AuraSpeedBonus = 0;
+                    unit.AttackInterval = AttackIntervalFor(unit.Definition, unit.Speed, unit.AttackInterval);
+                }
+            }
+
+            foreach (var source in units.Where(unit => unit.IsAlive))
+            {
+                foreach (var aura in GetManageTalents(source))
+                {
+                    switch (aura.kind)
+                    {
+                        case "while_on_board_per_ally_id_buff_type_attack":
+                            var allyCount = units.Count(unit => unit.IsAlive && unit.UnitId == aura.allyId);
+                            var attackBonus = allyCount * Math.Max(0, aura.attack);
+                            if (attackBonus <= 0)
+                            {
+                                continue;
+                            }
+
+                            foreach (var target in units.Where(unit => unit.IsAlive && HasTag(unit, aura.targetTag)))
+                            {
+                                target.Attack += attackBonus;
+                                target.AuraAttackBonus += attackBonus;
+                            }
+                            break;
+                        case "while_on_board_race_threshold_team_speed":
+                            var race = string.IsNullOrWhiteSpace(aura.race) ? source.Race : aura.race;
+                            if (units.Count(unit => unit.IsAlive && unit.Race == race) < Math.Max(1, aura.threshold))
+                            {
+                                continue;
+                            }
+
+                            foreach (var target in units.Where(unit => unit.IsAlive))
+                            {
+                                var speedBonus = Math.Max(0, aura.value);
+                                if (speedBonus <= 0)
+                                {
+                                    continue;
+                                }
+
+                                target.Speed += speedBonus;
+                                target.AuraSpeedBonus += speedBonus;
+                                target.AttackInterval = AttackIntervalFor(target.Definition, target.Speed, target.AttackInterval);
+                            }
+                            break;
+                    }
+                }
+            }
+
             foreach (var aura in units.Where(unit => unit.IsAlive).SelectMany(unit => GetBattleSkills(unit).Where(skill => skill.kind == "battle_aura_sync_unit_id_attack_to_highest")))
             {
                 var targetUnitId = string.IsNullOrWhiteSpace(aura.targetUnitId) ? null : aura.targetUnitId;
@@ -977,6 +1268,74 @@ namespace ProphecyCentury.Systems
             }
 
             return (unit.IsGolden ? unit.Definition.goldBattleSkills : unit.Definition.battleSkills) ?? Array.Empty<SkillDefinition>();
+        }
+
+        private static IEnumerable<SkillDefinition> GetManageTalents(BattleRuntimeUnit unit)
+        {
+            if (unit?.Definition == null)
+            {
+                return Enumerable.Empty<SkillDefinition>();
+            }
+
+            return (unit.IsGolden ? unit.Definition.goldTalents : unit.Definition.talents) ?? Array.Empty<SkillDefinition>();
+        }
+
+        private static void ResolveFirstHitsCounterattack(BattleRuntimeUnit target, BattleRuntimeUnit attacker, List<BattleRuntimeUnit> targetAllies, List<BattleRuntimeUnit> attackerAllies, Random random, List<BattleEvent> events = null, float elapsed = 0f)
+        {
+            if (target == null || attacker == null || !target.IsAlive || !attacker.IsAlive)
+            {
+                return;
+            }
+
+            foreach (var skill in GetBattleSkills(target).Where(skill => skill.kind == "first_hits_counterattack"))
+            {
+                var limit = Math.Max(1, skill.count);
+                if (target.ForcedCounterattackTriggers >= limit)
+                {
+                    continue;
+                }
+
+                target.ForcedCounterattackTriggers += 1;
+                var repeat = Math.Max(1, skill.repeat);
+                for (var index = 0; index < repeat && target.IsAlive && attacker.IsAlive; index += 1)
+                {
+                    ApplyAttack(target, attacker, targetAllies, attackerAllies, random, true, false, false, events, elapsed);
+                    target.CounterCount += 1;
+                }
+
+                target.SkillTriggers += 1;
+            }
+        }
+
+        private static void ResolveAllyDeathTaggedPower(BattleRuntimeUnit deadUnit, List<BattleRuntimeUnit> allies)
+        {
+            if (deadUnit == null || allies == null)
+            {
+                return;
+            }
+
+            foreach (var owner in allies.Where(unit => unit.IsAlive))
+            {
+                foreach (var skill in GetBattleSkills(owner).Where(skill => skill.kind == "on_ally_death_tagged_units_temp_power"))
+                {
+                    if (!HasTag(deadUnit, skill.deadTag))
+                    {
+                        continue;
+                    }
+
+                    var changed = false;
+                    foreach (var target in allies.Where(unit => unit.IsAlive && HasTag(unit, skill.targetTag)))
+                    {
+                        target.Power += Math.Max(0, skill.power);
+                        changed = true;
+                    }
+
+                    if (changed)
+                    {
+                        owner.SkillTriggers += 1;
+                    }
+                }
+            }
         }
 
         private static int CountFaith(IEnumerable<BattleRuntimeUnit> units, string skillFaith, string fallbackFaith)
@@ -1065,7 +1424,7 @@ namespace ProphecyCentury.Systems
             return count;
         }
 
-        private static void SummonUnits(List<BattleRuntimeUnit> allies, BattleRuntimeUnit source, SkillDefinition skill, Random random)
+        private static void SummonUnits(List<BattleRuntimeUnit> allies, BattleRuntimeUnit source, SkillDefinition skill, Random random, List<BattleEvent> events = null, float elapsed = 0f)
         {
             if (allies == null || source == null || skill == null || string.IsNullOrWhiteSpace(skill.summonUnitId))
             {
@@ -1091,6 +1450,7 @@ namespace ProphecyCentury.Systems
                 summoned.Summoned = true;
                 summoned.SummonDuration = skill.duration > 0f ? skill.duration : 0f;
                 allies.Add(summoned);
+                AddEvent(events, elapsed, "summon", source, summoned, 0, $"{source.Name} summons {summoned.Name}");
             }
         }
 
@@ -1148,6 +1508,12 @@ namespace ProphecyCentury.Systems
             return Math.Max(1, (int)Math.Round(value * multiplier));
         }
 
+        private static float AttackIntervalFor(UnitDefinition definition, int speed, float fallback)
+        {
+            var baseInterval = definition != null && definition.attackInterval > 0f ? definition.attackInterval : fallback;
+            return Math.Max(0.2f, baseInterval * (100f / (100f + Math.Max(0, speed) * 2f)));
+        }
+
         private static float Distance(BattleRuntimeUnit left, BattleRuntimeUnit right)
         {
             var row = left.Row - right.Row;
@@ -1188,6 +1554,58 @@ namespace ProphecyCentury.Systems
         public int PlayerDamage;
         public int EnemyDamage;
         public string Summary;
+        public List<BattleEvent> Events = new List<BattleEvent>();
+        public List<BattleUnitSnapshot> PlayerUnits = new List<BattleUnitSnapshot>();
+        public List<BattleUnitSnapshot> EnemyUnits = new List<BattleUnitSnapshot>();
+    }
+
+    public sealed class BattlePreviewResult
+    {
+        public int PlayerScore;
+        public int EnemyScore;
+        public List<BattleUnitSnapshot> PlayerUnits = new List<BattleUnitSnapshot>();
+        public List<BattleUnitSnapshot> EnemyUnits = new List<BattleUnitSnapshot>();
+    }
+
+    public sealed class BattleEvent
+    {
+        public float Time;
+        public string Kind;
+        public string SourceUnitId;
+        public string SourceName;
+        public bool SourcePlayerSide;
+        public string SourceSlotId;
+        public int SourceHp;
+        public int SourceMaxHp;
+        public string TargetUnitId;
+        public string TargetName;
+        public bool TargetPlayerSide;
+        public string TargetSlotId;
+        public int TargetHp;
+        public int TargetMaxHp;
+        public int Amount;
+        public string Message;
+    }
+
+    public sealed class BattleUnitSnapshot
+    {
+        public string UnitId;
+        public string Name;
+        public int Star;
+        public bool IsGolden;
+        public string SlotId;
+        public int MaxHp;
+        public int CurrentHp;
+        public int Attack;
+        public int Defense;
+        public int Power;
+        public int Speed;
+        public float Range;
+        public int Size;
+        public float AttackInterval;
+        public int DamageDone;
+        public int Kills;
+        public bool Summoned;
     }
 
     internal sealed class BattleRuntimeUnit
@@ -1218,9 +1636,12 @@ namespace ProphecyCentury.Systems
         public int DamageDone;
         public int AttackCount;
         public int KillCount;
+        public BattleRuntimeUnit CurrentTarget;
+        public float TargetSearchTimer;
         public int CounterCount;
         public int MoraleExtraCount;
         public int DamagedCount;
+        public int ForcedCounterattackTriggers;
         public int ShieldLayers;
         public float StunRemaining;
         public float InvincibleRemaining;
@@ -1228,6 +1649,8 @@ namespace ProphecyCentury.Systems
         public float ShieldRefreshTimer;
         public int OriginalSpeed;
         public float OriginalAttackInterval;
+        public int AuraAttackBonus;
+        public int AuraSpeedBonus;
         public bool FirstAttackForceCrit;
         public float FirstAttackCritMultiplier;
         public bool DeathProcessed;

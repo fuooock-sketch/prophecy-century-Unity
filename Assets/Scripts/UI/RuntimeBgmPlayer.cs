@@ -8,6 +8,7 @@ namespace ProphecyCentury.UI
     [RequireComponent(typeof(AudioSource))]
     public sealed class RuntimeBgmPlayer : MonoBehaviour
     {
+        [SerializeField] private bool playBgm;
         [SerializeField] private string relativeAssetPath = "Audio/manage-bgm.mp3";
         [SerializeField] private float volume = 0.45f;
 
@@ -23,6 +24,12 @@ namespace ProphecyCentury.UI
 
         private void Start()
         {
+            if (!playBgm)
+            {
+                _audioSource.Stop();
+                return;
+            }
+
             StartCoroutine(LoadAndPlay());
         }
 

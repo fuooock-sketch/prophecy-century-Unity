@@ -55,8 +55,10 @@ namespace ProphecyCentury.Model
         public int forestGemsReceived;
         public int manageEntryEffectTriggerCount;
         public int manageGiftActionBucket;
+        public int manageAttackGainBucket;
         public int manageReceiveGiftPowerBucket;
         public bool manageReceiveGiftDiscoverTriggered;
+        public bool manageRoundAttackRewardTriggered;
         public int pendingNextRoundTempAttack;
         public int pendingNextRoundTempPower;
         public int pendingNextRoundPermanentHp;
@@ -71,6 +73,51 @@ namespace ProphecyCentury.Model
     public sealed class BoardUnitState : UnitCardState
     {
         public string boardSlotId;
+    }
+
+    [Serializable]
+    public sealed class DevourShopEventState
+    {
+        public int shopIndex;
+        public string devourerSlotId;
+        public string devourerUnitId;
+        public string devourerName;
+        public UnitCardState devouredCard;
+    }
+
+    [Serializable]
+    public sealed class ForestGemGiftEventState
+    {
+        public string sourceSlotId;
+        public string sourceName;
+        public string targetSlotId;
+        public string targetName;
+        public int amount;
+    }
+
+    [Serializable]
+    public sealed class UnitEvolveEventState
+    {
+        public string slotId;
+        public string oldName;
+        public string newName;
+    }
+
+    [Serializable]
+    public sealed class ShopBuffEventState
+    {
+        public string sourceSlotId;
+        public string sourceName;
+        public int attack;
+        public List<int> shopIndices = new List<int>();
+    }
+
+    [Serializable]
+    public sealed class ManageFeedbackEventsState
+    {
+        public List<ForestGemGiftEventState> forestGemGiftEvents = new List<ForestGemGiftEventState>();
+        public List<UnitEvolveEventState> evolveEvents = new List<UnitEvolveEventState>();
+        public List<ShopBuffEventState> shopBuffEvents = new List<ShopBuffEventState>();
     }
 
     [Serializable]

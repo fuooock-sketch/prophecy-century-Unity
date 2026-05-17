@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using ProphecyCentury.Core;
 using ProphecyCentury.Data;
@@ -8,11 +9,14 @@ namespace ProphecyCentury.Systems
 {
     public sealed class RunFlowController
     {
+        private const int HandMaxCount = 9;
         public readonly ShopSystem ShopSystem = new ShopSystem();
         public readonly BoardSystem BoardSystem = new BoardSystem();
         public readonly SynthesisSystem SynthesisSystem = new SynthesisSystem();
         public readonly ManageEventResolver ManageEventResolver;
         private readonly Random _random = new Random();
+        private bool _synthesizedSinceLastConsume;
+        private bool _abilityTriggeredSinceLastConsume;
 
         public RunFlowController()
         {
@@ -31,10 +35,21 @@ namespace ProphecyCentury.Systems
 
         public void EnterBattlePhase()
         {
+            ResolveRoundEndBeforeBattle();
+            SetBattlePhase();
+        }
+
+        public void ResolveRoundEndBeforeBattle()
+        {
             var run = ProphecyGameSession.Instance.CurrentRun;
             ManageEventResolver.ResolveRoundEnd(run);
-            SynthesisSystem.TrySynthesizeAll(run);
-            run.state = "battle";
+            CaptureAbilityTrigger();
+            TrySynthesizeAll(run);
+        }
+
+        public void SetBattlePhase()
+        {
+            ProphecyGameSession.Instance.CurrentRun.state = "battle";
         }
 
         public void FinishBattlePhase()
@@ -101,8 +116,9 @@ namespace ProphecyCentury.Systems
             run.gold = income;
             run.state = "manage";
             ManageEventResolver.ResolveRoundStart(run);
+            CaptureAbilityTrigger();
             ApplyPendingBattleRewards(run);
-            SynthesisSystem.TrySynthesizeAll(run);
+            TrySynthesizeAll(run);
             ShopSystem.RefreshForNewRound(run);
         }
 
@@ -129,7 +145,8 @@ namespace ProphecyCentury.Systems
             {
                 var bought = run.handCards.Count > 0 ? run.handCards[run.handCards.Count - 1] : null;
                 ManageEventResolver.ResolveGainUnit(run, bought);
-                SynthesisSystem.TrySynthesizeAll(run);
+                CaptureAbilityTrigger();
+                TrySynthesizeAll(run);
             }
 
             return success;
@@ -145,10 +162,75 @@ namespace ProphecyCentury.Systems
                     ? run.boardUnits.LastOrDefault()
                     : run.boardUnits.LastOrDefault(unit => unit.boardSlotId == boardSlotId);
                 ManageEventResolver.ResolveEntry(run, deployed);
-                SynthesisSystem.TrySynthesizeAll(run);
+                CaptureAbilityTrigger();
+                TrySynthesizeAll(run);
             }
 
             return success;
+        }
+
+        public IReadOnlyList<UnitDefinition> CreateGoldDeployRewardChoices(out int actualStar)
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var targetStar = Math.Min((run?.shopLevel ?? 1) + 1, 6);
+            var data = ProphecyGameSession.Instance.Data;
+            var pool = data.Units
+                .Where(unit => unit != null && !unit.hidden && unit.star == targetStar)
+                .ToList();
+
+            actualStar = targetStar;
+            if (pool.Count == 0)
+            {
+                actualStar = data.Units
+                    .Where(unit => unit != null && !unit.hidden && unit.star <= targetStar)
+                    .Select(unit => unit.star)
+                    .DefaultIfEmpty(1)
+                    .Max();
+                var fallbackStar = actualStar;
+                pool = data.Units
+                    .Where(unit => unit != null && !unit.hidden && unit.star == fallbackStar)
+                    .ToList();
+            }
+
+            var choices = new List<UnitDefinition>();
+            var available = new List<UnitDefinition>(pool);
+            var count = Math.Max(1, data.Config?.milestoneRewardChoices ?? 3);
+            for (var i = 0; i < count && pool.Count > 0; i += 1)
+            {
+                if (available.Count > 0)
+                {
+                    var index = _random.Next(available.Count);
+                    choices.Add(available[index]);
+                    available.RemoveAt(index);
+                }
+                else
+                {
+                    choices.Add(pool[_random.Next(pool.Count)]);
+                }
+            }
+
+            return choices;
+        }
+
+        public bool ChooseGoldDeployReward(UnitDefinition definition)
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            if (run == null || definition == null || run.handCards.Count >= HandMaxCount)
+            {
+                return false;
+            }
+
+            var gained = new UnitCardState
+            {
+                unitId = definition.id,
+                name = definition.name,
+                star = definition.star
+            };
+            run.handCards.Add(gained);
+            ManageEventResolver.ResolveGainUnit(run, gained);
+            CaptureAbilityTrigger();
+            TrySynthesizeAll(run);
+            return true;
         }
 
         public bool MoveBoardUnit(string fromSlotId, string toSlotId)
@@ -161,10 +243,11 @@ namespace ProphecyCentury.Systems
             var run = ProphecyGameSession.Instance.CurrentRun;
             var target = handIndex >= 0 && handIndex < run.handCards.Count ? run.handCards[handIndex] : null;
             ManageEventResolver.ResolveSell(run, target);
+            CaptureAbilityTrigger();
             var success = BoardSystem.SellFromHand(run, handIndex);
             if (success)
             {
-                SynthesisSystem.TrySynthesizeAll(run);
+                TrySynthesizeAll(run);
             }
 
             return success;
@@ -175,14 +258,52 @@ namespace ProphecyCentury.Systems
             var run = ProphecyGameSession.Instance.CurrentRun;
             var target = run.boardUnits.LastOrDefault(unit => unit.boardSlotId == boardSlotId);
             ManageEventResolver.ResolveSell(run, target);
+            CaptureAbilityTrigger();
             var success = BoardSystem.SellFromBoard(run, boardSlotId);
             if (success)
             {
                 ManageEventResolver.ResolveLeave(run, target, "sell");
-                SynthesisSystem.TrySynthesizeAll(run);
+                CaptureAbilityTrigger();
+                TrySynthesizeAll(run);
             }
 
             return success;
+        }
+
+        public bool ConsumeSynthesisFlag()
+        {
+            var synthesized = _synthesizedSinceLastConsume;
+            _synthesizedSinceLastConsume = false;
+            return synthesized;
+        }
+
+        public bool ConsumeAbilityTriggerFlag()
+        {
+            var triggered = _abilityTriggeredSinceLastConsume;
+            _abilityTriggeredSinceLastConsume = false;
+            return triggered;
+        }
+
+        public List<DevourShopEventState> ConsumeDevourShopEvents()
+        {
+            return ManageEventResolver.ConsumeDevourShopEvents();
+        }
+
+        public ManageFeedbackEventsState ConsumeManageFeedbackEvents()
+        {
+            return ManageEventResolver.ConsumeFeedbackEvents();
+        }
+
+        private void CaptureAbilityTrigger()
+        {
+            _abilityTriggeredSinceLastConsume |= ManageEventResolver.ConsumeAbilityTriggered();
+        }
+
+        private bool TrySynthesizeAll(RunState run)
+        {
+            var synthesized = SynthesisSystem.TrySynthesizeAll(run);
+            _synthesizedSinceLastConsume |= synthesized;
+            return synthesized;
         }
 
         private void ApplyPendingBattleRewards(RunState run)
@@ -264,7 +385,7 @@ namespace ProphecyCentury.Systems
                     && (string.IsNullOrWhiteSpace(reward.race) || unit.race == reward.race))
                 .ToList();
             var added = 0;
-            for (var i = 0; i < reward.count && run.handCards.Count < 10 && pool.Count > 0; i += 1)
+            for (var i = 0; i < reward.count && run.handCards.Count < HandMaxCount && pool.Count > 0; i += 1)
             {
                 var unit = pool[_random.Next(pool.Count)];
                 run.handCards.Add(new UnitCardState { unitId = unit.id, name = unit.name, star = unit.star });

@@ -49,6 +49,8 @@ namespace ProphecyCentury.Data
         public string type;
         public string entryRace;
         public string targetTag;
+        public string deadTag;
+        public string allyId;
         public string unitId;
         public string targetUnitId;
         public string targetId;
@@ -67,6 +69,7 @@ namespace ProphecyCentury.Data
         public int nextRoundAttack;
         public int giftThreshold;
         public int count;
+        public int repeat;
         public int times;
         public int layers;
         public int targets;

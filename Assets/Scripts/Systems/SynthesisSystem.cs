@@ -104,8 +104,10 @@ namespace ProphecyCentury.Systems
                 forestGemsAttached = sourceUnits.Sum(unit => Math.Max(0, unit.forestGemsAttached)),
                 forestGemsReceived = sourceUnits.Sum(unit => Math.Max(0, unit.forestGemsReceived)),
                 manageGiftActionBucket = sourceUnits.Max(unit => unit.manageGiftActionBucket),
+                manageAttackGainBucket = sourceUnits.Max(unit => unit.manageAttackGainBucket),
                 manageReceiveGiftPowerBucket = sourceUnits.Max(unit => unit.manageReceiveGiftPowerBucket),
                 manageReceiveGiftDiscoverTriggered = sourceUnits.Any(unit => unit.manageReceiveGiftDiscoverTriggered),
+                manageRoundAttackRewardTriggered = sourceUnits.Any(unit => unit.manageRoundAttackRewardTriggered),
                 battleProgressCounters = MergeBattleProgress(sourceUnits)
             };
         }

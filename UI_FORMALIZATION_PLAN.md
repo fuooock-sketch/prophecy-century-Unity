@@ -1,6 +1,6 @@
 # Prophecy Century UI Formalization Plan
 
-Last updated: 2026-05-11
+Last updated: 2026-05-17
 
 ## Goal
 
@@ -20,7 +20,7 @@ The current UI is functional but still reads as a debug surface:
 
 ## Target Layout
 
-Reference resolution remains `1600x900`.
+Reference resolution is now `2560x1280`.
 
 Stable regions based on the original `index.html` and `style.css`:
 
@@ -79,13 +79,19 @@ Rules:
 
 ## Card Component
 
-Every unit card should use a consistent component shape:
+Current implementation note:
 
-- Left: unit portrait, fixed square.
-- Top line: unit name, star, golden state.
-- Middle line: race / faith / type.
-- Bottom line: stat row with attack, HP, defense, power or speed when available.
-- Right: contextual action buttons.
+- Shop, hand, and board cards are now independent prefabs under `Assets/Resources/Prefabs/UI/`.
+- `UnitCardView` uses prefab-driven layout for those prefabs by default; runtime binding should only fill text and assign portrait/race/frame sprites.
+- `Use Scripted Layout` should remain disabled on authored prefabs unless intentionally reverting to code-driven layout.
+- The shared `UnitCard.prefab` remains only as a fallback.
+
+Every shop/hand unit card should use a consistent component shape:
+
+- Top: star row.
+- Middle: race/faction background plus portrait, fixed aspect.
+- Lower area: name, attack/power, and race/class/faith metadata.
+- Frame: normal/golden frame is the top rendered layer.
 
 States:
 
@@ -97,10 +103,10 @@ States:
 - Valid drop target
 - Invalid drop target
 
-Card sizing target:
+Current sizing target:
 
-- Shop and hand cards: `88-96` px tall.
-- Board cell cards: compact `76-90` px tall depending on available row height.
+- Shop and hand cards: `221x286`.
+- Board unit cards: compact board-unit prefab hosted inside a `146x146` board slot.
 - Text should wrap only where planned; important stats should remain on one line.
 
 ## Board Slot Component
@@ -120,6 +126,10 @@ Rules:
 - Occupied slots should show portrait, name, star, and compact stats.
 - Sell/move/deploy actions should not cover the unit name or stats.
 - Drag/drop and click selection should remain equivalent ways to operate the board.
+- Dragging a hand card highlights only empty board slots.
+- Dragging a board unit highlights all slots except the source slot; dropping on an occupied slot swaps the two units.
+- Dragging shows an arrow from the source card/slot to the pointer, snaps near valid slots, and right-click cancels.
+- Unit tooltips are suppressed during drag.
 
 ## Right Panel
 
@@ -162,6 +172,7 @@ Rules:
 - Tune board cell sizing and typography.
 - Add clearer selected and golden states.
 - Make empty shop slots visually distinct from unavailable cards.
+- Continue tuning `UnitCardShop`, `UnitCardHand`, and `UnitCardBoard` in prefab assets rather than reintroducing scripted layout changes.
 
 ### Pass 3 - Right Panel Structure
 
@@ -186,7 +197,8 @@ Play Mode checks:
 
 Visual checks:
 
-- `1600x900`: intended reference layout.
+- `2560x1280`: intended reference layout.
+- `1600x900`: downscaled compatibility check.
 - `1366x768`: laptop minimum check.
 - `1920x1080`: large desktop check.
 - Narrow-ish Game View: no catastrophic overlap.
