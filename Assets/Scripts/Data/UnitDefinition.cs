@@ -68,6 +68,7 @@ namespace ProphecyCentury.Data
         public int hitThreshold;
         public int nextRoundAttack;
         public int giftThreshold;
+        public int roundOffset;
         public int count;
         public int repeat;
         public int times;
@@ -90,15 +91,19 @@ namespace ProphecyCentury.Data
         public int goldDefenseValue;
         public float chance;
         public float duration;
+        public float refreshSeconds;
         public float delay;
         public float interval;
         public float reduce;
         public float ratio;
         public float attackMultiplier;
+        public float deathAttackMultiplier;
+        public float critMultiplier;
         public float stunSeconds;
         public float invincibleSeconds;
         public float speedMultiplier;
         public float radius;
+        public float tick;
         public string summonUnitId;
         public string transformUnitId;
         public string[] targetTags;
@@ -106,6 +111,10 @@ namespace ProphecyCentury.Data
         public StatDeltaDefinition stats;
         public bool oncePerBattle;
         public bool forceCrit;
+        public bool temporary;
+        public bool disableAttack;
+        public bool byFaith;
+        public bool allowEvents;
     }
 
     [Serializable]

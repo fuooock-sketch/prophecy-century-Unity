@@ -67,6 +67,11 @@ namespace ProphecyCentury.UI
                 ToggleRealtimeBattlePreview();
             }
 
+            if (Input.GetKeyDown(KeyCode.F6))
+            {
+                TestSmallMerchantMoraleExtra();
+            }
+
             if (Input.GetKeyDown(KeyCode.G))
             {
                 AddGold();
@@ -192,6 +197,94 @@ namespace ProphecyCentury.UI
             RefreshView();
         }
 
+        [ContextMenu("Test Small Merchant Morale Extra")]
+        public void TestSmallMerchantMoraleExtra()
+        {
+            var session = ProphecyGameSession.Instance;
+            if (session == null)
+            {
+                Debug.LogWarning("[ProphecyCentury] Cannot test small merchant morale: session missing.");
+                return;
+            }
+
+            if (!session.HasCurrentRun)
+            {
+                session.StartNewRun();
+            }
+
+            var merchant = session.Data.FindUnit("small_merchant");
+            if (merchant == null)
+            {
+                Debug.LogWarning("[ProphecyCentury] Cannot test small merchant morale: unit small_merchant missing.");
+                return;
+            }
+
+            const int simulations = 200;
+            var originalRun = session.CurrentRun;
+            var battle = new BattleStubSystem();
+            var flow = new RunFlowController();
+            var totalAttacks = 0;
+            var totalExtras = 0;
+            var battlesWithExtra = 0;
+            var battlesWithPendingGold = 0;
+            var battlesWithAppliedGold = 0;
+            var totalPendingGold = 0;
+            var totalAppliedBonusGold = 0;
+
+            try
+            {
+                for (var i = 0; i < simulations; i += 1)
+                {
+                    var testRun = CreateSmallMerchantRewardTestRun(merchant, i + 1);
+                    session.RestoreRun(testRun);
+
+                    var result = battle.Resolve(testRun);
+                    var attacks = result.Events.Count(item => item.Kind == "attack" && item.SourceUnitId == "small_merchant");
+                    var extras = result.Events.Count(item => item.Kind == "morale_extra" && item.SourceUnitId == "small_merchant");
+                    var pendingGold = testRun.pendingBattleRewards?.nextRoundGold ?? 0;
+
+                    flow.FinishBattlePhase();
+                    flow.ResolveBattleOutcome(result);
+                    var income = (session.Data.Config?.roundIncomeBase ?? 2) + testRun.round;
+                    var appliedBonusGold = Mathf.Max(0, testRun.gold - income);
+
+                    totalAttacks += attacks;
+                    totalExtras += extras;
+                    totalPendingGold += pendingGold;
+                    totalAppliedBonusGold += appliedBonusGold;
+                    if (extras > 0)
+                    {
+                        battlesWithExtra += 1;
+                    }
+
+                    if (pendingGold > 0)
+                    {
+                        battlesWithPendingGold += 1;
+                    }
+
+                    if (appliedBonusGold > 0)
+                    {
+                        battlesWithAppliedGold += 1;
+                    }
+                }
+            }
+            finally
+            {
+                session.RestoreRun(originalRun);
+            }
+
+            var rate = session.Data.Config?.moraleExtraAttackRate ?? 0.08f;
+            var expectedChance = Mathf.Min(0.6f, Mathf.Max(0f, merchant.morale * Mathf.Max(0f, rate)));
+            var observedChance = totalAttacks > 0 ? totalExtras / (float)totalAttacks : 0f;
+            Debug.Log(
+                $"[ProphecyCentury] Small merchant settlement test: simulations={simulations}, " +
+                $"attacks={totalAttacks}, morale_extra={totalExtras}, " +
+                $"battles_with_extra={battlesWithExtra}, battles_with_pending_gold={battlesWithPendingGold}, " +
+                $"battles_with_applied_gold={battlesWithAppliedGold}, pending_gold={totalPendingGold}, " +
+                $"applied_bonus_gold={totalAppliedBonusGold}, " +
+                $"expected_per_attack={expectedChance:P1}, observed_per_attack={observedChance:P1}.");
+        }
+
         private void EnsureToolbar()
         {
             if (_toolbar != null)
@@ -219,7 +312,7 @@ namespace ProphecyCentury.UI
             rect.anchorMax = new Vector2(0f, 1f);
             rect.pivot = new Vector2(0f, 1f);
             rect.anchoredPosition = new Vector2(14f, -14f);
-            rect.sizeDelta = new Vector2(644f, 40f);
+            rect.sizeDelta = new Vector2(768f, 40f);
 
             var background = _toolbar.GetComponent<Image>();
             background.color = new Color32(8, 8, 16, 190);
@@ -237,6 +330,7 @@ namespace ProphecyCentury.UI
             CreateToolbarButton("GM\u6218\u6597 F10", ResolveOneBattle);
             CreateToolbarButton("\u5237\u65b0 F8", RefreshView);
             CreateToolbarButton("\u5b9e\u65f6 F7", ToggleRealtimeBattlePreview);
+            CreateToolbarButton("\u8ffd\u51fb\u6d4b\u8bd5 F6", TestSmallMerchantMoraleExtra);
             CreateToolbarButton("\u91d1\u5e01 +10 G", AddGold);
             _toolbar.transform.SetAsLastSibling();
         }
@@ -290,6 +384,36 @@ namespace ProphecyCentury.UI
                 shopPoolReserved = false,
                 shopPoolContribution = 0,
                 fromShopPurchase = false
+            };
+        }
+
+        private static RunState CreateSmallMerchantRewardTestRun(UnitDefinition definition, int round)
+        {
+            return new RunState
+            {
+                campaignId = "south_town_adventure",
+                heroId = "james",
+                state = "battle",
+                gold = 0,
+                round = Mathf.Max(1, round),
+                playerHp = 9999,
+                shopLevel = 1,
+                shopUpgradeAnchorRound = 1,
+                campaignRoundLimit = 9999,
+                pendingBattleRewards = new BattleRewardState(),
+                boardUnits =
+                {
+                    new BoardUnitState
+                    {
+                        unitId = definition.id,
+                        name = definition.name,
+                        star = definition.star,
+                        boardSlotId = "4-1",
+                        shopBuffHp = 9999,
+                        shopBuffAttack = 1 - definition.attack,
+                        shopBuffDefense = 9999
+                    }
+                }
             };
         }
 

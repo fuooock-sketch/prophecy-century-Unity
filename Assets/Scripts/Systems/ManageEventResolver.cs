@@ -10,6 +10,9 @@ namespace ProphecyCentury.Systems
     public sealed class ManageEventResolver
     {
         private const int HandMaxCount = 9;
+        public const string ForestGemCardId = "forest_gem";
+        public const string ForestGemCardName = "密林宝钻";
+        public const int ForestGemAttackGain = 10;
         private readonly Random _random = new Random();
         private readonly ShopSystem _shopSystem;
         private bool _abilityTriggered;
@@ -409,7 +412,7 @@ namespace ProphecyCentury.Systems
                     }
                     break;
                 case "round_end_if_no_forest_gem_in_hand_self_gain_attack":
-                    if (eventType == "on_round_end" && Math.Max(0, runState.manageResources.forestGems) <= 0)
+                    if (eventType == "on_round_end" && !HasForestGemInHand(runState))
                     {
                         AddStat(runState, owner, "attack", Attack(talent, owner, Value(talent, owner)), owner, processed, depth);
                     }
@@ -417,10 +420,10 @@ namespace ProphecyCentury.Systems
                 case "on_gain_forest_gem_auto_gift_self_team_attack":
                     if (eventType == "on_gain_forest_gem")
                     {
-                        var amount = Math.Min(runState.manageResources.forestGems, Math.Max(0, eventValue));
+                        var amount = Math.Min(CountForestGemInHand(runState), Math.Max(0, eventValue));
                         if (amount > 0)
                         {
-                            runState.manageResources.forestGems -= amount;
+                            RemoveForestGemCards(runState, amount);
                             GiftForestGem(runState, owner, owner, amount, processed, depth);
                         }
 
@@ -780,8 +783,11 @@ namespace ProphecyCentury.Systems
                 return;
             }
 
-            runState.manageResources.forestGems += amount;
-            Dispatch(runState, "on_gain_forest_gem", owner, "gain_forest_gem", source, amount, processed, depth + 1);
+            var added = AddForestGemCardsToHand(runState, amount);
+            if (added > 0)
+            {
+                Dispatch(runState, "on_gain_forest_gem", owner, "gain_forest_gem", source, added, processed, depth + 1);
+            }
         }
 
         private void GiftForestGem(RunState runState, UnitCardState source, UnitCardState target, int amount, HashSet<string> processed, int depth)
@@ -793,6 +799,7 @@ namespace ProphecyCentury.Systems
 
             target.forestGemsAttached += amount;
             target.forestGemsReceived += amount;
+            AddStat(runState, target, "attack", ForestGemAttackGain * amount, source, processed, depth);
             runState.manageResources.forestGiftActions += 1;
             runState.manageResources.forestGiftTotal += amount;
             runState.manageResources.forestGiftRoundActions += 1;
@@ -807,6 +814,95 @@ namespace ProphecyCentury.Systems
             });
             Dispatch(runState, "on_gift_action", target, "gift_forest_gem", source, amount, processed, depth + 1);
             Dispatch(runState, "on_receive_gift", target, "receive_gift", source, amount, processed, depth + 1);
+        }
+
+        public bool UseForestGemCardOnBoardUnit(RunState runState, int handIndex, string boardSlotId)
+        {
+            if (runState == null || handIndex < 0 || handIndex >= runState.handCards.Count || string.IsNullOrWhiteSpace(boardSlotId))
+            {
+                return false;
+            }
+
+            var card = runState.handCards[handIndex];
+            if (!IsForestGemCard(card))
+            {
+                return false;
+            }
+
+            var target = runState.boardUnits.FirstOrDefault(unit => unit.boardSlotId == boardSlotId);
+            if (target == null)
+            {
+                return false;
+            }
+
+            runState.handCards.RemoveAt(handIndex);
+            GiftForestGem(runState, card, target, 1, new HashSet<string>(), 0);
+            _abilityTriggered = true;
+            return true;
+        }
+
+        public static bool IsForestGemCard(UnitCardState card)
+        {
+            return card != null && card.unitId == ForestGemCardId;
+        }
+
+        private static bool HasForestGemInHand(RunState runState)
+        {
+            return CountForestGemInHand(runState) > 0;
+        }
+
+        private static int CountForestGemInHand(RunState runState)
+        {
+            return runState?.handCards?.Count(IsForestGemCard) ?? 0;
+        }
+
+        private static int AddForestGemCardsToHand(RunState runState, int amount)
+        {
+            if (runState?.handCards == null || amount <= 0)
+            {
+                return 0;
+            }
+
+            var added = 0;
+            while (added < amount && runState.handCards.Count < HandMaxCount)
+            {
+                runState.handCards.Add(CreateForestGemCard());
+                added += 1;
+            }
+
+            return added;
+        }
+
+        private static int RemoveForestGemCards(RunState runState, int amount)
+        {
+            if (runState?.handCards == null || amount <= 0)
+            {
+                return 0;
+            }
+
+            var removed = 0;
+            for (var i = runState.handCards.Count - 1; i >= 0 && removed < amount; i -= 1)
+            {
+                if (!IsForestGemCard(runState.handCards[i]))
+                {
+                    continue;
+                }
+
+                runState.handCards.RemoveAt(i);
+                removed += 1;
+            }
+
+            return removed;
+        }
+
+        public static UnitCardState CreateForestGemCard()
+        {
+            return new UnitCardState
+            {
+                unitId = ForestGemCardId,
+                name = ForestGemCardName,
+                star = 0
+            };
         }
 
         private void AddStat(RunState runState, UnitCardState target, string stat, int amount, UnitCardState source, HashSet<string> processed, int depth)

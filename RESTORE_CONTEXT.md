@@ -1684,6 +1684,80 @@ Use the already-open Unity Editor. Do not start a second Unity batchmode process
   - confirm race backgrounds and normal/golden frames are visible on shop and hand cards.
   - confirm board-unit swap, hand deploy, snap release, right-click cancel, and tooltip suppression.
 
+### 2026-05-17 - Battle Skill Field Audit Batch 1
+
+- User requested a full battle-skill audit and chose to start with the first batch of fixes while keeping existing md documentation updated.
+- Audited all `battleSkills` / `goldBattleSkills` in `Assets/Resources/Data/unit_data.json`:
+  - current data has 36 distinct battle skill `kind` values.
+  - `BattleStubSystem` is the authoritative battle resolver; `BattleRealtimeSystem` is only a preview path and is off by default in the prefab.
+- Fixed first-batch silent data-field issues:
+  - added missing `SkillDefinition` fields used by JSON but previously ignored by Unity `JsonUtility`: `roundOffset`, `refreshSeconds`, `deathAttackMultiplier`, `critMultiplier`, `tick`, `temporary`, `disableAttack`, `byFaith`, and `allowEvents`.
+  - added `invincibleSeconds: 3` to normal/golden `骑士` pounce battle skills so the text "自身无敌3秒" can actually resolve.
+  - updated both battle resolvers to read `refreshSeconds` for refreshing shields, so `魔尊` / golden `魔尊` shield refresh intervals use 5s / 3s instead of falling back to 5s.
+  - updated delayed snipe multiplier selection to use `critMultiplier` when the configured forest-gem threshold is met, fixing the previously unread `幻影射手` 3x / 6x snipe multiplier data in authoritative battle.
+  - added death handling for `battle_periodic_nearby_enemies_attack_and_death_explode` and made it use `deathAttackMultiplier`, fixing the previously unread `火元素` death explosion multiplier data.
+- Deferred to the next battle-skill batch:
+  - `驱魔师坐骑` fire rain still needs a real duration/tick area implementation; `tick` is now parsed, but the current resolver still performs an immediate area hit.
+  - pounce movement/visual displacement and realtime-preview parity should be handled after authoritative battle semantics are stable.
+
+### 2026-05-17 - Battle Skill Semantics Batch 2
+
+- Continued battle-skill parity work after the first field-readability batch.
+- Updated authoritative battle resolution in `Assets/Scripts/Systems/BattleStubSystem.cs`:
+  - `on_attack_count_fire_rain_area_dot` now creates a timed area effect at the target position instead of resolving as one immediate area hit.
+  - Fire rain now uses parsed `duration` and `tick` values, snapshots the caster's attack/power at cast time, and damages enemies in the area on each tick.
+  - `battle_start_summon_and_buff_type` now matches `targetId` / `targetUnitId` as well as type/tag filters, so `魔法龙` can buff summoned `fire_elemental` units as configured.
+  - delayed snipe now marks the hit as critical when the configured `critMultiplier` threshold path is active, so battle events reflect the 3x/6x critical snipe path.
+- Updated realtime preview targeting for `battle_start_summon_and_buff_type` so preview buffs also honor `targetId` / `targetUnitId`.
+- Remaining follow-up:
+  - realtime preview still approximates fire rain as an immediate area attack; authoritative resolution is now the source of truth for the DOT behavior.
+  - pounce movement/visual displacement remains a separate polish/parity task.
+
+### 2026-05-17 - Battle Skill Final Parity Batch
+
+- Continued from the battle-skill audit with the goal of closing the remaining known battle-skill gaps in one pass.
+- Recompared current Unity `unit_data.json` against the original project's `_sheet1_units.json` export:
+  - real battle text mismatch found for `风元素`; updated Unity text to the table wording: speed threshold 8/10 and normal reduction by 0.5s.
+  - most other reported structural differences are expected because `_sheet1_units.json` is the sheet export and Unity now carries structured `battleSkills` handlers.
+- Updated authoritative battle resolution:
+  - `battle_start_pounce_nearest_damage` now moves the pouncing unit next to its target in the headless grid state before resolving damage/control.
+  - pounce also retargets the unit to the pounced enemy immediately.
+- Updated realtime preview:
+  - pounce now moves the preview unit beside the target instead of only applying damage/control.
+  - `on_attack_count_fire_rain_area_dot` now creates a timed realtime area effect using `duration` and `tick`, instead of a single immediate area hit.
+- Remaining validation is Play Mode/user-facing rather than known data mismatch:
+  - visually confirm pounce placement looks correct in battle playback.
+  - visually confirm fire-rain events read well in the battle log/playback.
+
+### 2026-05-17 - Morale Extra Attack Feedback
+
+- User requested visible combat feedback when a unit triggers one extra attack / "追击".
+- Updated authoritative battle events in `Assets/Scripts/Systems/BattleStubSystem.cs`:
+  - when morale extra attack triggers, the resolver now emits a `morale_extra` `BattleEvent` before the extra attack is applied.
+  - this does not change battle math; it only exposes the already-existing `MoraleExtraCount` trigger to the playback layer.
+- Updated `Assets/Scripts/UI/RunSceneController.cs` battle playback:
+  - reads `morale_extra` events by time.
+  - finds the source unit view and shows floating text `追击！` above that unit.
+  - inserts the event message into the rolling battle log.
+- Also corrected two existing battle playback mojibake float labels to `眩晕` and `锁定`.
+
+### 2026-05-18 - Morale Extra Attack Parity Fix
+
+- User reported `小商人` appeared to stop triggering `追击`.
+- Compared Unity with the original web `BattleManager.js`:
+  - both use `morale * moraleExtraAttackRate`, with `moraleExtraAttackRate = 0.08`.
+  - `小商人` has morale 2, so the base chance is 16% per normal attack.
+  - the original web caps morale extra attack and counter chance at 60%.
+- Updated Unity battle code:
+  - authoritative `BattleStubSystem` now uses the same 60% morale cap instead of clamping to 100%.
+  - realtime preview `BattleRealtimeSystem` now implements morale extra attacks and emits the same `morale_extra` event used by playback floating text.
+- Practical note:
+  - if realtime preview was enabled before this fix, it would visually show no morale追击 because that path had no morale-extra logic.
+- Follow-up compile fix:
+  - added `Morale` to `BattleUnitSnapshot` and `BattleRealtimeSystem.RealtimeBattleUnit`.
+  - snapshots created by authoritative battle, realtime battle, and summon playback now carry morale into realtime preview.
+  - this fixes `BattleRealtimeSystem.cs(233,83) CS1061` after adding realtime morale extra attacks.
+
 ## Remaining Migration Roadmap Estimate
 
 As of 2026-05-12 after Process 30, roadmap items 1-5 have first-pass implementations. The next priority is original HTML UI layout restoration verification and card/board/tooltip polish, then QA and tuning:

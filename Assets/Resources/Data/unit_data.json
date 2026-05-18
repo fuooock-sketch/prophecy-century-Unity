@@ -265,7 +265,8 @@
                 "kind": "battle_start_pounce_nearest_damage",
                 "attackMultiplier": 1,
                 "forceCrit": true,
-                "stunSeconds": 2
+                "stunSeconds": 2,
+                "invincibleSeconds": 3
             }
         ],
         "goldBattleSkills": [
@@ -273,7 +274,8 @@
                 "kind": "battle_start_pounce_nearest_damage",
                 "attackMultiplier": 1,
                 "forceCrit": true,
-                "stunSeconds": 4
+                "stunSeconds": 4,
+                "invincibleSeconds": 3
             }
         ],
         "sizeTier": 2,
@@ -1104,8 +1106,8 @@
         "tags": [],
         "talentText": "场上至少有4个甘德单位，给所有单位临时+5速度",
         "goldTalentText": "场上至少有4个甘德单位，给所有单位临时+8速度",
-        "battleText": "开战后，如果有单位速度大于20，则这个单位攻击间隔临时减少四分之一",
-        "goldBattleText": "开战后，如果有单位速度大于20，则这个单位攻击间隔临时减半",
+        "battleText": "开战后，如果有单位速度大于8，则这个单位攻击间隔临时减少0.5秒",
+        "goldBattleText": "开战后，如果有单位速度大于10，则这个单位攻击间隔临时减半",
         "talents": [
             {
                 "kind": "while_on_board_race_threshold_team_speed",

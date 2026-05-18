@@ -1,5 +1,6 @@
 using ProphecyCentury.Data;
 using ProphecyCentury.Model;
+using ProphecyCentury.Systems;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -253,6 +254,18 @@ namespace ProphecyCentury.UI
 
             var hasUnit = definition != null || card != null;
             var style = styleLibrary != null ? styleLibrary.GetStyle(definition?.race) : null;
+            if (ManageEventResolver.IsForestGemCard(card))
+            {
+                ApplyStyle(style, false, selected, true, mode);
+                SetText(starsLabel, string.Empty);
+                SetText(nameLabel, string.IsNullOrWhiteSpace(prefix) ? ManageEventResolver.ForestGemCardName : $"{prefix}  {ManageEventResolver.ForestGemCardName}");
+                SetText(statsLabel, $"使用：攻击 +{ManageEventResolver.ForestGemAttackGain}");
+                SetText(tagsLabel, "密林  消耗品");
+                SetText(gemLabel, string.Empty);
+                SetIcon(iconImage, null);
+                return;
+            }
+
             var golden = card != null && card.isGolden;
             ApplyStyle(style, golden, selected, hasUnit, mode);
 

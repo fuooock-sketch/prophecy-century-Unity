@@ -11,6 +11,7 @@ namespace ProphecyCentury.UI
     {
         public const string RuntimeUiPrefabAssetPath = "Assets/Resources/Prefabs/RuntimeCanvas.prefab";
         private const string RuntimeUiPrefabResourcePath = "Prefabs/RuntimeCanvas";
+        private const string BattleStagePanelPrefabResourcePath = "Prefabs/UI/BattleStagePanel";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureRunSceneUi()
@@ -90,7 +91,11 @@ namespace ProphecyCentury.UI
                 return;
             }
 
+            TryInstallBattleStagePanelPrefab(root.transform, controller);
+            EnsureTitleChaseTestButton(root.transform, controller);
+
             WireButton(root.transform, "StartSelectedRunButton", controller.StartSelectedRun);
+            WireButton(root.transform, "ChaseTestButton", controller.StartSmallMerchantChaseTest);
             WireButton(root.transform, "RefreshShopButton", controller.RefreshShop);
             WireButton(root.transform, "UpgradeShopButton", controller.UpgradeShop);
             WireButton(root.transform, "LockShopButton", controller.ToggleShopLock);
@@ -108,6 +113,74 @@ namespace ProphecyCentury.UI
             {
                 WireButton(root.transform, "EncyclopediaButtonV2", encyclopedia.Open);
             }
+        }
+
+        private static void EnsureTitleChaseTestButton(Transform root, RunSceneController controller)
+        {
+            if (root == null || controller == null || FindDeepChild(root, "ChaseTestButton") != null)
+            {
+                return;
+            }
+
+            var titlePanel = FindDeepChild(root, "TitlePanel");
+            if (titlePanel == null)
+            {
+                return;
+            }
+
+            CreateButton("ChaseTestButton", titlePanel, "追击测试", new Vector2(900f, 220f), new Vector2(260f, 56f), controller.StartSmallMerchantChaseTest);
+        }
+
+        private static bool TryInstallBattleStagePanelPrefab(Transform root, RunSceneController controller)
+        {
+            var prefab = Resources.Load<GameObject>(BattleStagePanelPrefabResourcePath);
+            if (prefab == null || root == null || controller == null)
+            {
+                return false;
+            }
+
+            var runPanel = FindDeepChild(root, "RunPanel");
+            if (runPanel == null)
+            {
+                return false;
+            }
+
+            var oldPanel = FindDeepChild(runPanel, "BattleStagePanel");
+            var oldView = oldPanel != null ? oldPanel.GetComponent<BattleStagePanelView>() : null;
+            if (oldView != null)
+            {
+                oldView.Bind(controller);
+                return true;
+            }
+
+            var instance = Object.Instantiate(prefab, runPanel, false);
+            instance.name = "BattleStagePanel";
+            var rect = instance.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+            }
+
+            instance.SetActive(false);
+            var view = instance.GetComponent<BattleStagePanelView>() ?? instance.AddComponent<BattleStagePanelView>();
+            view.Bind(controller);
+
+            if (oldPanel != null && oldPanel.gameObject != instance)
+            {
+                if (Application.isPlaying)
+                {
+                    Object.Destroy(oldPanel.gameObject);
+                }
+                else
+                {
+                    Object.DestroyImmediate(oldPanel.gameObject);
+                }
+            }
+
+            return true;
         }
 
         private static void WireButton(Transform root, string name, UnityEngine.Events.UnityAction callback)
@@ -180,6 +253,7 @@ namespace ProphecyCentury.UI
             var campaignDescription = CreateText("CampaignDescription", titlePanel.transform, string.Empty, 21, TextAnchor.UpperLeft, new Vector2(0.22f, 0.30f), new Vector2(0.48f, 0.42f), Vector2.zero, Vector2.zero);
             var heroDescription = CreateText("HeroDescription", titlePanel.transform, string.Empty, 20, TextAnchor.UpperLeft, new Vector2(0.52f, 0.26f), new Vector2(0.78f, 0.42f), Vector2.zero, Vector2.zero);
             CreateButton("StartSelectedRunButton", titlePanel.transform, "开始游戏", new Vector2(900f, 300f), new Vector2(260f, 64f), controller.StartSelectedRun);
+            CreateButton("ChaseTestButton", titlePanel.transform, "追击测试", new Vector2(900f, 220f), new Vector2(260f, 56f), controller.StartSmallMerchantChaseTest);
 
             var runPanel = CreatePanel("RunPanel", canvasObject.transform, new Color32(18, 24, 31, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var topBar = CreatePanel("TopBar", runPanel.transform, new Color32(25, 34, 44, 255), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -72f), Vector2.zero);

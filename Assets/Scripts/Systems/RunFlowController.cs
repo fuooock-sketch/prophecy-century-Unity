@@ -169,6 +169,19 @@ namespace ProphecyCentury.Systems
             return success;
         }
 
+        public bool UseForestGemCard(int handIndex, string boardSlotId)
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var success = ManageEventResolver.UseForestGemCardOnBoardUnit(run, handIndex, boardSlotId);
+            if (success)
+            {
+                CaptureAbilityTrigger();
+                TrySynthesizeAll(run);
+            }
+
+            return success;
+        }
+
         public IReadOnlyList<UnitDefinition> CreateGoldDeployRewardChoices(out int actualStar)
         {
             var run = ProphecyGameSession.Instance.CurrentRun;
@@ -329,7 +342,7 @@ namespace ProphecyCentury.Systems
                 unit.shopBuffHp += Math.Max(0, unit.pendingNextRoundPermanentHp);
                 unit.shopBuffPower += Math.Max(0, unit.pendingNextRoundPermanentPower);
                 unit.shopBuffLuck += Math.Max(0, unit.pendingNextRoundPermanentLuck);
-                run.manageResources.forestGems += Math.Max(0, unit.pendingNextRoundForestGems);
+                AddForestGemCardsToHand(run, Math.Max(0, unit.pendingNextRoundForestGems));
 
                 if (!string.IsNullOrWhiteSpace(unit.pendingNextRoundEvolveTo))
                 {
@@ -389,6 +402,23 @@ namespace ProphecyCentury.Systems
             {
                 var unit = pool[_random.Next(pool.Count)];
                 run.handCards.Add(new UnitCardState { unitId = unit.id, name = unit.name, star = unit.star });
+                added += 1;
+            }
+
+            return added;
+        }
+
+        private static int AddForestGemCardsToHand(RunState run, int amount)
+        {
+            if (run?.handCards == null || amount <= 0)
+            {
+                return 0;
+            }
+
+            var added = 0;
+            while (added < amount && run.handCards.Count < HandMaxCount)
+            {
+                run.handCards.Add(ManageEventResolver.CreateForestGemCard());
                 added += 1;
             }
 
