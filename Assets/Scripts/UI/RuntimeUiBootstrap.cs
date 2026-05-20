@@ -353,7 +353,7 @@ namespace ProphecyCentury.UI
                 RuntimeFeatureIconCache.ApplyTo(icon.GetComponent<Image>(), "\u5b9d\u77f3");
             }
 
-            var roundV2 = CreateText("RoundLabelV2", boardPanelV2.transform, "💰 0   第 1 回合", 38, TextAnchor.MiddleRight, new Vector2(0.42f, 0.03f), new Vector2(0.96f, 0.16f), Vector2.zero, Vector2.zero);
+            var roundV2 = CreateText("RoundLabelV2", boardPanelV2.transform, "0    第 1 回合", 38, TextAnchor.MiddleRight, new Vector2(0.42f, 0.03f), new Vector2(0.96f, 0.16f), Vector2.zero, Vector2.zero);
             roundV2.resizeTextForBestFit = true;
             roundV2.resizeTextMinSize = 26;
             roundV2.resizeTextMaxSize = 38;
@@ -369,18 +369,18 @@ namespace ProphecyCentury.UI
             battlePreviewTextV2.gameObject.SetActive(false);
             logTextV2.gameObject.SetActive(false);
 
-            var shopMetaTextV2 = CreateText("ShopMetaTextV2", shopPanelV2.transform, "\u5546\u5e97\u7b49\u7ea7\uff1a\u2B50", 28, TextAnchor.MiddleCenter, new Vector2(0.05f, 0.89f), new Vector2(0.95f, 0.98f), Vector2.zero, Vector2.zero);
+            var shopMetaStarV2 = CreateShopMetaStarRoot(shopPanelV2.transform);
             var shopCardRootV2 = CreateGridCardRoot("ShopCardRootV2", shopPanelV2.transform, new Vector2(0.05f, 0.22f), new Vector2(0.95f, 0.88f), Vector2.zero, Vector2.zero);
-            SetPixelRectTopLeft(shopMetaTextV2.GetComponent<RectTransform>(), 34f, 17f, 560f, 88f);
+            SetPixelRectTopLeft(shopMetaStarV2.GetComponent<RectTransform>(), 34f, 17f, 560f, 88f);
             SetPixelRectTopLeft(shopCardRootV2.GetComponent<RectTransform>(), 34f, 110f, 735f, 589f);
             var shopGrid = shopCardRootV2.GetComponent<GridLayoutGroup>();
             shopGrid.cellSize = new Vector2(221f, 286f);
             shopGrid.spacing = new Vector2(28f, 12f);
             shopGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             shopGrid.constraintCount = 3;
-            CreateButton("UpgradeShopButtonV2", shopPanelV2.transform, "升级", new Vector2(88f, -282f), new Vector2(142f, 58f), controller.UpgradeShop, "\u94bb\u77f3");
-            CreateButton("LockShopButtonV2", shopPanelV2.transform, "锁定", new Vector2(246f, -282f), new Vector2(142f, 58f), controller.ToggleShopLock, "\u94c1\u9501");
-            CreateButton("RefreshShopButtonV2", shopPanelV2.transform, "刷新", new Vector2(404f, -282f), new Vector2(142f, 58f), controller.RefreshShop, "\u5546\u5e97");
+            CreateButton("UpgradeShopButtonV2", shopPanelV2.transform, "升级", new Vector2(88f, -282f), new Vector2(142f, 58f), controller.UpgradeShop);
+            CreateButton("LockShopButtonV2", shopPanelV2.transform, "锁定", new Vector2(246f, -282f), new Vector2(142f, 58f), controller.ToggleShopLock);
+            CreateButton("RefreshShopButtonV2", shopPanelV2.transform, "刷新", new Vector2(404f, -282f), new Vector2(142f, 58f), controller.RefreshShop);
             CreateButton("EncyclopediaButtonV2", shopPanelV2.transform, "图鉴", new Vector2(660f, -62f), new Vector2(120f, 88f), encyclopedia.Open);
             SetPixelRectTopLeft(shopPanelV2.transform.Find("UpgradeShopButtonV2")?.GetComponent<RectTransform>(), 33f, 721f, 221f, 104f);
             SetPixelRectTopLeft(shopPanelV2.transform.Find("LockShopButtonV2")?.GetComponent<RectTransform>(), 291f, 721f, 221f, 104f);
@@ -441,7 +441,7 @@ namespace ProphecyCentury.UI
             AssignField(controller, "campaignLabel", campaignTextV2);
             AssignField(controller, "heroLabel", heroTextV2);
             AssignField(controller, "logLabel", logTextV2);
-            AssignField(controller, "shopMetaLabel", shopMetaTextV2);
+            AssignField(controller, "shopMetaLabel", null);
             AssignField(controller, "shopCardRoot", shopCardRootV2);
             AssignField(controller, "handCardRoot", handCardRootV2);
             AssignField(controller, "boardCardRoot", boardCardRootV2);
@@ -483,6 +483,24 @@ namespace ProphecyCentury.UI
             rect.offsetMax = offsetMax;
             panel.GetComponent<Image>().color = color;
             return panel;
+        }
+
+        private static GameObject CreateShopMetaStarRoot(Transform parent)
+        {
+            var root = new GameObject("ShopMetaStarV2", typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+
+            var starObject = new GameObject("star_1", typeof(Image));
+            starObject.transform.SetParent(root.transform, false);
+            var starRect = starObject.GetComponent<RectTransform>();
+            starRect.anchorMin = new Vector2(0.5f, 0.5f);
+            starRect.anchorMax = new Vector2(0.5f, 0.5f);
+            starRect.pivot = new Vector2(0.5f, 0.5f);
+            starRect.anchoredPosition = Vector2.zero;
+            starRect.sizeDelta = new Vector2(76f, 76f);
+            ApplySpriteFromProjectPath(starObject.GetComponent<Image>(), "Art/icon/system/star.png");
+
+            return root;
         }
 
         private static void SetPixelRectTopLeft(RectTransform rect, float left, float top, float width, float height)

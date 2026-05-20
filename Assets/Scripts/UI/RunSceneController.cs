@@ -4428,7 +4428,14 @@ namespace ProphecyCentury.UI
             {
                 goldLabel.text = string.Empty;
             }
-            roundLabel.text = $"💰 {Run.gold}   第 {Run.round} 回合";
+            var roundText = $"{Run.gold}    第 {Run.round} 回合";
+            if (roundLabel != null)
+            {
+                roundLabel.text = roundText;
+            }
+
+            SetTextLabel("RoundLabelV2", roundText);
+            UpdateRoundGoldIcon();
             hpLabel.text = $"{Run.playerHp}/100";
             if (stateLabel != null)
             {
@@ -4438,10 +4445,7 @@ namespace ProphecyCentury.UI
             {
                 hpFillImage.fillAmount = Mathf.Clamp01(Run.playerHp / 100f);
             }
-            if (shopMetaLabel != null)
-            {
-                shopMetaLabel.text = FormatShopMetaText();
-            }
+            RefreshShopMetaStars();
             RefreshShopActionLabels();
 
             var campaign = data.Campaigns.FirstOrDefault(item => item.id == Run.campaignId);
@@ -4489,23 +4493,21 @@ namespace ProphecyCentury.UI
             _flow.ShopSystem.InitializeShop(Run);
         }
 
-        private string FormatShopMetaText()
-        {
-            var refreshCost = GetShopRefreshCost();
-            var upgradeCost = Run == null ? 0 : _flow.ShopSystem.GetCurrentShopUpgradeCost(Run);
-            var upgradeText = upgradeCost > 0 ? $"升级 {upgradeCost}金" : "升级 满级";
-            return $"商店等级：{RepeatStar("\u2B50", Mathf.Clamp(Run.shopLevel, 1, 6))}\n刷新 {refreshCost}金  {upgradeText}";
-        }
-
         private void RefreshShopActionLabels()
         {
             var refreshCost = GetShopRefreshCost();
             var upgradeCost = Run == null ? 0 : _flow.ShopSystem.GetCurrentShopUpgradeCost(Run);
-            var upgradeText = upgradeCost > 0 ? $"升级\n{upgradeCost}金" : "升级\n满级";
-            SetButtonLabel("RefreshShopButton", $"刷新\n{refreshCost}金");
-            SetButtonLabel("RefreshShopButtonV2", $"刷新\n{refreshCost}金");
-            SetButtonLabel("UpgradeShopButton", upgradeText);
-            SetButtonLabel("UpgradeShopButtonV2", upgradeText);
+            var isShopMaxLevel = IsShopMaxLevel();
+            var upgradeText = isShopMaxLevel ? "升级\n满级" : $"升级\n{upgradeCost}金";
+            var upgradeTextV2 = isShopMaxLevel ? "升级 满级" : $"升级 {upgradeCost}金";
+            var lockText = Run != null && Run.isShopLocked ? "解锁" : "锁定";
+            var lockIcon = Run != null && Run.isShopLocked ? "钥匙" : "铁锁";
+            SetButtonLabel("RefreshShopButton", $"刷新\n{refreshCost}金", "金币");
+            SetButtonLabel("RefreshShopButtonV2", $"刷新 {refreshCost}金", "金币");
+            SetButtonLabel("UpgradeShopButton", upgradeText, isShopMaxLevel ? null : "金币");
+            SetButtonLabel("UpgradeShopButtonV2", upgradeTextV2, isShopMaxLevel ? null : "金币");
+            SetButtonLabel("LockShopButton", lockText, lockIcon);
+            SetButtonLabel("LockShopButtonV2", lockText, lockIcon);
         }
 
         private static int GetShopRefreshCost()
@@ -4513,9 +4515,21 @@ namespace ProphecyCentury.UI
             return 1;
         }
 
-        private void SetButtonLabel(string buttonName, string label)
+        private bool IsShopMaxLevel()
         {
-            var button = FindDeepChild(transform, buttonName);
+            if (Run == null)
+            {
+                return false;
+            }
+
+            var costs = ProphecyGameSession.Instance.Data.Config?.shopUpgradeCost;
+            var maxLevel = costs == null || costs.Length == 0 ? 6 : costs.Length;
+            return Run.shopLevel >= maxLevel;
+        }
+
+        private void SetButtonLabel(string buttonName, string label, string iconName = null)
+        {
+            var button = FindDeepChild(GetUiSearchRoot(), buttonName);
             var labelTransform = button != null ? FindDeepChild(button, "Label") : null;
             var text = labelTransform != null ? labelTransform.GetComponent<Text>() : null;
             if (text == null)
@@ -4527,6 +4541,119 @@ namespace ProphecyCentury.UI
             text.resizeTextForBestFit = true;
             text.resizeTextMinSize = 14;
             text.resizeTextMaxSize = Mathf.Max(text.resizeTextMaxSize, text.fontSize);
+            var iconTransform = button != null ? FindDeepChild(button, "Icon") : null;
+            ApplyPrefabIcon(iconTransform, iconName);
+        }
+
+        private static void ApplyPrefabIcon(Transform iconTransform, string iconName)
+        {
+            if (iconTransform == null)
+            {
+                return;
+            }
+
+            var iconObject = iconTransform.gameObject;
+            iconObject.SetActive(!string.IsNullOrWhiteSpace(iconName));
+            if (string.IsNullOrWhiteSpace(iconName))
+            {
+                return;
+            }
+
+            var iconImage = iconTransform.GetComponent<Image>();
+            if (iconImage != null)
+            {
+                RuntimeFeatureIconCache.ApplyTo(iconImage, iconName);
+                iconImage.color = Color.white;
+                iconImage.raycastTarget = false;
+            }
+        }
+
+        private void SetTextLabel(string labelName, string label)
+        {
+            var labelTransform = FindDeepChild(GetUiSearchRoot(), labelName);
+            var text = labelTransform != null ? labelTransform.GetComponent<Text>() : null;
+            if (text == null)
+            {
+                return;
+            }
+
+            text.text = label;
+        }
+
+        private void UpdateRoundGoldIcon()
+        {
+            var roundTransform = FindDeepChild(GetUiSearchRoot(), "RoundLabelV2");
+            var roundText = roundTransform != null ? roundTransform.GetComponent<Text>() : roundLabel;
+            var roundRect = roundText != null ? roundText.GetComponent<RectTransform>() : null;
+            if (roundRect == null)
+            {
+                return;
+            }
+
+            var icon = FindDeepChild(roundRect, "RoundGoldIcon");
+            ApplyPrefabIcon(icon, "金币");
+        }
+
+        private void RefreshShopMetaStars()
+        {
+            var starRoot = FindDeepChild(GetUiSearchRoot(), "ShopMetaStarV2");
+            if (starRoot == null || starRoot.childCount == 0)
+            {
+                return;
+            }
+
+            var level = Mathf.Clamp(Run != null ? Run.shopLevel : 1, 1, 6);
+            var template = starRoot.GetChild(0) as RectTransform;
+            if (template == null)
+            {
+                return;
+            }
+
+            while (starRoot.childCount < level)
+            {
+                var clone = Instantiate(template.gameObject, starRoot);
+                clone.name = $"star_{starRoot.childCount}";
+            }
+
+            var starSize = template.sizeDelta;
+            var starWidth = starSize.x > 0f ? starSize.x : template.rect.width;
+            var spacing = Mathf.Max(4f, starWidth * 0.12f);
+            var step = starWidth + spacing;
+            var startX = -step * (level - 1) * 0.5f;
+            var y = template.anchoredPosition.y;
+
+            for (var i = 0; i < starRoot.childCount; i += 1)
+            {
+                var child = starRoot.GetChild(i) as RectTransform;
+                if (child == null)
+                {
+                    continue;
+                }
+
+                var visible = i < level;
+                child.gameObject.SetActive(visible);
+                if (!visible)
+                {
+                    continue;
+                }
+
+                child.anchorMin = new Vector2(0.5f, 0.5f);
+                child.anchorMax = new Vector2(0.5f, 0.5f);
+                child.pivot = new Vector2(0.5f, 0.5f);
+                child.sizeDelta = starSize;
+                child.anchoredPosition = new Vector2(startX + step * i, y);
+            }
+        }
+
+        private Transform GetUiSearchRoot()
+        {
+            var canvas = GetComponentInParent<Canvas>();
+            if (canvas != null)
+            {
+                return canvas.transform;
+            }
+
+            return transform.root != null ? transform.root : transform;
         }
 
         private static Transform FindDeepChild(Transform root, string childName)
