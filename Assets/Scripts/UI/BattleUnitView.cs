@@ -14,7 +14,11 @@ namespace ProphecyCentury.UI
         {
             get
             {
-                EnsureReferences();
+                if (!EnsureReferences())
+                {
+                    return null;
+                }
+
                 return backingImage;
             }
         }
@@ -23,7 +27,11 @@ namespace ProphecyCentury.UI
         {
             get
             {
-                EnsureReferences();
+                if (!EnsureReferences())
+                {
+                    return null;
+                }
+
                 return unitIconImage;
             }
         }
@@ -32,7 +40,11 @@ namespace ProphecyCentury.UI
         {
             get
             {
-                EnsureReferences();
+                if (!EnsureReferences())
+                {
+                    return null;
+                }
+
                 return labelText;
             }
         }
@@ -41,14 +53,22 @@ namespace ProphecyCentury.UI
         {
             get
             {
-                EnsureReferences();
+                if (!EnsureReferences())
+                {
+                    return null;
+                }
+
                 return healthFillImage;
             }
         }
 
         public void Bind(string iconName, string label, int star, bool playerSide)
         {
-            EnsureReferences();
+            if (!EnsureReferences())
+            {
+                return;
+            }
+
             if (backingImage != null)
             {
                 backingImage.raycastTarget = false;
@@ -69,7 +89,11 @@ namespace ProphecyCentury.UI
 
         public void SetHealth(int hp, int maxHp)
         {
-            EnsureReferences();
+            if (!EnsureReferences())
+            {
+                return;
+            }
+
             var amount = Mathf.Clamp01(Mathf.Max(0, hp) / (float)Mathf.Max(1, maxHp));
             if (healthFillImage != null)
             {
@@ -82,8 +106,13 @@ namespace ProphecyCentury.UI
             }
         }
 
-        private void EnsureReferences()
+        private bool EnsureReferences()
         {
+            if (this == null)
+            {
+                return false;
+            }
+
             if (backingImage == null)
             {
                 backingImage = GetComponent<Image>();
@@ -115,6 +144,8 @@ namespace ProphecyCentury.UI
                     healthFillImage = fill.GetComponent<Image>();
                 }
             }
+
+            return true;
         }
     }
 }

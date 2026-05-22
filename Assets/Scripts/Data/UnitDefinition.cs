@@ -92,14 +92,18 @@ namespace ProphecyCentury.Data
         public float chance;
         public float duration;
         public float refreshSeconds;
+        public int refreshRounds;
         public float delay;
         public float interval;
+        public int intervalRounds;
         public float reduce;
         public float ratio;
         public float attackMultiplier;
         public float deathAttackMultiplier;
         public float critMultiplier;
         public float stunSeconds;
+        public int stunTurns;
+        public int moveLockTurns;
         public float invincibleSeconds;
         public float speedMultiplier;
         public float radius;

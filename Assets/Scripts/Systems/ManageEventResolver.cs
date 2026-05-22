@@ -55,6 +55,30 @@ namespace ProphecyCentury.Systems
             Dispatch(runState, "on_entry", target, reason, null, 0, new HashSet<string>());
         }
 
+        public bool HasTargetedEntryPower(UnitCardState unit)
+        {
+            return GetTalents(unit).Any(talent => talent.kind == "enter_target_unit_permanent_power");
+        }
+
+        public int ResolveTargetedEntryPower(RunState runState, BoardUnitState source, BoardUnitState target)
+        {
+            if (runState == null || source == null || target == null)
+            {
+                return 0;
+            }
+
+            var talent = GetTalents(source).FirstOrDefault(item => item.kind == "enter_target_unit_permanent_power");
+            if (talent == null)
+            {
+                return 0;
+            }
+
+            var value = Value(talent, source);
+            AddStat(runState, target, "power", value, source, new HashSet<string>(), 0);
+            _abilityTriggered = true;
+            return value;
+        }
+
         public void ResolveLeave(RunState runState, BoardUnitState target, string reason = "leave")
         {
             Dispatch(runState, "on_leave", target, reason, null, 0, new HashSet<string>());
@@ -377,6 +401,12 @@ namespace ProphecyCentury.Systems
                     break;
                 case "round_end_self_gain_attack":
                     if (eventType == "on_round_end")
+                    {
+                        AddStat(runState, owner, "attack", Value(talent, owner), owner, processed, depth);
+                    }
+                    break;
+                case "round_end_if_race_count_self_gain_attack":
+                    if (eventType == "on_round_end" && CountRace(runState, talent.race, UnitDef(owner)?.race) >= Math.Max(1, talent.threshold))
                     {
                         AddStat(runState, owner, "attack", Value(talent, owner), owner, processed, depth);
                     }
@@ -1036,6 +1066,7 @@ namespace ProphecyCentury.Systems
                 case "round_end_tagged_units_gain_attack_and_defense":
                 case "round_end_gain_forest_gem_self":
                 case "round_end_self_gain_attack":
+                case "round_end_if_race_count_self_gain_attack":
                 case "round_end_self_temp_morale_per_race_count":
                 case "round_end_forward_adjacent_units_gain_attack_and_gift":
                 case "round_end_self_gift_forest_gem":

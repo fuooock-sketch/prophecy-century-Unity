@@ -166,9 +166,24 @@ namespace ProphecyCentury.Systems
                                 unit.InvincibleRemaining = Math.Max(unit.InvincibleRemaining, skill.invincibleSeconds);
                                 MovePouncerNextToTarget(unit, pounceTarget);
                                 var multiplier = skill.attackMultiplier > 0f ? skill.attackMultiplier : 3f;
-                                DealDamage(unit, pounceTarget, Math.Max(1, (int)Math.Round(unit.Attack * multiplier + unit.Power * 8 - pounceTarget.Defense)), allies, enemies, random, events, elapsed, skill.forceCrit);
-                                pounceTarget.StunRemaining = Math.Max(pounceTarget.StunRemaining, skill.stunSeconds);
-                                if (skill.stunSeconds > 0f)
+                                var damage = Math.Max(1, (int)Math.Round(unit.Attack * multiplier + unit.Power * 8 - pounceTarget.Defense));
+                                for (var hit = 0; hit < Math.Max(1, skill.times); hit += 1)
+                                {
+                                    if (!pounceTarget.IsAlive)
+                                    {
+                                        break;
+                                    }
+
+                                    DealDamage(unit, pounceTarget, damage, allies, enemies, random, events, elapsed, skill.forceCrit);
+                                }
+
+                                var stunDuration = skill.stunTurns > 0 ? skill.stunTurns : skill.stunSeconds;
+                                pounceTarget.StunRemaining = Math.Max(pounceTarget.StunRemaining, stunDuration);
+                                if (skill.stunTurns > 0)
+                                {
+                                    AddEvent(events, elapsed, "control", unit, pounceTarget, skill.stunTurns, $"{pounceTarget.Name} stunned for {skill.stunTurns} turns");
+                                }
+                                else if (skill.stunSeconds > 0f)
                                 {
                                     AddEvent(events, elapsed, "control", unit, pounceTarget, (int)Math.Round(skill.stunSeconds * 1000f), $"{pounceTarget.Name} stunned for {skill.stunSeconds:0.#}s");
                                 }
@@ -177,8 +192,16 @@ namespace ProphecyCentury.Systems
                         case "battle_start_lock_highest_hp_targets":
                             foreach (var locked in enemies.Where(enemy => enemy.IsAlive).OrderByDescending(enemy => enemy.Hp).Take(Math.Max(1, skill.count)))
                             {
-                                locked.StunRemaining = Math.Max(locked.StunRemaining, skill.duration);
-                                AddEvent(events, elapsed, "control", unit, locked, (int)Math.Round(Math.Max(0.1f, skill.duration) * 1000f), $"{locked.Name} locked for {skill.duration:0.#}s");
+                                if (skill.moveLockTurns > 0)
+                                {
+                                    locked.MoveLockRemaining = Math.Max(locked.MoveLockRemaining, skill.moveLockTurns);
+                                    AddEvent(events, elapsed, "control", unit, locked, skill.moveLockTurns, $"{locked.Name} move locked for {skill.moveLockTurns} turns");
+                                }
+                                else
+                                {
+                                    locked.StunRemaining = Math.Max(locked.StunRemaining, skill.duration);
+                                    AddEvent(events, elapsed, "control", unit, locked, (int)Math.Round(Math.Max(0.1f, skill.duration) * 1000f), $"{locked.Name} locked for {skill.duration:0.#}s");
+                                }
                             }
                             break;
                     }
@@ -227,7 +250,10 @@ namespace ProphecyCentury.Systems
                 var attackRange = AttackRange(attacker, target);
                 if (distance > attackRange + AttackRangeSlack)
                 {
-                    MoveToTarget(attacker, target, distance, attackRange);
+                    if (attacker.MoveLockRemaining <= 0f)
+                    {
+                        MoveToTarget(attacker, target, distance, attackRange);
+                    }
                     continue;
                 }
 
@@ -264,6 +290,15 @@ namespace ProphecyCentury.Systems
                     var extraDamage = CalculateDamage(attacker, moraleExtraTarget);
                     DealDamage(attacker, moraleExtraTarget, extraDamage, attackers, defenders, random, events, elapsed);
                     attacker.MoraleExtraCount += 1;
+                    foreach (var skill in GetBattleSkills(attacker))
+                    {
+                        if (skill.kind == "on_extra_attack_once_next_round_gold" && !attacker.SkillCounters.ContainsKey(skill.kind))
+                        {
+                            attacker.SkillCounters[skill.kind] = 1;
+                            AddEvent(events, elapsed, "skill", attacker, attacker, Math.Max(1, skill.value), $"{attacker.Name} grants next round gold");
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -323,6 +358,11 @@ namespace ProphecyCentury.Systems
                             }
                         }
                         break;
+                    case "on_attack_mark_target_next_round_forest_gem_on_death":
+                        target.ForestGemDeathMarkSource = attacker;
+                        target.ForestGemDeathMarkAmount = Math.Max(1, skill.value);
+                        AddEvent(events, elapsed, "skill", attacker, target, target.ForestGemDeathMarkAmount, $"{attacker.Name} marks {target.Name} for next round forest gem");
+                        break;
                 }
             }
         }
@@ -346,7 +386,7 @@ namespace ProphecyCentury.Systems
 
                 foreach (var skill in GetBattleSkills(unit))
                 {
-                    if (skill.kind == "battle_periodic_temp_power" && TickSkillTimer(unit, skill.kind, Math.Max(0.1f, skill.interval <= 0f ? 3f : skill.interval)))
+                    if (skill.kind == "battle_periodic_temp_power" && TickSkillTimer(unit, skill.kind, Math.Max(0.1f, SkillIntervalSeconds(skill, 3f))))
                     {
                         unit.Power += Math.Max(1, skill.value);
                         AddEvent(events, elapsed, "skill", unit, unit, skill.value, $"{unit.Name} gains temporary power");
@@ -414,6 +454,11 @@ namespace ProphecyCentury.Systems
             }
 
             unit.DeathProcessed = true;
+            if (unit.ForestGemDeathMarkSource != null && unit.ForestGemDeathMarkSource.PlayerSide)
+            {
+                AddEvent(events, elapsed, "skill", unit.ForestGemDeathMarkSource, unit, Math.Max(1, unit.ForestGemDeathMarkAmount), $"{unit.ForestGemDeathMarkSource.Name} gains next round forest gem");
+            }
+
             foreach (var skill in GetBattleSkills(unit))
             {
                 switch (skill.kind)
@@ -424,14 +469,33 @@ namespace ProphecyCentury.Systems
                     case "battle_periodic_nearby_enemies_attack_and_death_explode":
                     case "on_death_explode":
                     case "on_death_explode_if_hits_next_round_team_attack":
+                        var hitCount = 0;
                         foreach (var enemy in enemies.Where(enemy => enemy.IsAlive && Distance(unit, enemy) <= Math.Max(1f, skill.radius * 80f)).ToList())
                         {
                             AddEvent(events, elapsed, "skill", unit, enemy, 0, $"{unit.Name} 死亡爆炸");
                             var multiplier = skill.kind == "battle_periodic_nearby_enemies_attack_and_death_explode"
                                 ? SkillDeathAttackMultiplier(skill)
                                 : Math.Max(1f, skill.attackMultiplier);
-                            var explodeDamage = Math.Max(1, skill.damage > 0 ? skill.damage : (int)Math.Round((unit.Attack + unit.Power * 8) * multiplier));
+                            var explodeDamage = Math.Max(1, skill.damage > 0 ? skill.damage : (int)Math.Round(CalculateDamage(unit, enemy) * multiplier));
                             DealDamage(unit, enemy, explodeDamage, allies, enemies, random, events, elapsed);
+                            hitCount += 1;
+                        }
+
+                        if (unit.PlayerSide && skill.kind == "on_death_explode_if_hits_next_round_team_attack" && hitCount >= Math.Max(1, skill.hitThreshold))
+                        {
+                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.nextRoundAttack), $"{unit.Name} grants next round team attack");
+                        }
+                        break;
+                    case "on_death_next_round_shop_cards_gain_attack":
+                        if (unit.PlayerSide)
+                        {
+                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.attack), $"{unit.Name} grants next round shop attack");
+                        }
+                        break;
+                    case "on_death_next_round_forest_gem":
+                        if (unit.PlayerSide)
+                        {
+                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.value), $"{unit.Name} grants next round forest gem");
                         }
                         break;
                 }
@@ -563,6 +627,7 @@ namespace ProphecyCentury.Systems
             foreach (var unit in units.Where(unit => unit.IsAlive))
             {
                 unit.StunRemaining = Math.Max(0f, unit.StunRemaining - StepSeconds);
+                unit.MoveLockRemaining = Math.Max(0f, unit.MoveLockRemaining - StepSeconds);
                 unit.InvincibleRemaining = Math.Max(0f, unit.InvincibleRemaining - StepSeconds);
                 if (unit.ShieldRefreshInterval > 0f && unit.ShieldLayers <= 0)
                 {
@@ -765,7 +830,17 @@ namespace ProphecyCentury.Systems
                 return fallback;
             }
 
-            return skill.refreshSeconds > 0f ? skill.refreshSeconds : skill.duration > 0f ? skill.duration : fallback;
+            return skill.refreshSeconds > 0f ? skill.refreshSeconds : skill.refreshRounds > 0 ? skill.refreshRounds : skill.duration > 0f ? skill.duration : fallback;
+        }
+
+        private static float SkillIntervalSeconds(SkillDefinition skill, float fallback)
+        {
+            if (skill == null)
+            {
+                return fallback;
+            }
+
+            return skill.interval > 0f ? skill.interval : skill.intervalRounds > 0 ? skill.intervalRounds : fallback;
         }
 
         private static float SkillDeathAttackMultiplier(SkillDefinition skill)
@@ -979,6 +1054,7 @@ namespace ProphecyCentury.Systems
             public float ShieldRefreshInterval;
             public float ShieldRefreshTimer;
             public float StunRemaining;
+            public float MoveLockRemaining;
             public float InvincibleRemaining;
             public bool Summoned;
             public float SummonDuration;
@@ -986,6 +1062,8 @@ namespace ProphecyCentury.Systems
             public int TeamForestGiftTotal;
             public bool FirstAttackForceCrit;
             public float FirstAttackCritMultiplier;
+            public RealtimeBattleUnit ForestGemDeathMarkSource;
+            public int ForestGemDeathMarkAmount;
             public readonly Dictionary<string, int> SkillCounters = new Dictionary<string, int>();
             public readonly Dictionary<string, float> SkillTimers = new Dictionary<string, float>();
             public bool IsAlive => Hp > 0;

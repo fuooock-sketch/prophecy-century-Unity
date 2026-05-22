@@ -1,7 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using ProphecyCentury.Core;
 using ProphecyCentury.Data;
 using ProphecyCentury.Model;
@@ -56,11 +58,18 @@ namespace ProphecyCentury.UI
         private readonly BattleRealtimeSystem _battleRealtime = new BattleRealtimeSystem();
         private readonly SaveGameSystem _saveGame = new SaveGameSystem();
         private const string BattleUnitPrefabResourcePath = "Prefabs/UI/BattleUnitView";
+        private const int BattleHexColumnCount = 11;
+        private const float BattleHexHorizontalStep = 0.75f;
+        private const float BattleHexHeightRatio = 0.8660254f;
+        private static readonly int[] BattleHexRowsByColumn = { 4, 3, 4, 3, 4, 3, 4, 3, 4, 3, 4 };
         private const int HandMaxCount = 9;
         private const float TargetSearchInterval = 1f;
         private const float VisualAttackRangeSlack = 36f;
         private int _selectedHandIndex = -1;
         private string _selectedBoardSlotId;
+        private string _pendingTargetedEntrySourceSlotId;
+        private string _pendingTargetedEntrySourceName;
+        private bool _pendingTargetedEntryGoldReward;
         private string _dragSource;
         private int _dragHandIndex = -1;
         private string _dragBoardSlotId;
@@ -68,6 +77,8 @@ namespace ProphecyCentury.UI
         private bool _battlePlaybackRunning;
         private Transform _battleFieldRoot;
         private GameObject _battleStartActionButton;
+        private GameObject _battlePlaybackSpeedRoot;
+        private float _battlePlaybackSpeed = 0.5f;
         private bool _battleStartActionRequested;
         private bool _battleSetupDraggingEnabled;
         private GameObject _goldDeployRewardModal;
@@ -75,6 +86,9 @@ namespace ProphecyCentury.UI
         private Text _goldDeployRewardTitleLabel;
         private Text _goldDeployRewardSubtitleLabel;
         private int _goldDeployRewardActualStar;
+        private GameObject _battleLogButton;
+        private GameObject _battleLogModal;
+        private Text _battleLogContentLabel;
         private const float DragSnapRadius = 58f;
         private readonly List<RuntimeDragBoardSlotVisual> _dragBoardSlots = new List<RuntimeDragBoardSlotVisual>();
         private GameObject _dragIndicatorRoot;
@@ -86,9 +100,11 @@ namespace ProphecyCentury.UI
         private Vector2 _dragArrowStartScreen;
         private string _dragSnapBoardSlotId;
         private readonly List<string> _recentLogs = new List<string>();
+        private readonly List<string> _latestBattleLogLines = new List<string>();
         private readonly Dictionary<GameObject, bool> _battleUiVisibility = new Dictionary<GameObject, bool>();
         private readonly Dictionary<string, Vector2> _battlePlayerPositionOverrides = new Dictionary<string, Vector2>();
         private static GameObject _cachedBattleUnitPrefab;
+        private static Sprite _cachedBattleHexCellSprite;
 
         private RunState Run => ProphecyGameSession.Instance.CurrentRun;
 
@@ -176,6 +192,8 @@ namespace ProphecyCentury.UI
         {
             public RectTransform Rect;
             public Image Image;
+            public Vector2 StartSize;
+            public Vector2 EndSize;
             public float Life;
             public float Duration;
         }
@@ -472,19 +490,28 @@ namespace ProphecyCentury.UI
 
             var targetSlot = GetSelectedEmptyBoardSlot();
             var deployedGoldenCard = IsGoldenHandCard(index);
+            var needsTargetSelection = IsTargetedEntryPowerHandCard(index);
             var noBoardSlot = string.IsNullOrWhiteSpace(targetSlot);
             var before = CaptureUnitNumberSnapshots();
             ClearPendingSynthesisSfx();
-            var success = _flow.DeployUnit(index, targetSlot);
+            var success = _flow.DeployUnit(index, targetSlot, needsTargetSelection);
             var devourEvents = success ? _flow.ConsumeDevourShopEvents() : new List<DevourShopEventState>();
             var feedbackEvents = success ? _flow.ConsumeManageFeedbackEvents() : null;
             if (success)
             {
+                var deployed = FindJustDeployedBoardUnit(targetSlot);
                 _selectedHandIndex = -1;
                 _selectedBoardSlotId = null;
                 RuntimeSfxPlayer.PlayMove();
                 PlayAbilitySfxIfNeeded();
-                PlaySynthesisSfxIfNeeded();
+                if (needsTargetSelection)
+                {
+                    BeginTargetedEntrySelection(deployed, deployedGoldenCard);
+                }
+                else
+                {
+                    PlaySynthesisSfxIfNeeded();
+                }
             }
             else
             {
@@ -497,7 +524,7 @@ namespace ProphecyCentury.UI
             PlayNumberChangeFeedback(before);
             PlayDevourFeedbackIfNeeded(devourEvents);
             PlayManageFeedbackIfNeeded(feedbackEvents);
-            if (success && deployedGoldenCard)
+            if (success && deployedGoldenCard && !needsTargetSelection)
             {
                 OpenGoldDeployRewardModal();
             }
@@ -518,19 +545,28 @@ namespace ProphecyCentury.UI
             }
 
             var deployedGoldenCard = IsGoldenHandCard(index);
+            var needsTargetSelection = IsTargetedEntryPowerHandCard(index);
             var slotOccupied = Run != null && Run.boardUnits.Any(unit => unit.boardSlotId == boardSlotId);
             var before = CaptureUnitNumberSnapshots();
             ClearPendingSynthesisSfx();
-            var success = _flow.DeployUnit(index, boardSlotId);
+            var success = _flow.DeployUnit(index, boardSlotId, needsTargetSelection);
             var devourEvents = success ? _flow.ConsumeDevourShopEvents() : new List<DevourShopEventState>();
             var feedbackEvents = success ? _flow.ConsumeManageFeedbackEvents() : null;
             if (success)
             {
+                var deployed = FindJustDeployedBoardUnit(boardSlotId);
                 _selectedHandIndex = -1;
                 _selectedBoardSlotId = null;
                 RuntimeSfxPlayer.PlayMove();
                 PlayAbilitySfxIfNeeded();
-                PlaySynthesisSfxIfNeeded();
+                if (needsTargetSelection)
+                {
+                    BeginTargetedEntrySelection(deployed, deployedGoldenCard);
+                }
+                else
+                {
+                    PlaySynthesisSfxIfNeeded();
+                }
             }
             else
             {
@@ -543,10 +579,88 @@ namespace ProphecyCentury.UI
             PlayNumberChangeFeedback(before);
             PlayDevourFeedbackIfNeeded(devourEvents);
             PlayManageFeedbackIfNeeded(feedbackEvents);
-            if (success && deployedGoldenCard)
+            if (success && deployedGoldenCard && !needsTargetSelection)
             {
                 OpenGoldDeployRewardModal();
             }
+        }
+
+        private BoardUnitState FindJustDeployedBoardUnit(string boardSlotId)
+        {
+            if (Run == null)
+            {
+                return null;
+            }
+
+            return string.IsNullOrWhiteSpace(boardSlotId)
+                ? Run.boardUnits.LastOrDefault()
+                : Run.boardUnits.LastOrDefault(unit => unit.boardSlotId == boardSlotId);
+        }
+
+        private void BeginTargetedEntrySelection(BoardUnitState source, bool opensGoldReward)
+        {
+            if (source == null)
+            {
+                return;
+            }
+
+            _pendingTargetedEntrySourceSlotId = source.boardSlotId;
+            _pendingTargetedEntrySourceName = source.name;
+            _pendingTargetedEntryGoldReward = opensGoldReward;
+            ShowFloatingText("选择祝福目标");
+            WriteLog($"{source.name} 入场：请选择一个阵上单位获得力量。");
+        }
+
+        private bool ResolvePendingTargetedEntryOnSlot(string targetSlotId)
+        {
+            if (string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId))
+            {
+                return false;
+            }
+
+            var target = Run?.boardUnits.FirstOrDefault(unit => unit.boardSlotId == targetSlotId);
+            if (target == null)
+            {
+                RuntimeSfxPlayer.PlayError();
+                ShowFloatingText("请选择阵上单位");
+                return true;
+            }
+
+            var sourceName = _pendingTargetedEntrySourceName;
+            var sourceSlotId = _pendingTargetedEntrySourceSlotId;
+            var before = CaptureUnitNumberSnapshots();
+            ClearPendingSynthesisSfx();
+            var value = _flow.ResolveTargetedEntryPower(sourceSlotId, targetSlotId);
+            var feedbackEvents = _flow.ConsumeManageFeedbackEvents();
+            var openGoldReward = _pendingTargetedEntryGoldReward;
+            _pendingTargetedEntrySourceSlotId = null;
+            _pendingTargetedEntrySourceName = null;
+            _pendingTargetedEntryGoldReward = false;
+            _selectedBoardSlotId = null;
+
+            if (value > 0)
+            {
+                RuntimeSfxPlayer.PlayAbilityTrigger();
+                PlayAbilitySfxIfNeeded();
+                PlaySynthesisSfxIfNeeded();
+                WriteLog($"{sourceName} 祝福 {target.name}，力量 +{value}。");
+            }
+            else
+            {
+                RuntimeSfxPlayer.PlayError();
+                ShowFloatingText("祝福失败");
+                WriteLog($"{sourceName} 的祝福没有生效。");
+            }
+
+            RefreshView();
+            PlayNumberChangeFeedback(before);
+            PlayManageFeedbackIfNeeded(feedbackEvents);
+            if (openGoldReward)
+            {
+                OpenGoldDeployRewardModal();
+            }
+
+            return true;
         }
 
         private bool UseForestGemCardOnSlot(int index, string boardSlotId)
@@ -603,6 +717,13 @@ namespace ProphecyCentury.UI
 
         private void SelectHandCard(int index)
         {
+            if (!string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId))
+            {
+                RuntimeSfxPlayer.PlayError();
+                ShowFloatingText("请先选择祝福目标");
+                return;
+            }
+
             if (index < 0 || index >= Run.handCards.Count)
             {
                 return;
@@ -625,6 +746,12 @@ namespace ProphecyCentury.UI
             }
 
             var unit = Run.boardUnits.FirstOrDefault(item => item.boardSlotId == boardSlotId);
+            if (!string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId))
+            {
+                ResolvePendingTargetedEntryOnSlot(boardSlotId);
+                return;
+            }
+
             if (_selectedHandIndex >= 0)
             {
                 DeployHandCardToSlot(_selectedHandIndex, boardSlotId);
@@ -644,6 +771,13 @@ namespace ProphecyCentury.UI
 
         public void BeginRuntimeDrag(string source, int handIndex, string boardSlotId, PointerEventData eventData = null, RectTransform originRect = null)
         {
+            if (!string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId))
+            {
+                RuntimeSfxPlayer.PlayError();
+                ShowFloatingText("请先选择祝福目标");
+                return;
+            }
+
             _dragSource = source;
             _dragHandIndex = handIndex;
             _dragBoardSlotId = boardSlotId;
@@ -988,6 +1122,13 @@ namespace ProphecyCentury.UI
 
         private void SellHandCard(int index)
         {
+            if (!string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId))
+            {
+                RuntimeSfxPlayer.PlayError();
+                ShowFloatingText("请先选择祝福目标");
+                return;
+            }
+
             var before = CaptureUnitNumberSnapshots();
             ClearPendingSynthesisSfx();
             var success = _flow.SellHandUnit(index);
@@ -1012,6 +1153,13 @@ namespace ProphecyCentury.UI
 
         private void SellBoardCard(int index)
         {
+            if (!string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId))
+            {
+                RuntimeSfxPlayer.PlayError();
+                ShowFloatingText("请先选择祝福目标");
+                return;
+            }
+
             var before = CaptureUnitNumberSnapshots();
             var target = index >= 0 && index < Run.boardUnits.Count ? Run.boardUnits[index].boardSlotId : null;
             ClearPendingSynthesisSfx();
@@ -1037,6 +1185,13 @@ namespace ProphecyCentury.UI
 
         private void SellBoardSlot(string boardSlotId)
         {
+            if (!string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId))
+            {
+                RuntimeSfxPlayer.PlayError();
+                ShowFloatingText("请先选择祝福目标");
+                return;
+            }
+
             var before = CaptureUnitNumberSnapshots();
             ClearPendingSynthesisSfx();
             var success = !string.IsNullOrWhiteSpace(boardSlotId) && _flow.SellBoardUnit(boardSlotId);
@@ -1109,6 +1264,14 @@ namespace ProphecyCentury.UI
                 && index >= 0
                 && index < Run.handCards.Count
                 && ManageEventResolver.IsForestGemCard(Run.handCards[index]);
+        }
+
+        private bool IsTargetedEntryPowerHandCard(int index)
+        {
+            return Run != null
+                && index >= 0
+                && index < Run.handCards.Count
+                && _flow.HasTargetedEntryPower(Run.handCards[index]);
         }
 
         private int CountForestGemCardsInHand()
@@ -2039,6 +2202,15 @@ namespace ProphecyCentury.UI
 
         public void StartBattle()
         {
+            if (!string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId))
+            {
+                RuntimeSfxPlayer.PlayError();
+                WriteLog("请先选择祝福目标。");
+                ShowFloatingText("请先选择祝福目标");
+                RefreshView();
+                return;
+            }
+
             if (IsGoldDeployRewardOpen())
             {
                 RuntimeSfxPlayer.PlayError();
@@ -2220,7 +2392,7 @@ namespace ProphecyCentury.UI
             RefreshView();
             PlayNumberChangeFeedback(roundEndBefore);
             PlayManageFeedbackIfNeeded(roundEndFeedback);
-            yield return new WaitForSeconds(3f);
+            yield return PlayBattleStartCountdown();
 
             _battlePlayerPositionOverrides.Clear();
             _flow.SetBattlePhase();
@@ -2236,19 +2408,15 @@ namespace ProphecyCentury.UI
             yield return WaitForBattleStartAction();
 
             var authoritativeResult = _battleStub.Resolve(Run);
+            WriteBattleTurnDebugLog(authoritativeResult);
             SetPlayerHpDisplay(hpBeforeBattle);
             var visualResult = authoritativeResult;
-            if (useRealtimeBattlePreview)
-            {
-                var realtimeResult = _battleRealtime.Resolve(preview.PlayerUnits, preview.EnemyUnits);
-                visualResult = CreateRealtimePreviewStageResult(realtimeResult, authoritativeResult, preview);
-                WriteLog(FormatRealtimePreviewComparison(realtimeResult, authoritativeResult));
-            }
+            useRealtimeBattlePreview = false;
 
             var result = visualResult;
             _battleSetupDraggingEnabled = false;
-            unitViews = RebuildBattleStagePlaybackUnits(result);
-            yield return PlayVisualRealtimeBattle(unitViews, result, $"我方战力 {previewPlayerScore}，敌方战力 {previewEnemyScore}");
+            unitViews = RebuildBattleStagePlaybackUnits(setupResult);
+            yield return PlayVisualTurnBattle(unitViews, result, $"我方战力 {previewPlayerScore}，敌方战力 {previewEnemyScore}");
 
             var settleBefore = CaptureUnitNumberSnapshots();
             var battleRewardFeedback = FormatPendingBattleRewardFeedback();
@@ -2274,6 +2442,7 @@ namespace ProphecyCentury.UI
                 battleStagePanel.SetActive(false);
             }
 
+            SetBattlePlaybackSpeedControlsVisible(false);
             SetBattleStartActionButtonVisible(false);
             _battleSetupDraggingEnabled = false;
             _battlePlayerPositionOverrides.Clear();
@@ -2369,6 +2538,468 @@ namespace ProphecyCentury.UI
                 elapsed += deltaTime;
                 yield return null;
             }
+        }
+
+        private IEnumerator PlayVisualTurnBattle(Dictionary<string, BattleStageUnitView> views, BattleStubResult result, string openingLine)
+        {
+            EnsureBattlePlaybackSpeedControls();
+            SetBattlePlaybackSpeedControlsVisible(true);
+            var events = (result?.Events ?? new List<BattleEvent>())
+                .OrderBy(item => item.Time)
+                .ToList();
+            var floatingTexts = new List<BattleFloatingTextView>();
+            var bursts = new List<BattleEffectBurstView>();
+            var rollingLines = new List<string> { openingLine };
+            var total = Mathf.Max(1, events.Count);
+            _latestBattleLogLines.Clear();
+            _latestBattleLogLines.Add(openingLine);
+
+            for (var i = 0; i < events.Count; i += 1)
+            {
+                var battleEvent = events[i];
+                var line = FormatBattleEvent(battleEvent);
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    _latestBattleLogLines.Add(line);
+                    rollingLines.Insert(0, line);
+                    while (rollingLines.Count > 7)
+                    {
+                        rollingLines.RemoveAt(rollingLines.Count - 1);
+                    }
+                }
+
+                SetBattleStageProgress(Mathf.Lerp(0.05f, 0.95f, i / (float)total));
+                SetBattleStageText("轮次战斗", string.Join("\n", rollingLines));
+
+                switch (battleEvent.Kind)
+                {
+                    case "round":
+                        yield return WaitAndUpdateBattleEffects(0.65f, floatingTexts, bursts);
+                        break;
+                    case "move":
+                        yield return PlayBattleMoveEvent(views, battleEvent, floatingTexts, bursts);
+                        break;
+                    case "attack":
+                    case "morale_extra":
+                    case "skill":
+                        yield return PlayBattleAttackEffect(views, battleEvent, floatingTexts, bursts);
+                        break;
+                    case "damage":
+                    case "critical_damage":
+                    case "block":
+                    case "immune":
+                        ApplyBattleDamageFeedback(views, battleEvent, floatingTexts, bursts);
+                        yield return WaitAndUpdateBattleEffects(0.16f, floatingTexts, bursts);
+                        break;
+                    case "death":
+                        ApplyBattleDeathFeedback(views, battleEvent, floatingTexts, bursts);
+                        yield return WaitAndUpdateBattleEffects(0.12f, floatingTexts, bursts);
+                        break;
+                    case "summon":
+                        CreateSummonFromEvent(battleEvent, views, views.Values.Distinct().ToList(), floatingTexts);
+                        yield return WaitAndUpdateBattleEffects(0.18f, floatingTexts, bursts);
+                        break;
+                    case "control":
+                        ApplyControlEvent(battleEvent, views, floatingTexts);
+                        yield return WaitAndUpdateBattleEffects(0.18f, floatingTexts, bursts);
+                        break;
+                    case "buff_attack":
+                        ApplyBattleAttackBuffFeedback(views, battleEvent, floatingTexts, bursts);
+                        yield return WaitAndUpdateBattleEffects(0.18f, floatingTexts, bursts);
+                        break;
+                    default:
+                        yield return WaitAndUpdateBattleEffects(0.06f, floatingTexts, bursts);
+                        break;
+                }
+            }
+
+            SetBattleStageProgress(0.95f);
+            SetBattlePlaybackSpeedControlsVisible(false);
+        }
+
+        private IEnumerator PlayBattleMoveEvent(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            var source = FindBattleStageView(views, battleEvent.SourcePlayerSide, battleEvent.SourceSlotId, battleEvent.SourceName);
+            var destinationSlotId = string.IsNullOrWhiteSpace(battleEvent.DestinationSlotId)
+                ? battleEvent.SourceSlotId
+                : battleEvent.DestinationSlotId;
+            if (source?.Rect == null || !TryGetBattleHexSlotCenter(source.Rect.parent is RectTransform parent ? parent.rect.size : new Vector2(1420f, 720f), destinationSlotId, battleEvent.SourcePlayerSide, out var target))
+            {
+                yield return WaitAndUpdateBattleEffects(0.08f, floatingTexts, bursts);
+                yield break;
+            }
+
+            var start = source.Rect.anchoredPosition;
+            var routePoints = BuildBattleRoutePoints(source.Rect.parent as RectTransform, start, target, battleEvent.RouteSlotIds, battleEvent.SourcePlayerSide);
+            var routeLine = CreateBattleRoutePreview(source.Rect.parent, routePoints);
+            source.Rect.SetAsLastSibling();
+            var elapsed = 0f;
+            var duration = ScaledBattlePlaybackDuration(Mathf.Clamp(0.22f * Mathf.Max(1, routePoints.Count - 1), 0.28f, 0.9f));
+            while (elapsed < duration && source.Rect != null)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+                source.Rect.anchoredPosition = SampleBattleRoute(routePoints, t);
+                UpdateBattleFloatingTexts(floatingTexts, Time.deltaTime);
+                UpdateBattleEffectBursts(bursts, Time.deltaTime);
+                yield return null;
+            }
+
+            if (source.Rect != null)
+            {
+                source.Rect.anchoredPosition = target;
+                source.StartPosition = target;
+                source.FightPosition = target;
+                source.SlotId = destinationSlotId;
+                views[BattleStageKey(source.PlayerSide, destinationSlotId)] = source;
+            }
+
+            if (routeLine != null)
+            {
+                Destroy(routeLine.gameObject);
+            }
+        }
+
+        private static List<Vector2> BuildBattleRoutePoints(RectTransform parent, Vector2 start, Vector2 fallbackEnd, string routeSlotIds, bool playerSide)
+        {
+            var points = new List<Vector2> { start };
+            var rootSize = parent != null && parent.rect.size.sqrMagnitude > 1f ? parent.rect.size : new Vector2(1420f, 720f);
+            if (!string.IsNullOrWhiteSpace(routeSlotIds))
+            {
+                foreach (var slotId in routeSlotIds.Split('|'))
+                {
+                    if (TryGetBattleHexSlotCenter(rootSize, slotId, playerSide, out var point))
+                    {
+                        points.Add(point);
+                    }
+                }
+            }
+
+            if (points.Count <= 1)
+            {
+                points.Add(fallbackEnd);
+            }
+
+            return points;
+        }
+
+        private static Vector2 SampleBattleRoute(IReadOnlyList<Vector2> points, float t)
+        {
+            if (points == null || points.Count == 0)
+            {
+                return Vector2.zero;
+            }
+
+            if (points.Count == 1)
+            {
+                return points[0];
+            }
+
+            var totalLength = 0f;
+            for (var i = 1; i < points.Count; i += 1)
+            {
+                totalLength += Vector2.Distance(points[i - 1], points[i]);
+            }
+
+            var targetLength = Mathf.Clamp01(t) * Mathf.Max(0.001f, totalLength);
+            var walked = 0f;
+            for (var i = 1; i < points.Count; i += 1)
+            {
+                var segmentLength = Vector2.Distance(points[i - 1], points[i]);
+                if (walked + segmentLength >= targetLength)
+                {
+                    var segmentT = (targetLength - walked) / Mathf.Max(0.001f, segmentLength);
+                    return Vector2.Lerp(points[i - 1], points[i], segmentT);
+                }
+
+                walked += segmentLength;
+            }
+
+            return points[points.Count - 1];
+        }
+
+        private static RectTransform CreateBattleRoutePreview(Transform parent, IReadOnlyList<Vector2> points)
+        {
+            if (parent == null || points == null || points.Count < 2)
+            {
+                return null;
+            }
+
+            var routeObject = new GameObject("BattleMoveRoutePreview", typeof(RectTransform));
+            routeObject.transform.SetParent(parent, false);
+            var rect = routeObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = Vector2.zero;
+            rect.SetAsLastSibling();
+
+            for (var i = 1; i < points.Count; i += 1)
+            {
+                var start = points[i - 1];
+                var end = points[i];
+                var delta = end - start;
+                if (delta.sqrMagnitude < 4f)
+                {
+                    continue;
+                }
+
+                var segmentObject = new GameObject($"Segment_{i}", typeof(Image));
+                segmentObject.transform.SetParent(routeObject.transform, false);
+                var segmentRect = segmentObject.GetComponent<RectTransform>();
+                segmentRect.anchorMin = new Vector2(0.5f, 0.5f);
+                segmentRect.anchorMax = new Vector2(0.5f, 0.5f);
+                segmentRect.pivot = new Vector2(0.5f, 0.5f);
+                segmentRect.anchoredPosition = (start + end) * 0.5f;
+                segmentRect.sizeDelta = new Vector2(delta.magnitude, 5f);
+                segmentRect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
+
+                var image = segmentObject.GetComponent<Image>();
+                image.color = new Color32(95, 228, 255, 210);
+                image.raycastTarget = false;
+            }
+
+            return rect;
+        }
+
+        private IEnumerator PlayBattleAttackEffect(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            if (battleEvent == null || views == null)
+            {
+                yield break;
+            }
+
+            var source = FindBattleStageView(views, battleEvent.SourcePlayerSide, battleEvent.SourceSlotId, battleEvent.SourceName);
+            var target = FindBattleStageView(views, battleEvent.TargetPlayerSide, battleEvent.TargetSlotId, battleEvent.TargetName);
+            if (source?.Rect == null && target?.Rect == null)
+            {
+                yield return WaitAndUpdateBattleEffects(0.08f, floatingTexts, bursts);
+                yield break;
+            }
+
+            if (source?.Rect != null && target?.Rect != null)
+            {
+                RuntimeSfxPlayer.PlayAttack(source.Range);
+                if (source.Range > 1.05f || battleEvent.Kind == "skill")
+                {
+                    yield return PlayProjectileAttackEffect(source, target, floatingTexts, bursts, battleEvent.Kind == "skill");
+                }
+                else
+                {
+                    yield return PlayMeleeAttackEffect(source, target, floatingTexts, bursts);
+                }
+
+                yield break;
+            }
+
+            var origin = target?.Rect != null ? target.Rect.anchoredPosition : source.Rect.anchoredPosition;
+            SpawnEffectBurst(origin, new Color32(255, 205, 92, 150), bursts);
+            yield return WaitAndUpdateBattleEffects(0.22f, floatingTexts, bursts);
+        }
+
+        private IEnumerator PlayProjectileAttackEffect(BattleStageUnitView source, BattleStageUnitView target, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts, bool skill)
+        {
+            if (_battleFieldRoot == null || source?.Rect == null || target?.Rect == null)
+            {
+                yield break;
+            }
+
+            var projectileObject = new GameObject(skill ? "BattleSkillProjectile" : "BattleAttackProjectile", typeof(Image));
+            projectileObject.transform.SetParent(_battleFieldRoot, false);
+            var rect = projectileObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = skill ? new Vector2(28f, 28f) : new Vector2(20f, 20f);
+            rect.anchoredPosition = source.Rect.anchoredPosition;
+            var image = projectileObject.GetComponent<Image>();
+            image.color = skill
+                ? new Color32(255, 210, 86, 235)
+                : source.PlayerSide ? new Color32(130, 220, 255, 235) : new Color32(255, 150, 120, 235);
+            image.raycastTarget = false;
+
+            var start = source.Rect.anchoredPosition;
+            var end = target.Rect.anchoredPosition;
+            var duration = ScaledBattlePlaybackDuration(skill ? 0.42f : 0.34f);
+            var elapsed = 0f;
+            while (elapsed < duration && rect != null)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                end = target.Rect != null ? target.Rect.anchoredPosition : end;
+                var arc = new Vector2(0f, Mathf.Sin(t * Mathf.PI) * (skill ? 32f : 18f));
+                rect.anchoredPosition = Vector2.Lerp(start, end, Mathf.SmoothStep(0f, 1f, t)) + arc;
+                rect.localScale = Vector3.one * Mathf.Lerp(1f, skill ? 1.35f : 1.15f, Mathf.Sin(t * Mathf.PI));
+                UpdateBattleFloatingTexts(floatingTexts, Time.deltaTime);
+                UpdateBattleEffectBursts(bursts, Time.deltaTime);
+                yield return null;
+            }
+
+            if (rect != null)
+            {
+                var hit = target.Rect != null ? target.Rect.anchoredPosition : end;
+                SpawnEffectBurst(hit, skill ? new Color32(255, 210, 86, 145) : new Color32(140, 220, 255, 125), bursts);
+                Destroy(rect.gameObject);
+            }
+        }
+
+        private IEnumerator PlayMeleeAttackEffect(BattleStageUnitView source, BattleStageUnitView target, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            if (source?.Rect == null || target?.Rect == null)
+            {
+                yield break;
+            }
+
+            var origin = source.Rect.anchoredPosition;
+            var direction = target.Rect.anchoredPosition - origin;
+            var distance = Mathf.Max(1f, direction.magnitude);
+            var lunge = origin + direction / distance * Mathf.Min(42f, distance * 0.28f);
+            SpawnMeleeSlash(source, target, bursts);
+
+            var duration = ScaledBattlePlaybackDuration(0.26f);
+            var elapsed = 0f;
+            while (elapsed < duration && source.Rect != null)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var phase = t < 0.5f ? t / 0.5f : (1f - t) / 0.5f;
+                source.Rect.anchoredPosition = Vector2.Lerp(origin, lunge, Mathf.SmoothStep(0f, 1f, phase));
+                UpdateBattleFloatingTexts(floatingTexts, Time.deltaTime);
+                UpdateBattleEffectBursts(bursts, Time.deltaTime);
+                yield return null;
+            }
+
+            if (source.Rect != null)
+            {
+                source.Rect.anchoredPosition = origin;
+            }
+        }
+
+        private void SpawnMeleeSlash(BattleStageUnitView source, BattleStageUnitView target, List<BattleEffectBurstView> bursts)
+        {
+            if (_battleFieldRoot == null || source?.Rect == null || target?.Rect == null)
+            {
+                return;
+            }
+
+            var slashObject = new GameObject("BattleMeleeSlash", typeof(Image));
+            slashObject.transform.SetParent(_battleFieldRoot, false);
+            var rect = slashObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.Lerp(source.Rect.anchoredPosition, target.Rect.anchoredPosition, 0.58f);
+            rect.sizeDelta = new Vector2(82f, 18f);
+            var direction = target.Rect.anchoredPosition - source.Rect.anchoredPosition;
+            rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
+
+            var image = slashObject.GetComponent<Image>();
+            image.color = new Color32(255, 238, 180, 210);
+            image.raycastTarget = false;
+            bursts?.Add(new BattleEffectBurstView
+            {
+                Rect = rect,
+                Image = image,
+                StartSize = new Vector2(82f, 18f),
+                EndSize = new Vector2(112f, 8f),
+                Life = 0f,
+                Duration = 0.22f
+            });
+        }
+
+        private void ApplyBattleDamageFeedback(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            if (battleEvent == null || views == null)
+            {
+                return;
+            }
+
+            var target = FindBattleStageView(views, battleEvent.TargetPlayerSide, battleEvent.TargetSlotId, battleEvent.TargetName);
+            if (target == null || target.Dead)
+            {
+                return;
+            }
+
+            var critical = battleEvent.Kind == "critical_damage";
+            if (battleEvent.Kind == "block" || battleEvent.Kind == "immune")
+            {
+                AddFloatingText(battleEvent.Kind == "block" ? "格挡" : "免疫", target.Rect.anchoredPosition + new Vector2(0f, 60f), new Color32(150, 210, 255, 255), 20, floatingTexts);
+                SpawnEffectBurst(target.Rect.anchoredPosition, new Color32(150, 210, 255, 130), bursts);
+                return;
+            }
+
+            target.Hp = Mathf.Clamp(battleEvent.TargetHp, 0, Mathf.Max(1, battleEvent.TargetMaxHp));
+            target.MaxHp = Mathf.Max(1, battleEvent.TargetMaxHp);
+            RuntimeSfxPlayer.PlayHit();
+            UpdateBattleStageLabel(target, battleEvent.TargetName, target.Hp, target.MaxHp);
+            if (target.Rect != null)
+            {
+                StartCoroutine(ShakeHitTarget(target, critical));
+                SpawnEffectBurst(target.Rect.anchoredPosition, critical ? new Color32(255, 196, 78, 165) : new Color32(255, 92, 92, 130), bursts);
+                AddFloatingText(
+                    critical ? $"暴击 {Mathf.Max(1, battleEvent.Amount)}" : Mathf.Max(1, battleEvent.Amount).ToString(),
+                    target.Rect.anchoredPosition + new Vector2(0f, 54f),
+                    critical ? new Color32(255, 226, 112, 255) : Color.white,
+                    critical ? 28 : 20,
+                    floatingTexts);
+            }
+        }
+
+        private void ApplyBattleAttackBuffFeedback(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            if (battleEvent == null || views == null)
+            {
+                return;
+            }
+
+            var target = FindBattleStageView(views, battleEvent.TargetPlayerSide, battleEvent.TargetSlotId, battleEvent.TargetName);
+            if (target?.Rect == null || target.Dead)
+            {
+                return;
+            }
+
+            AddFloatingText($"攻击+{Mathf.Max(0, battleEvent.Amount)}", target.Rect.anchoredPosition + new Vector2(0f, 76f), new Color32(255, 218, 96, 255), 60, floatingTexts);
+            SpawnEffectBurst(target.Rect.anchoredPosition, new Color32(255, 218, 96, 130), bursts);
+        }
+
+        private void ApplyBattleDeathFeedback(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            if (battleEvent == null || views == null)
+            {
+                return;
+            }
+
+            var target = FindBattleStageView(views, battleEvent.TargetPlayerSide, battleEvent.TargetSlotId, battleEvent.TargetName);
+            if (target == null)
+            {
+                return;
+            }
+
+            var position = target.Rect != null ? target.Rect.anchoredPosition : Vector2.zero;
+            UpdateBattleStageLabel(target, battleEvent.TargetName, 0, Mathf.Max(1, battleEvent.TargetMaxHp));
+            MarkBattleStageDead(target);
+            RuntimeSfxPlayer.PlayDeath();
+            AddFloatingText("阵亡", position + new Vector2(0f, 78f), new Color32(255, 120, 120, 255), 20, floatingTexts);
+            SpawnEffectBurst(position, new Color32(220, 72, 72, 160), bursts);
+        }
+
+        private IEnumerator WaitAndUpdateBattleEffects(float duration, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            duration = ScaledBattlePlaybackDuration(duration);
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                UpdateBattleFloatingTexts(floatingTexts, Time.deltaTime);
+                UpdateBattleEffectBursts(bursts, Time.deltaTime);
+                yield return null;
+            }
+        }
+
+        private float ScaledBattlePlaybackDuration(float baseDuration)
+        {
+            return Mathf.Max(0.02f, baseDuration / Mathf.Max(0.1f, _battlePlaybackSpeed));
         }
 
         private Dictionary<string, BattleStageUnitView> RebuildBattleStagePlaybackUnits(BattleStubResult result)
@@ -2563,6 +3194,160 @@ namespace ProphecyCentury.UI
             }
         }
 
+        private IEnumerator PlayBattleStartCountdown()
+        {
+            var parent = runPanel != null ? runPanel.transform : transform;
+            var overlay = new GameObject("BattleStartCountdown", typeof(RectTransform), typeof(CanvasGroup));
+            overlay.transform.SetParent(parent, false);
+            overlay.transform.SetAsLastSibling();
+
+            var rect = overlay.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var group = overlay.GetComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            group.interactable = false;
+
+            var textObject = new GameObject("CountdownText", typeof(Text));
+            textObject.transform.SetParent(overlay.transform, false);
+            var textRect = textObject.GetComponent<RectTransform>();
+            textRect.anchorMin = new Vector2(0.5f, 0.5f);
+            textRect.anchorMax = new Vector2(0.5f, 0.5f);
+            textRect.pivot = new Vector2(0.5f, 0.5f);
+            textRect.anchoredPosition = Vector2.zero;
+            textRect.sizeDelta = new Vector2(760f, 220f);
+
+            var text = textObject.GetComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.fontSize = 150;
+            text.fontStyle = FontStyle.Bold;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = new Color32(255, 238, 126, 255);
+            text.raycastTarget = false;
+            var outline = textObject.AddComponent<Outline>();
+            outline.effectColor = new Color32(0, 0, 0, 230);
+            outline.effectDistance = new Vector2(5f, -5f);
+
+            var steps = new[] { "3", "2", "1", "开战" };
+            foreach (var step in steps)
+            {
+                text.text = step;
+                textRect.localScale = Vector3.one * 0.78f;
+                group.alpha = 0f;
+                RuntimeSfxPlayer.PlayClick();
+
+                var elapsed = 0f;
+                const float duration = 0.62f;
+                while (elapsed < duration)
+                {
+                    elapsed += Time.deltaTime;
+                    var t = Mathf.Clamp01(elapsed / duration);
+                    textRect.localScale = Vector3.one * Mathf.Lerp(0.78f, 1.18f, Mathf.SmoothStep(0f, 1f, t));
+                    group.alpha = t < 0.18f
+                        ? Mathf.Lerp(0f, 1f, t / 0.18f)
+                        : Mathf.Lerp(1f, 0.08f, Mathf.Clamp01((t - 0.72f) / 0.28f));
+                    yield return null;
+                }
+
+                yield return new WaitForSeconds(0.08f);
+            }
+
+            Destroy(overlay);
+        }
+
+        private void SetBattlePlaybackSpeedControlsVisible(bool visible)
+        {
+            EnsureBattlePlaybackSpeedControls();
+            if (_battlePlaybackSpeedRoot == null)
+            {
+                return;
+            }
+
+            _battlePlaybackSpeedRoot.SetActive(visible);
+            if (visible)
+            {
+                _battlePlaybackSpeedRoot.transform.SetAsLastSibling();
+            }
+        }
+
+        private void EnsureBattlePlaybackSpeedControls()
+        {
+            if (_battlePlaybackSpeedRoot != null)
+            {
+                RefreshBattlePlaybackSpeedButtons();
+                return;
+            }
+
+            var parent = battleStagePanel != null ? battleStagePanel.transform : transform;
+            _battlePlaybackSpeedRoot = new GameObject("BattlePlaybackSpeedControls", typeof(RectTransform));
+            _battlePlaybackSpeedRoot.transform.SetParent(parent, false);
+            var rootRect = _battlePlaybackSpeedRoot.GetComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0.5f, 0f);
+            rootRect.anchorMax = new Vector2(0.5f, 0f);
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+            rootRect.anchoredPosition = new Vector2(0f, 188f);
+            rootRect.sizeDelta = new Vector2(270f, 44f);
+
+            CreateBattlePlaybackSpeedButton("SpeedSlow", "0.5x", -90f, 0.5f);
+            CreateBattlePlaybackSpeedButton("SpeedNormal", "1x", 0f, 1f);
+            CreateBattlePlaybackSpeedButton("SpeedFast", "2x", 90f, 2f);
+            RefreshBattlePlaybackSpeedButtons();
+            _battlePlaybackSpeedRoot.SetActive(false);
+        }
+
+        private void CreateBattlePlaybackSpeedButton(string name, string label, float x, float speed)
+        {
+            var buttonObject = new GameObject(name, typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(_battlePlaybackSpeedRoot.transform, false);
+            var rect = buttonObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(x, 0f);
+            rect.sizeDelta = new Vector2(78f, 38f);
+
+            var image = buttonObject.GetComponent<Image>();
+            image.color = new Color32(42, 68, 104, 245);
+            var button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
+            button.onClick.AddListener(() =>
+            {
+                _battlePlaybackSpeed = speed;
+                RefreshBattlePlaybackSpeedButtons();
+            });
+
+            var text = CreateChildText(buttonObject.transform, label, 18, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
+            text.color = Color.white;
+        }
+
+        private void RefreshBattlePlaybackSpeedButtons()
+        {
+            if (_battlePlaybackSpeedRoot == null)
+            {
+                return;
+            }
+
+            foreach (Transform child in _battlePlaybackSpeedRoot.transform)
+            {
+                var image = child.GetComponent<Image>();
+                if (image == null)
+                {
+                    continue;
+                }
+
+                var selected = (child.name == "SpeedSlow" && Mathf.Approximately(_battlePlaybackSpeed, 0.5f))
+                    || (child.name == "SpeedNormal" && Mathf.Approximately(_battlePlaybackSpeed, 1f))
+                    || (child.name == "SpeedFast" && Mathf.Approximately(_battlePlaybackSpeed, 2f));
+                image.color = selected
+                    ? new Color32(78, 132, 190, 255)
+                    : new Color32(42, 68, 104, 230);
+            }
+        }
+
         private void EnsureBattleStartActionButton()
         {
             if (_battleStartActionButton != null)
@@ -2603,7 +3388,148 @@ namespace ProphecyCentury.UI
             var rect = rootObject.GetComponent<RectTransform>();
             ApplyBattleFieldRootRect(rect);
             _battleFieldRoot = rootObject.transform;
+            CreateBattleHexGrid(_battleFieldRoot);
             return _battleFieldRoot;
+        }
+
+        private static void CreateBattleHexGrid(Transform root)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            var rootRect = root as RectTransform;
+            var rootSize = rootRect != null && rootRect.rect.size.sqrMagnitude > 1f ? rootRect.rect.size : new Vector2(1420f, 720f);
+            var cellSize = CalculateBattleHexCellSize(rootSize);
+            var gridObject = new GameObject("BattleHexGrid", typeof(RectTransform));
+            gridObject.transform.SetParent(root, false);
+            var rect = gridObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.SetAsFirstSibling();
+
+            var sprite = GetBattleHexCellSprite();
+            for (var column = 0; column < BattleHexColumnCount; column += 1)
+            {
+                var rows = BattleHexRowsByColumn[column];
+                for (var row = 0; row < rows; row += 1)
+                {
+                    if (!TryGetBattleHexCenter(rootSize, column, row, out var center))
+                    {
+                        continue;
+                    }
+
+                    var cellObject = new GameObject($"Hex_{column + 1}_{row + 1}", typeof(Image));
+                    cellObject.transform.SetParent(gridObject.transform, false);
+                    var cellRect = cellObject.GetComponent<RectTransform>();
+                    cellRect.anchorMin = new Vector2(0.5f, 0.5f);
+                    cellRect.anchorMax = new Vector2(0.5f, 0.5f);
+                    cellRect.pivot = new Vector2(0.5f, 0.5f);
+                    cellRect.anchoredPosition = center;
+                    cellRect.sizeDelta = cellSize;
+
+                    var image = cellObject.GetComponent<Image>();
+                    image.sprite = sprite;
+                    image.raycastTarget = false;
+                    image.color = column < 4
+                        ? new Color32(104, 205, 255, 235)
+                        : column > 6
+                            ? new Color32(255, 124, 146, 235)
+                            : new Color32(255, 235, 148, 220);
+                }
+            }
+
+            CreateBattleCenterGuide(gridObject.transform, rootSize, cellSize);
+        }
+
+        private static void CreateBattleCenterGuide(Transform gridRoot, Vector2 rootSize, Vector2 cellSize)
+        {
+            if (gridRoot == null
+                || !TryGetBattleHexCenter(rootSize, 5, 1, out var top)
+                || !TryGetBattleHexCenter(rootSize, 5, 2, out var bottom))
+            {
+                return;
+            }
+
+            var guideObject = new GameObject("BattleCenterGuide", typeof(Image));
+            guideObject.transform.SetParent(gridRoot, false);
+            var guideRect = guideObject.GetComponent<RectTransform>();
+            guideRect.anchorMin = new Vector2(0.5f, 0.5f);
+            guideRect.anchorMax = new Vector2(0.5f, 0.5f);
+            guideRect.pivot = new Vector2(0.5f, 0.5f);
+            guideRect.anchoredPosition = new Vector2(top.x, (top.y + bottom.y) * 0.5f);
+            guideRect.sizeDelta = new Vector2(5f, Mathf.Abs(top.y - bottom.y) + cellSize.y * 1.2f);
+
+            var image = guideObject.GetComponent<Image>();
+            image.color = new Color32(255, 222, 98, 180);
+            image.raycastTarget = false;
+        }
+
+        private static Sprite GetBattleHexCellSprite()
+        {
+            if (_cachedBattleHexCellSprite != null)
+            {
+                return _cachedBattleHexCellSprite;
+            }
+
+            const int width = 128;
+            const int height = 112;
+            const float border = 5.5f;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.name = "RuntimeBattleHexCell";
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+            var clear = new Color32(0, 0, 0, 0);
+            var fill = new Color32(255, 255, 255, 35);
+            var line = new Color32(255, 255, 255, 255);
+
+            for (var y = 0; y < height; y += 1)
+            {
+                for (var x = 0; x < width; x += 1)
+                {
+                    var point = new Vector2((x + 0.5f) / width, (y + 0.5f) / height);
+                    if (!IsInsideBattleHex(point, 0f))
+                    {
+                        texture.SetPixel(x, y, clear);
+                    }
+                    else if (!IsInsideBattleHex(point, border / Mathf.Min(width, height)))
+                    {
+                        texture.SetPixel(x, y, line);
+                    }
+                    else
+                    {
+                        texture.SetPixel(x, y, fill);
+                    }
+                }
+            }
+
+            texture.Apply();
+            _cachedBattleHexCellSprite = Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
+            return _cachedBattleHexCellSprite;
+        }
+
+        private static bool IsInsideBattleHex(Vector2 point, float inset)
+        {
+            var x = Mathf.Abs(point.x - 0.5f);
+            var y = Mathf.Abs(point.y - 0.5f);
+            var halfWidth = Mathf.Max(0.01f, 0.5f - inset);
+            var halfHeight = Mathf.Max(0.01f, 0.5f - inset);
+            if (x > halfWidth || y > halfHeight)
+            {
+                return false;
+            }
+
+            var shoulder = halfWidth * 0.5f;
+            if (x <= shoulder)
+            {
+                return true;
+            }
+
+            var t = (x - shoulder) / Mathf.Max(0.001f, halfWidth - shoulder);
+            return y <= halfHeight * (1f - t);
         }
 
         private void PositionBattleFieldLayer(Transform battleField)
@@ -3179,11 +4105,11 @@ namespace ProphecyCentury.UI
             var rect = textObject.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(160f, 42f);
+            rect.sizeDelta = new Vector2(240f, 78f);
             rect.anchoredPosition = position;
             var label = textObject.GetComponent<Text>();
             label.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            label.fontSize = fontSize;
+            label.fontSize = 60;
             label.alignment = TextAnchor.MiddleCenter;
             label.color = color;
             label.text = text;
@@ -3246,6 +4172,8 @@ namespace ProphecyCentury.UI
             {
                 Rect = rect,
                 Image = burstObject.GetComponent<Image>(),
+                StartSize = new Vector2(30f, 30f),
+                EndSize = new Vector2(132f, 132f),
                 Life = 0f,
                 Duration = 0.45f
             });
@@ -3264,7 +4192,9 @@ namespace ProphecyCentury.UI
 
                 burst.Life += deltaTime;
                 var t = Mathf.Clamp01(burst.Life / Mathf.Max(0.01f, burst.Duration));
-                burst.Rect.sizeDelta = Vector2.Lerp(new Vector2(30f, 30f), new Vector2(132f, 132f), t);
+                var startSize = burst.StartSize.sqrMagnitude > 0f ? burst.StartSize : new Vector2(30f, 30f);
+                var endSize = burst.EndSize.sqrMagnitude > 0f ? burst.EndSize : new Vector2(132f, 132f);
+                burst.Rect.sizeDelta = Vector2.Lerp(startSize, endSize, t);
                 if (burst.Image != null)
                 {
                     var color = burst.Image.color;
@@ -3420,7 +4350,7 @@ namespace ProphecyCentury.UI
                 yield break;
             }
 
-            if (battleEvent.Kind == "attack" || battleEvent.Kind == "skill")
+            if (battleEvent.Kind == "attack" || battleEvent.Kind == "skill" || battleEvent.Kind == "morale_extra")
             {
                 yield return PulseAttacker(source, duration);
             }
@@ -3491,7 +4421,11 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            view.UnitView?.SetHealth(hp, maxHp);
+            if (view.UnitView != null)
+            {
+                view.UnitView.SetHealth(hp, maxHp);
+            }
+
             if (view.Label == null)
             {
                 return;
@@ -3526,10 +4460,19 @@ namespace ProphecyCentury.UI
                 Destroy(view.Rect.gameObject);
                 view.Rect = null;
             }
+
+            view.Backing = null;
+            view.Label = null;
+            view.UnitView = null;
         }
 
         private static BattleStageUnitView FindBattleStageView(Dictionary<string, BattleStageUnitView> views, bool playerSide, string slotId, string unitName)
         {
+            if (views == null)
+            {
+                return null;
+            }
+
             if (!string.IsNullOrWhiteSpace(slotId) && views.TryGetValue(BattleStageKey(playerSide, slotId), out var bySlot))
             {
                 return bySlot;
@@ -3566,7 +4509,7 @@ namespace ProphecyCentury.UI
                 UnitId = definition.id,
                 Name = definition.name,
                 Star = definition.star,
-                SlotId = summonEvent.SourceSlotId,
+                SlotId = string.IsNullOrWhiteSpace(summonEvent.TargetSlotId) ? summonEvent.SourceSlotId : summonEvent.TargetSlotId,
                 MaxHp = Mathf.Max(1, definition.hp),
                 CurrentHp = Mathf.Max(1, definition.hp),
                 Attack = Mathf.Max(1, definition.attack),
@@ -3587,22 +4530,27 @@ namespace ProphecyCentury.UI
 
             view.IsSummon = true;
             view.SummonDuration = 4f;
-            if (source?.Rect != null && view.Rect != null)
+            if (source?.Rect != null && view.Rect != null && string.IsNullOrWhiteSpace(summonEvent.TargetSlotId))
             {
                 var offset = new Vector2(summonEvent.SourcePlayerSide ? -54f : 54f, 42f);
                 view.Rect.anchoredPosition = source.Rect.anchoredPosition + offset;
             }
 
             uniqueViews.Add(view);
-            AddBattleStageView(views, summonEvent.SourcePlayerSide, $"{summonEvent.SourceSlotId}:summon:{uniqueViews.Count}", summonEvent.TargetName, view);
+            AddBattleStageView(views, summonEvent.SourcePlayerSide, view.SlotId, summonEvent.TargetName, view);
             AddFloatingText($"召唤{view.Name}", view.Rect.anchoredPosition + new Vector2(0f, 78f), new Color32(160, 232, 255, 255), 18, floatingTexts);
             return view;
         }
 
         private void ApplyControlEvent(BattleEvent controlEvent, Dictionary<string, BattleStageUnitView> views, List<BattleFloatingTextView> floatingTexts)
         {
+            if (controlEvent == null)
+            {
+                return;
+            }
+
             var target = FindBattleStageView(views, controlEvent.TargetPlayerSide, controlEvent.TargetSlotId, controlEvent.TargetName);
-            if (target == null)
+            if (target?.Rect == null || target.Dead)
             {
                 return;
             }
@@ -3658,6 +4606,162 @@ namespace ProphecyCentury.UI
             }
 
             return selected.Take(140).ToList();
+        }
+
+        private void WriteBattleTurnDebugLog(BattleStubResult result)
+        {
+            if (result?.Events == null || result.Events.Count == 0)
+            {
+                return;
+            }
+
+            var builder = new StringBuilder();
+            builder.AppendLine($"Battle turn debug {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            builder.AppendLine($"Result: {(result.Victory ? "Victory" : "Defeat")}  PlayerScore={result.PlayerScore}  EnemyScore={result.EnemyScore}  HpDelta={result.HpDelta}");
+            builder.AppendLine("Flags: DUP_TURN=同一单位同一轮出现多次行动开始；DUP_ATTACK=同一单位同一轮出现多次普通攻击。");
+
+            var currentRound = 0;
+            var roundTurnCounts = new Dictionary<string, int>();
+            var roundAttackCounts = new Dictionary<string, int>();
+            var duplicateFound = false;
+
+            foreach (var battleEvent in result.Events.OrderBy(item => item.Time))
+            {
+                if (battleEvent.Kind == "round")
+                {
+                    currentRound = battleEvent.Amount;
+                    roundTurnCounts.Clear();
+                    roundAttackCounts.Clear();
+                    builder.AppendLine();
+                    builder.AppendLine($"=== Round {currentRound} @ {battleEvent.Time:0.00}s ===");
+                    continue;
+                }
+
+                var flags = string.Empty;
+                var sourceKey = BuildBattleDebugSourceKey(battleEvent);
+                if (battleEvent.Kind == "turn" && !string.IsNullOrWhiteSpace(sourceKey))
+                {
+                    roundTurnCounts.TryGetValue(sourceKey, out var count);
+                    count += 1;
+                    roundTurnCounts[sourceKey] = count;
+                    if (count > 1)
+                    {
+                        duplicateFound = true;
+                        flags = AppendBattleDebugFlag(flags, $"DUP_TURN#{count}");
+                    }
+                }
+                else if (battleEvent.Kind == "attack" && !string.IsNullOrWhiteSpace(sourceKey))
+                {
+                    roundAttackCounts.TryGetValue(sourceKey, out var count);
+                    count += 1;
+                    roundAttackCounts[sourceKey] = count;
+                    if (count > 1)
+                    {
+                        duplicateFound = true;
+                        flags = AppendBattleDebugFlag(flags, $"DUP_ATTACK#{count}");
+                    }
+                }
+
+                builder.AppendLine(FormatBattleDebugEvent(battleEvent, currentRound, flags));
+            }
+
+            builder.AppendLine();
+            builder.AppendLine(duplicateFound ? "Duplicate flag detected." : "No duplicate turn/attack flag detected in authoritative battle events.");
+
+            try
+            {
+                var path = Path.Combine(Application.persistentDataPath, "battle_turn_debug.log");
+                File.WriteAllText(path, builder.ToString(), Encoding.UTF8);
+                Debug.Log($"[BattleTurnLog] Saved to {path}. Events={result.Events.Count}, DuplicateFlag={duplicateFound}");
+                WriteLog($"战斗日志已写入：{path}");
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogError($"[BattleTurnLog] Failed to write battle log: {exception}");
+                WriteLog("战斗日志写入失败，已输出到 Unity Console。");
+            }
+        }
+
+        private static string BuildBattleDebugSourceKey(BattleEvent battleEvent)
+        {
+            if (battleEvent == null)
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrWhiteSpace(battleEvent.SourceInstanceId))
+            {
+                return battleEvent.SourceInstanceId;
+            }
+
+            return $"{(battleEvent.SourcePlayerSide ? "P" : "E")}:{battleEvent.SourceSlotId}:{battleEvent.SourceUnitId}:{battleEvent.SourceName}";
+        }
+
+        private static string AppendBattleDebugFlag(string existing, string flag)
+        {
+            return string.IsNullOrWhiteSpace(existing) ? flag : $"{existing},{flag}";
+        }
+
+        private static string FormatBattleDebugEvent(BattleEvent battleEvent, int round, string flags)
+        {
+            if (battleEvent == null)
+            {
+                return string.Empty;
+            }
+
+            var prefix = string.IsNullOrWhiteSpace(flags) ? string.Empty : $" [{flags}]";
+            var source = FormatBattleDebugUnit(
+                battleEvent.SourceName,
+                battleEvent.SourcePlayerSide,
+                battleEvent.SourceSlotId,
+                battleEvent.SourceInstanceId,
+                battleEvent.SourceHp,
+                battleEvent.SourceMaxHp);
+            var target = FormatBattleDebugUnit(
+                battleEvent.TargetName,
+                battleEvent.TargetPlayerSide,
+                battleEvent.TargetSlotId,
+                battleEvent.TargetInstanceId,
+                battleEvent.TargetHp,
+                battleEvent.TargetMaxHp);
+            var destination = string.IsNullOrWhiteSpace(battleEvent.DestinationSlotId) ? string.Empty : $" -> {battleEvent.DestinationSlotId}";
+            var message = string.IsNullOrWhiteSpace(battleEvent.Message) ? battleEvent.Kind : battleEvent.Message;
+
+            switch (battleEvent.Kind)
+            {
+                case "turn":
+                case "turn_skip":
+                    return $"{battleEvent.Time:0.00}s R{round} {battleEvent.Kind}{prefix}: {source}";
+                case "move":
+                    return $"{battleEvent.Time:0.00}s R{round} move{prefix}: {source}{destination} target={target}";
+                case "attack":
+                case "skill":
+                case "morale_extra":
+                    return $"{battleEvent.Time:0.00}s R{round} {battleEvent.Kind}{prefix}: {source} -> {target}";
+                case "damage":
+                case "critical_damage":
+                case "block":
+                case "immune":
+                    return $"{battleEvent.Time:0.00}s R{round} {battleEvent.Kind}{prefix}: {source} -> {target} amount={battleEvent.Amount}";
+                case "death":
+                case "summon":
+                case "control":
+                    return $"{battleEvent.Time:0.00}s R{round} {battleEvent.Kind}{prefix}: {source} -> {target} amount={battleEvent.Amount}";
+                default:
+                    return $"{battleEvent.Time:0.00}s R{round} {battleEvent.Kind}{prefix}: {message}";
+            }
+        }
+
+        private static string FormatBattleDebugUnit(string name, bool playerSide, string slotId, string instanceId, int hp, int maxHp)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return "-";
+            }
+
+            var side = playerSide ? "P" : "E";
+            var id = string.IsNullOrWhiteSpace(instanceId) ? string.Empty : $" id={instanceId}";
+            return $"{side}:{name}@{slotId}{id} HP={hp}/{Mathf.Max(1, maxHp)}";
         }
 
         private static string FormatBattleEvent(BattleEvent battleEvent)
@@ -4161,6 +5265,7 @@ namespace ProphecyCentury.UI
             }
 
             unitView.Rect.anchoredPosition = start;
+            unitView.Rect.localScale = Vector3.one * CalculateBattleUnitScale(rootSize);
 
             return new BattleStageUnitView
             {
@@ -4316,49 +5421,153 @@ namespace ProphecyCentury.UI
 
         private static Vector2 BattleStartPosition(Vector2 rootSize, string slotId, bool playerSide)
         {
-            var normalized = BoardFormationPosition(slotId);
-            const float boardWidth = 1128f;
-            const float boardHeight = 772f;
-            var sideWidth = rootSize.x * 0.43f;
-            var sideHeight = rootSize.y * 0.86f;
-            var formationScale = Mathf.Min(sideWidth / boardWidth, sideHeight / boardHeight);
-            var formationWidth = boardWidth * formationScale;
-            var formationHeight = boardHeight * formationScale;
-            var localX = (normalized.x - 0.5f) * formationWidth;
-            if (!playerSide)
+            if (TryGetBattleHexSlotCenter(rootSize, slotId, playerSide, out var hexCenter))
             {
-                localX = -localX;
+                return hexCenter;
             }
 
-            var x = (playerSide ? -0.25f : 0.25f) * rootSize.x + localX;
-            var y = (0.5f - normalized.y) * formationHeight;
-            return new Vector2(x, y);
+            return playerSide
+                ? new Vector2(rootSize.x * -0.36f, 0f)
+                : new Vector2(rootSize.x * 0.36f, 0f);
         }
 
-        private static Vector2 BoardFormationPosition(string slotId)
+        private static bool TryGetBattleHexSlotCenter(Vector2 rootSize, string slotId, bool playerSide, out Vector2 center)
         {
+            center = Vector2.zero;
+            if (!TryMapBattleSlotToHex(slotId, playerSide, out var column, out var row))
+            {
+                return false;
+            }
+
+            return TryGetBattleHexCenter(rootSize, column, row, out center);
+        }
+
+        private static bool TryMapBattleSlotToHex(string slotId, bool playerSide, out int column, out int row)
+        {
+            column = 0;
+            row = 0;
+            if (TryParseBattleHexSlot(slotId, out column, out row))
+            {
+                return true;
+            }
+
             switch (slotId)
             {
-                case "4-1": return BoardFormationCenter(6f, 14f);
-                case "4-2": return BoardFormationCenter(6f, 188f);
-                case "4-3": return BoardFormationCenter(6f, 362f);
-                case "4-4": return BoardFormationCenter(6f, 536f);
-                case "3-1": return BoardFormationCenter(256f, 88f);
-                case "3-2": return BoardFormationCenter(256f, 262f);
-                case "3-3": return BoardFormationCenter(256f, 436f);
-                case "2-1": return BoardFormationCenter(506f, 188f);
-                case "2-2": return BoardFormationCenter(506f, 362f);
-                case "1-1": return BoardFormationCenter(756f, 276f);
-                default: return new Vector2(0.18f, 0.5f);
+                case "4-1":
+                    column = 0;
+                    row = 0;
+                    break;
+                case "4-2":
+                    column = 0;
+                    row = 1;
+                    break;
+                case "4-3":
+                    column = 0;
+                    row = 2;
+                    break;
+                case "4-4":
+                    column = 0;
+                    row = 3;
+                    break;
+                case "3-1":
+                    column = 1;
+                    row = 0;
+                    break;
+                case "3-2":
+                    column = 1;
+                    row = 1;
+                    break;
+                case "3-3":
+                    column = 1;
+                    row = 2;
+                    break;
+                case "2-1":
+                    column = 2;
+                    row = 1;
+                    break;
+                case "2-2":
+                    column = 2;
+                    row = 2;
+                    break;
+                case "1-1":
+                    column = 3;
+                    row = 1;
+                    break;
+                default:
+                    return false;
             }
+
+            if (!playerSide)
+            {
+                column = BattleHexColumnCount - 1 - column;
+            }
+
+            return true;
         }
 
-        private static Vector2 BoardFormationCenter(float left, float top)
+        private static bool TryParseBattleHexSlot(string slotId, out int column, out int row)
         {
-            const float boardWidth = 1128f;
-            const float boardHeight = 772f;
-            const float slotSize = 146f;
-            return new Vector2((left + slotSize * 0.5f) / boardWidth, (top + slotSize * 0.5f) / boardHeight);
+            column = 0;
+            row = 0;
+            if (string.IsNullOrWhiteSpace(slotId) || !slotId.StartsWith("h-", System.StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var parts = slotId.Split('-');
+            if (parts.Length != 3 || !int.TryParse(parts[1], out var parsedColumn) || !int.TryParse(parts[2], out var parsedRow))
+            {
+                return false;
+            }
+
+            column = parsedColumn - 1;
+            row = parsedRow - 1;
+            return column >= 0
+                && column < BattleHexColumnCount
+                && row >= 0
+                && row < BattleHexRowsByColumn[column];
+        }
+
+        private static bool TryGetBattleHexCenter(Vector2 rootSize, int column, int row, out Vector2 center)
+        {
+            center = Vector2.zero;
+            if (column < 0 || column >= BattleHexColumnCount)
+            {
+                return false;
+            }
+
+            var rows = BattleHexRowsByColumn[column];
+            if (row < 0 || row >= rows)
+            {
+                return false;
+            }
+
+            var cellSize = CalculateBattleHexCellSize(rootSize);
+            var hexWidth = cellSize.x;
+            var hexHeight = cellSize.y;
+            var totalWidth = hexWidth + (BattleHexColumnCount - 1) * hexWidth * BattleHexHorizontalStep;
+            var totalHeight = hexHeight * 4f;
+            var left = -totalWidth * 0.5f + hexWidth * 0.5f;
+            var top = totalHeight * 0.5f - hexHeight * 0.5f;
+            var x = left + column * hexWidth * BattleHexHorizontalStep;
+            var yOffset = rows == 3 ? -hexHeight * 0.5f : 0f;
+            var y = top - row * hexHeight + yOffset;
+            center = new Vector2(x, y);
+            return true;
+        }
+
+        private static Vector2 CalculateBattleHexCellSize(Vector2 rootSize)
+        {
+            var widthLimit = Mathf.Max(1f, rootSize.x * 0.92f) / (1f + (BattleHexColumnCount - 1) * BattleHexHorizontalStep);
+            var heightLimit = Mathf.Max(1f, rootSize.y * 0.82f) / (4f * BattleHexHeightRatio);
+            var hexWidth = Mathf.Clamp(Mathf.Min(widthLimit, heightLimit), 76f, 180f);
+            return new Vector2(hexWidth, hexWidth * BattleHexHeightRatio);
+        }
+
+        private static float CalculateBattleUnitScale(Vector2 rootSize)
+        {
+            var cellSize = CalculateBattleHexCellSize(rootSize);
+            return Mathf.Clamp(Mathf.Min(cellSize.x / 260f, cellSize.y / 250f), 0.42f, 0.72f);
         }
 
         private static void ParseBattleSlot(string slotId, out int row, out int col)
@@ -4473,6 +5682,156 @@ namespace ProphecyCentury.UI
                 battlePreviewText.text = FormatBattlePreview();
             }
             RefreshCardLists();
+            EnsureBattleLogButton();
+            RefreshBattleLogButton();
+        }
+
+        private void EnsureBattleLogButton()
+        {
+            if (_battleLogButton != null)
+            {
+                return;
+            }
+
+            var parent = runPanel != null ? runPanel.transform : transform;
+            _battleLogButton = new GameObject("BattleLogButton", typeof(Image), typeof(Button));
+            _battleLogButton.transform.SetParent(parent, false);
+            var rect = _battleLogButton.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 0f);
+            rect.anchorMax = new Vector2(1f, 0f);
+            rect.pivot = new Vector2(1f, 0f);
+            rect.anchoredPosition = new Vector2(-18f, 18f);
+            rect.sizeDelta = new Vector2(132f, 42f);
+
+            var image = _battleLogButton.GetComponent<Image>();
+            image.color = new Color32(36, 52, 82, 235);
+
+            var button = _battleLogButton.GetComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
+            button.onClick.AddListener(OpenBattleLogModal);
+
+            var text = CreateChildText(_battleLogButton.transform, "战斗记录", 18, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
+            text.color = Color.white;
+        }
+
+        private void RefreshBattleLogButton()
+        {
+            if (_battleLogButton == null)
+            {
+                return;
+            }
+
+            _battleLogButton.SetActive(runPanel == null || runPanel.activeInHierarchy);
+            _battleLogButton.transform.SetAsLastSibling();
+        }
+
+        private void OpenBattleLogModal()
+        {
+            EnsureBattleLogModal();
+            if (_battleLogContentLabel != null)
+            {
+                _battleLogContentLabel.text = _latestBattleLogLines.Count == 0
+                    ? "暂无战斗记录。"
+                    : string.Join("\n", _latestBattleLogLines);
+            }
+
+            _battleLogModal.SetActive(true);
+            _battleLogModal.transform.SetAsLastSibling();
+        }
+
+        private void EnsureBattleLogModal()
+        {
+            if (_battleLogModal != null)
+            {
+                return;
+            }
+
+            var parent = runPanel != null ? runPanel.transform : transform;
+            _battleLogModal = new GameObject("BattleLogModal", typeof(Image));
+            _battleLogModal.transform.SetParent(parent, false);
+            var modalRect = _battleLogModal.GetComponent<RectTransform>();
+            modalRect.anchorMin = Vector2.zero;
+            modalRect.anchorMax = Vector2.one;
+            modalRect.offsetMin = Vector2.zero;
+            modalRect.offsetMax = Vector2.zero;
+            _battleLogModal.GetComponent<Image>().color = new Color32(4, 3, 12, 196);
+
+            var panel = new GameObject("Panel", typeof(Image));
+            panel.transform.SetParent(_battleLogModal.transform, false);
+            var panelRect = panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.anchoredPosition = Vector2.zero;
+            panelRect.sizeDelta = new Vector2(980f, 680f);
+            panel.GetComponent<Image>().color = new Color32(22, 28, 48, 252);
+
+            var title = CreateAnchoredText(panel.transform, "Title", "最近战斗记录", 34, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.89f), new Vector2(0.92f, 0.97f));
+            title.color = new Color32(255, 226, 132, 255);
+
+            var closeButton = new GameObject("CloseButton", typeof(Image), typeof(Button));
+            closeButton.transform.SetParent(panel.transform, false);
+            var closeRect = closeButton.GetComponent<RectTransform>();
+            closeRect.anchorMin = new Vector2(1f, 1f);
+            closeRect.anchorMax = new Vector2(1f, 1f);
+            closeRect.pivot = new Vector2(1f, 1f);
+            closeRect.anchoredPosition = new Vector2(-18f, -18f);
+            closeRect.sizeDelta = new Vector2(96f, 42f);
+            var closeImage = closeButton.GetComponent<Image>();
+            closeImage.color = new Color32(70, 82, 112, 245);
+            var button = closeButton.GetComponent<Button>();
+            button.targetGraphic = closeImage;
+            button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
+            button.onClick.AddListener(() => _battleLogModal.SetActive(false));
+            CreateChildText(closeButton.transform, "关闭", 18, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
+
+            var scrollObject = new GameObject("Scroll", typeof(ScrollRect));
+            scrollObject.transform.SetParent(panel.transform, false);
+            var scrollRect = scrollObject.GetComponent<RectTransform>();
+            scrollRect.anchorMin = new Vector2(0.06f, 0.08f);
+            scrollRect.anchorMax = new Vector2(0.94f, 0.86f);
+            scrollRect.offsetMin = Vector2.zero;
+            scrollRect.offsetMax = Vector2.zero;
+
+            var viewport = new GameObject("Viewport", typeof(Image), typeof(RectMask2D));
+            viewport.transform.SetParent(scrollObject.transform, false);
+            var viewportRect = viewport.GetComponent<RectTransform>();
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.offsetMin = Vector2.zero;
+            viewportRect.offsetMax = Vector2.zero;
+            viewport.GetComponent<Image>().color = new Color32(8, 12, 24, 210);
+
+            var content = new GameObject("Content", typeof(Text), typeof(ContentSizeFitter));
+            content.transform.SetParent(viewport.transform, false);
+            var contentRect = content.GetComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0f, 1f);
+            contentRect.anchorMax = new Vector2(1f, 1f);
+            contentRect.pivot = new Vector2(0f, 1f);
+            contentRect.offsetMin = new Vector2(18f, 0f);
+            contentRect.offsetMax = new Vector2(-18f, -16f);
+
+            _battleLogContentLabel = content.GetComponent<Text>();
+            _battleLogContentLabel.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            _battleLogContentLabel.fontSize = 50;
+            _battleLogContentLabel.alignment = TextAnchor.UpperLeft;
+            _battleLogContentLabel.color = new Color32(230, 236, 248, 255);
+            _battleLogContentLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _battleLogContentLabel.verticalOverflow = VerticalWrapMode.Overflow;
+            _battleLogContentLabel.raycastTarget = false;
+            var fitter = content.GetComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var scroll = scrollObject.GetComponent<ScrollRect>();
+            scroll.viewport = viewportRect;
+            scroll.content = contentRect;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+
+            _battleLogModal.SetActive(false);
         }
 
         private void HideLegacyBoardInfoLabels()
@@ -4893,6 +6252,10 @@ namespace ProphecyCentury.UI
                 GetUnitCardRaceStyles(),
                 prefix,
                 selected);
+            if (dragSource == "board")
+            {
+                ApplyBoardCountBadge(view, unitDefinition, card);
+            }
 
             var background = view.BackgroundImage != null ? view.BackgroundImage : cardObject.GetComponent<Image>();
             var cardButton = cardObject.GetComponent<Button>();
@@ -4934,6 +6297,188 @@ namespace ProphecyCentury.UI
             if (!isShopCard && card != null && !string.IsNullOrWhiteSpace(secondaryLabel) && secondaryAction != null)
             {
                 CreateCardActionButton(cardObject.transform, secondaryLabel, isGridCard ? new Vector2(46f, 22f) : new Vector2(-52f, 16f), () => secondaryAction(index), isShopCard || isGridCard);
+            }
+        }
+
+        private void ApplyBoardCountBadge(UnitCardView view, UnitDefinition definition, UnitCardState card)
+        {
+            if (view?.GemLabel == null || definition == null || card == null || Run?.boardUnits == null)
+            {
+                return;
+            }
+
+            var text = FormatBoardCountBadge(definition, card, out var achieved);
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                view.GemLabel.text = text;
+                view.GemLabel.color = achieved ? new Color32(90, 238, 132, 255) : Color.white;
+            }
+        }
+
+        private string FormatBoardCountBadge(UnitDefinition definition, UnitCardState card, out bool achieved)
+        {
+            achieved = false;
+            var skill = GetBoardCountBadgeSkill(definition, card);
+            if (skill == null)
+            {
+                return string.Empty;
+            }
+
+            var count = 0;
+            var label = string.Empty;
+            var threshold = Mathf.Max(0, skill.threshold);
+
+            switch (skill.kind)
+            {
+                case "battle_start_if_team_faith_count_next_round_discover":
+                case "battle_start_self_attack_per_faith_count":
+                case "battle_start_team_attack_per_faith_count":
+                case "battle_start_self_stats_per_faith_count":
+                case "round_end_self_gain_attack_per_faith_count":
+                    var faith = string.IsNullOrWhiteSpace(skill.faith) ? definition.faith : skill.faith;
+                    count = CountBoardFaith(faith);
+                    label = BoardCountLabel(faith);
+                    break;
+                case "round_start_if_race_count_temp_power":
+                case "while_on_board_race_threshold_team_speed":
+                case "round_end_if_race_count_self_gain_attack":
+                case "round_end_self_temp_morale_per_race_count":
+                    var race = string.IsNullOrWhiteSpace(skill.race) ? definition.race : skill.race;
+                    count = CountBoardRace(race);
+                    label = BoardCountLabel(race);
+                    break;
+                default:
+                    return string.Empty;
+            }
+
+            if (threshold > 0)
+            {
+                achieved = count >= threshold;
+                return $"{label} {count}/{threshold}";
+            }
+
+            return $"{label} {count}";
+        }
+
+        private static SkillDefinition GetBoardCountBadgeSkill(UnitDefinition definition, UnitCardState card)
+        {
+            foreach (var skill in GetActiveBoardCountSkills(definition, card))
+            {
+                switch (skill.kind)
+                {
+                    case "battle_start_if_team_faith_count_next_round_discover":
+                    case "battle_start_self_attack_per_faith_count":
+                    case "battle_start_team_attack_per_faith_count":
+                    case "battle_start_self_stats_per_faith_count":
+                    case "round_start_if_race_count_temp_power":
+                    case "while_on_board_race_threshold_team_speed":
+                    case "round_end_self_gain_attack_per_faith_count":
+                    case "round_end_if_race_count_self_gain_attack":
+                    case "round_end_self_temp_morale_per_race_count":
+                        return skill;
+                }
+            }
+
+            return null;
+        }
+
+        private static IEnumerable<SkillDefinition> GetActiveBoardCountSkills(UnitDefinition definition, UnitCardState card)
+        {
+            if (definition == null)
+            {
+                yield break;
+            }
+
+            var talents = card != null && card.isGolden ? definition.goldTalents : definition.talents;
+            foreach (var skill in talents ?? new SkillDefinition[0])
+            {
+                if (skill != null)
+                {
+                    yield return skill;
+                }
+            }
+
+            var battleSkills = card != null && card.isGolden ? definition.goldBattleSkills : definition.battleSkills;
+            foreach (var skill in battleSkills ?? new SkillDefinition[0])
+            {
+                if (skill != null)
+                {
+                    yield return skill;
+                }
+            }
+        }
+
+        private int CountBoardFaith(string faith)
+        {
+            if (Run?.boardUnits == null || string.IsNullOrWhiteSpace(faith))
+            {
+                return 0;
+            }
+
+            return Run.boardUnits.Count(unit => ProphecyGameSession.Instance.Data.FindUnit(unit.unitId)?.faith == faith);
+        }
+
+        private int CountBoardRace(string race)
+        {
+            if (Run?.boardUnits == null || string.IsNullOrWhiteSpace(race))
+            {
+                return 0;
+            }
+
+            return Run.boardUnits.Count(unit => CountsAsBoardRace(unit, race));
+        }
+
+        private bool CountsAsBoardRace(UnitCardState unit, string race)
+        {
+            var definition = unit == null ? null : ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
+            return definition?.race == race || SameRowCountsAsRace(unit, race);
+        }
+
+        private bool SameRowCountsAsRace(UnitCardState unit, string race)
+        {
+            if (!(unit is BoardUnitState boardUnit) || string.IsNullOrWhiteSpace(race) || !TryParseBoardSlot(boardUnit.boardSlotId, out var row, out _))
+            {
+                return false;
+            }
+
+            return Run?.boardUnits?.Any(owner =>
+            {
+                if (owner == null || !TryParseBoardSlot(owner.boardSlotId, out var ownerRow, out _) || ownerRow != row)
+                {
+                    return false;
+                }
+
+                var ownerDefinition = ProphecyGameSession.Instance.Data.FindUnit(owner.unitId);
+                var skills = owner.isGolden ? ownerDefinition?.goldTalents : ownerDefinition?.talents;
+                return (skills ?? new SkillDefinition[0]).Any(skill => skill != null && skill.kind == "same_row_units_count_as_race" && (string.IsNullOrWhiteSpace(skill.race) || skill.race == race));
+            }) == true;
+        }
+
+        private static bool TryParseBoardSlot(string slotId, out int row, out int column)
+        {
+            row = 0;
+            column = 0;
+            if (string.IsNullOrWhiteSpace(slotId))
+            {
+                return false;
+            }
+
+            var parts = slotId.Split('-');
+            return parts.Length == 2 && int.TryParse(parts[0], out row) && int.TryParse(parts[1], out column);
+        }
+
+        private static string BoardCountLabel(string value)
+        {
+            switch (value)
+            {
+                case "莱特":
+                    return "莱";
+                case "甘地":
+                    return "甘";
+                case "甘德":
+                    return "德";
+                default:
+                    return string.IsNullOrWhiteSpace(value) ? "数" : value.Substring(0, 1);
             }
         }
 
@@ -5043,7 +6588,9 @@ namespace ProphecyCentury.UI
                 viewRect.anchorMax = Vector2.one;
                 viewRect.offsetMin = Vector2.zero;
                 viewRect.offsetMax = Vector2.zero;
-                view.Bind(ProphecyGameSession.Instance.Data.FindUnit(unit.unitId), unit, UnitCardPresentationMode.Board, GetUnitCardRaceStyles(), null, isSelected);
+                var definition = ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
+                view.Bind(definition, unit, UnitCardPresentationMode.Board, GetUnitCardRaceStyles(), null, isSelected);
+                ApplyBoardCountBadge(view, definition, unit);
 
                 var dragItem = cellObject.AddComponent<RuntimeUnitDragItem>();
                 dragItem.Controller = this;
@@ -5059,7 +6606,11 @@ namespace ProphecyCentury.UI
                 text.text = $"{slotId}\n空位";
             }
 
-            if (unit == null && _selectedHandIndex >= 0)
+            if (unit != null && !string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId))
+            {
+                CreateSmallBoardActionButton(cellObject.transform, "祝福", () => ResolvePendingTargetedEntryOnSlot(slotId));
+            }
+            else if (unit == null && _selectedHandIndex >= 0)
             {
                 CreateSmallBoardActionButton(cellObject.transform, "部署", () => DeployHandCardToSlot(_selectedHandIndex, slotId));
             }
@@ -5249,4 +6800,5 @@ namespace ProphecyCentury.UI
             return string.Concat(Enumerable.Repeat(value, Mathf.Max(0, count)));
         }
     }
+
 }

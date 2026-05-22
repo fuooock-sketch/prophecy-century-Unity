@@ -152,7 +152,7 @@ namespace ProphecyCentury.Systems
             return success;
         }
 
-        public bool DeployUnit(int handIndex, string boardSlotId = null)
+        public bool DeployUnit(int handIndex, string boardSlotId = null, bool deferSynthesis = false)
         {
             var run = ProphecyGameSession.Instance.CurrentRun;
             var success = BoardSystem.DeployFromHand(run, handIndex, boardSlotId);
@@ -163,10 +163,33 @@ namespace ProphecyCentury.Systems
                     : run.boardUnits.LastOrDefault(unit => unit.boardSlotId == boardSlotId);
                 ManageEventResolver.ResolveEntry(run, deployed);
                 CaptureAbilityTrigger();
-                TrySynthesizeAll(run);
+                if (!deferSynthesis)
+                {
+                    TrySynthesizeAll(run);
+                }
             }
 
             return success;
+        }
+
+        public bool HasTargetedEntryPower(UnitCardState unit)
+        {
+            return ManageEventResolver.HasTargetedEntryPower(unit);
+        }
+
+        public int ResolveTargetedEntryPower(string sourceSlotId, string targetSlotId)
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var source = run?.boardUnits.FirstOrDefault(unit => unit.boardSlotId == sourceSlotId);
+            var target = run?.boardUnits.FirstOrDefault(unit => unit.boardSlotId == targetSlotId);
+            var value = ManageEventResolver.ResolveTargetedEntryPower(run, source, target);
+            if (value > 0)
+            {
+                CaptureAbilityTrigger();
+                TrySynthesizeAll(run);
+            }
+
+            return value;
         }
 
         public bool UseForestGemCard(int handIndex, string boardSlotId)

@@ -12,12 +12,14 @@ namespace ProphecyCentury.Systems
         private const float StepSeconds = 0.1f;
         private const float TargetSearchInterval = 1f;
         private const int MaxBattleSeconds = 40;
+        private const int MaxBattleRounds = 50;
         private const int MaxBattleEvents = 600;
+        private const int BattleHexColumnCount = 11;
+        private static readonly int[] BattleHexRowsByColumn = { 4, 3, 4, 3, 4, 3, 4, 3, 4, 3, 4 };
 
         public BattleStubResult Resolve(RunState runState)
         {
             var random = new Random(runState.round * 7919 + runState.boardUnits.Count * 131);
-            var config = ProphecyGameSession.Instance.Data.Config;
             var battleTime = MaxBattleSeconds;
             var players = BuildPlayerUnits(runState);
             var enemies = BuildEnemyUnits(runState, random);
@@ -27,8 +29,6 @@ namespace ProphecyCentury.Systems
             ResolveBattleStart(enemies, players, random, events, 0f);
             ApplyContinuousAuras(players);
             ApplyContinuousAuras(enemies);
-            var playerAreaEffects = new List<BattleAreaEffect>();
-            var enemyAreaEffects = new List<BattleAreaEffect>();
             var playerScore = EstimateScore(players);
             var enemyScore = EstimateScore(enemies);
 
@@ -37,19 +37,44 @@ namespace ProphecyCentury.Systems
                 return Finish(runState, false, playerScore, enemyScore, 15, 0, players, enemies, events);
             }
 
-            var elapsed = 0f;
             var attacks = 0;
-            while (elapsed < battleTime && players.Any(unit => unit.IsAlive) && enemies.Any(unit => unit.IsAlive))
+            var elapsed = 0f;
+            for (var round = 1; round <= MaxBattleRounds && elapsed < battleTime && players.Any(unit => unit.IsAlive) && enemies.Any(unit => unit.IsAlive); round += 1)
             {
-                TickTimedSkills(players, enemies, random, playerAreaEffects, events, elapsed);
-                TickTimedSkills(enemies, players, random, enemyAreaEffects, events, elapsed);
-                TickSide(players, enemies, random, playerAreaEffects, ref attacks, events, elapsed);
-                TickSide(enemies, players, random, enemyAreaEffects, ref attacks, events, elapsed);
-                TickBattleState(players);
-                TickBattleState(enemies);
+                AddEvent(events, elapsed, "round", null, null, round, $"Round {round}");
+                ResolveBattleRoundStart(players, enemies, round, random, events, elapsed);
+                ResolveBattleRoundStart(enemies, players, round, random, events, elapsed);
                 ApplyContinuousAuras(players);
                 ApplyContinuousAuras(enemies);
-                elapsed += StepSeconds;
+                var turnOrder = players.Concat(enemies)
+                    .Where(unit => unit.IsAlive)
+                    .OrderByDescending(unit => unit.Speed)
+                    .ThenByDescending(unit => unit.Attack)
+                    .ThenByDescending(unit => unit.CurrentHp)
+                    .ThenBy(unit => unit.PlayerSide ? 0 : 1)
+                    .ThenBy(unit => unit.SlotId)
+                    .ToList();
+
+                foreach (var unit in turnOrder)
+                {
+                    if (elapsed >= battleTime || !players.Any(item => item.IsAlive) || !enemies.Any(item => item.IsAlive))
+                    {
+                        break;
+                    }
+
+                    if (!unit.IsAlive)
+                    {
+                        continue;
+                    }
+
+                    var allies = unit.PlayerSide ? players : enemies;
+                    var defenders = unit.PlayerSide ? enemies : players;
+                    TakeHexTurn(unit, allies, defenders, random, ref attacks, events, ref elapsed);
+                    TickBattleState(players);
+                    TickBattleState(enemies);
+                    ApplyContinuousAuras(players);
+                    ApplyContinuousAuras(enemies);
+                }
             }
 
             var playerAlive = players.Any(unit => unit.IsAlive);
@@ -107,6 +132,235 @@ namespace ProphecyCentury.Systems
             ResolveBattleStart(units, new List<BattleRuntimeUnit>(), random);
             ApplyContinuousAuras(units);
             return EstimateScore(units);
+        }
+
+        private static void TakeHexTurn(BattleRuntimeUnit actor, List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> defenders, Random random, ref int attacks, List<BattleEvent> events, ref float elapsed)
+        {
+            if (actor == null || !actor.IsAlive)
+            {
+                return;
+            }
+
+            AddEvent(events, elapsed, "turn", actor, null, 0, $"{actor.Name} turn");
+            if (actor.StunTurns > 0)
+            {
+                actor.StunTurns -= 1;
+                AddEvent(events, elapsed, "turn_skip", actor, null, 0, $"{actor.Name} skips stunned turn");
+                elapsed += 0.2f;
+                return;
+            }
+
+            if (actor.StunRemaining > 0f)
+            {
+                AddEvent(events, elapsed, "turn_skip", actor, null, 0, $"{actor.Name} skips action");
+                elapsed += 0.2f;
+                return;
+            }
+
+            var target = PickHexTurnTarget(actor, defenders);
+            if (target == null)
+            {
+                elapsed += 0.1f;
+                return;
+            }
+
+            actor.CurrentTarget = target;
+            if (IsInHexAttackRange(actor, target))
+            {
+                ApplyTurnAttack(actor, target, allies, defenders, random, ref attacks, events, elapsed);
+                elapsed += 0.35f;
+                return;
+            }
+
+            if (actor.MoveLockTurns > 0)
+            {
+                actor.MoveLockTurns -= 1;
+                AddEvent(events, elapsed, "turn_skip", actor, target, 0, $"{actor.Name} is move locked");
+                elapsed += 0.2f;
+                return;
+            }
+
+            var occupied = BuildOccupiedHexSet(allies, defenders, actor);
+            var destination = PickHexMoveDestination(actor, target, occupied, random);
+            if (!destination.HasValue)
+            {
+                elapsed += 0.2f;
+                return;
+            }
+
+            var path = FindHexPath(actor.HexColumn, actor.HexRow, destination.Value.Column, destination.Value.Row, occupied);
+            if (path == null || path.Count == 0)
+            {
+                elapsed += 0.2f;
+                return;
+            }
+
+            var maxSteps = Math.Max(0, actor.Speed);
+            var route = new List<HexCoord>();
+            for (var i = 0; i < path.Count && i < maxSteps; i += 1)
+            {
+                var step = path[i];
+                route.Add(step);
+                if (Math.Max(1f, actor.Definition != null ? actor.Definition.range : 1f) >= HexDistance(step.Column, step.Row, target.HexColumn, target.HexRow))
+                {
+                    break;
+                }
+            }
+
+            if (route.Count == 0)
+            {
+                elapsed += 0.12f;
+                return;
+            }
+
+            var finalStep = route[route.Count - 1];
+            var finalDestinationSlotId = FormatHexSlot(finalStep.Column, finalStep.Row);
+            AddEvent(
+                events,
+                elapsed,
+                "move",
+                actor,
+                target,
+                0,
+                $"{actor.Name} moves",
+                finalDestinationSlotId,
+                string.Join("|", route.Select(step => FormatHexSlot(step.Column, step.Row))));
+            actor.HexColumn = finalStep.Column;
+            actor.HexRow = finalStep.Row;
+            actor.Row = finalStep.Row;
+            actor.Col = finalStep.Column;
+            actor.SlotId = finalDestinationSlotId;
+            elapsed += 0.18f * route.Count;
+
+            if (target.IsAlive && IsInHexAttackRange(actor, target))
+            {
+                ApplyTurnAttack(actor, target, allies, defenders, random, ref attacks, events, elapsed);
+                elapsed += 0.35f;
+                return;
+            }
+
+            elapsed += 0.12f;
+        }
+
+        private static void ApplyTurnAttack(BattleRuntimeUnit attacker, BattleRuntimeUnit target, List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> defenders, Random random, ref int attacks, List<BattleEvent> events, float elapsed)
+        {
+            if (attacker == null || target == null || !attacker.IsAlive || !target.IsAlive)
+            {
+                return;
+            }
+
+            ApplyAttack(attacker, target, allies, defenders, random, null, false, false, true, events, elapsed);
+            attacks += 1;
+        }
+
+        private static BattleRuntimeUnit PickHexTurnTarget(BattleRuntimeUnit attacker, IEnumerable<BattleRuntimeUnit> defenders)
+        {
+            return defenders
+                .Where(unit => unit.IsAlive)
+                .OrderBy(unit => HexDistance(attacker.HexColumn, attacker.HexRow, unit.HexColumn, unit.HexRow))
+                .ThenBy(unit => unit.CurrentHp)
+                .ThenBy(unit => unit.SlotId)
+                .FirstOrDefault();
+        }
+
+        private static void ResolveBattleRoundStart(List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> enemies, int round, Random random, List<BattleEvent> events, float elapsed)
+        {
+            foreach (var unit in allies.Where(unit => unit.IsAlive).ToList())
+            {
+                foreach (var skill in GetBattleSkills(unit))
+                {
+                    switch (skill.kind)
+                    {
+                        case "battle_round_self_hp_loss_team_temp_attack":
+                            if (!IsRoundInterval(round, skill))
+                            {
+                                break;
+                            }
+
+                            var loss = Math.Max(1, skill.selfHpLoss > 0 ? skill.selfHpLoss : skill.damage > 0 ? skill.damage : skill.hp > 0 ? skill.hp : 1);
+                            AddEvent(events, elapsed, "skill", unit, unit, loss, $"{unit.Name} loses life and rallies allies");
+                            var beforeHp = unit.CurrentHp;
+                            unit.CurrentHp = Math.Max(0, unit.CurrentHp - loss);
+                            AddEvent(events, elapsed, "damage", unit, unit, beforeHp - unit.CurrentHp, $"{unit.Name} loses life");
+                            if (beforeHp > 0 && unit.CurrentHp <= 0)
+                            {
+                                AddEvent(events, elapsed, "death", unit, unit, 0, $"{unit.Name} dies");
+                                ResolveDeath(unit, unit, allies, enemies, random, events, elapsed);
+                            }
+
+                            foreach (var ally in allies.Where(ally => ally.IsAlive && ally != unit))
+                            {
+                                var attackGain = Math.Max(0, skill.attack);
+                                ally.Attack += attackGain;
+                                if (attackGain > 0)
+                                {
+                                    AddEvent(events, elapsed, "buff_attack", unit, ally, attackGain, $"{ally.Name} gains attack");
+                                }
+                            }
+                            unit.SkillTriggers += 1;
+                            break;
+                        case "battle_periodic_temp_power":
+                            if (!IsRoundInterval(round, skill))
+                            {
+                                break;
+                            }
+
+                            unit.Power += Math.Max(1, skill.value);
+                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(1, skill.value), $"{unit.Name} gains power");
+                            unit.SkillTriggers += 1;
+                            break;
+                        case "battle_start_self_refreshing_shield":
+                            var refreshRounds = SkillRefreshRounds(skill);
+                            if (refreshRounds > 0 && round > 1 && (round - 1) % refreshRounds == 0)
+                            {
+                                unit.ShieldLayers = Math.Max(unit.ShieldLayers, Math.Max(1, skill.layers));
+                                AddEvent(events, elapsed, "skill", unit, unit, unit.ShieldLayers, $"{unit.Name} refreshes shield");
+                                unit.SkillTriggers += 1;
+                            }
+                            break;
+                    }
+                }
+            }
+        }
+
+        private static bool IsInHexAttackRange(BattleRuntimeUnit attacker, BattleRuntimeUnit target)
+        {
+            if (attacker == null || target == null)
+            {
+                return false;
+            }
+
+            var range = attacker.Definition != null ? attacker.Definition.range : 1f;
+            return Math.Max(1f, range) >= HexDistance(attacker.HexColumn, attacker.HexRow, target.HexColumn, target.HexRow);
+        }
+
+        private static HashSet<string> BuildOccupiedHexSet(IEnumerable<BattleRuntimeUnit> allies, IEnumerable<BattleRuntimeUnit> defenders, BattleRuntimeUnit movingUnit)
+        {
+            return new HashSet<string>(allies.Concat(defenders)
+                .Where(unit => unit != null && unit != movingUnit && unit.IsAlive)
+                .Select(unit => HexKey(unit.HexColumn, unit.HexRow)));
+        }
+
+        private static HexCoord? PickHexMoveDestination(BattleRuntimeUnit actor, BattleRuntimeUnit target, HashSet<string> occupied, Random random)
+        {
+            var candidates = GetHexNeighbors(target.HexColumn, target.HexRow)
+                .Where(coord => !occupied.Contains(HexKey(coord.Column, coord.Row)))
+                .Select(coord => new
+                {
+                    Coord = coord,
+                    Path = FindHexPath(actor.HexColumn, actor.HexRow, coord.Column, coord.Row, occupied)
+                })
+                .Where(item => item.Path != null)
+                .ToList();
+
+            if (candidates.Count == 0)
+            {
+                return null;
+            }
+
+            var bestDistance = candidates.Min(item => item.Path.Count);
+            var best = candidates.Where(item => item.Path.Count == bestDistance).ToList();
+            return best[random.Next(best.Count)].Coord;
         }
 
         private static void TickSide(List<BattleRuntimeUnit> attackers, List<BattleRuntimeUnit> defenders, Random random, List<BattleAreaEffect> areaEffects, ref int attacks, List<BattleEvent> events = null, float elapsed = 0f)
@@ -249,7 +503,6 @@ namespace ProphecyCentury.Systems
                 AddEvent(events, elapsed, critical ? "critical_damage" : "damage", source, target, actualDamage, $"{source.Name} deals {actualDamage} damage to {target.Name}");
                 target.DamagedCount += 1;
                 ResolveDamaged(target);
-                ResolveFirstHitsCounterattack(target, source, targetAllies, sourceAllies, random, events, elapsed);
             }
 
             if (target.CurrentHp <= 0 && before > 0)
@@ -270,7 +523,7 @@ namespace ProphecyCentury.Systems
                 runState.playerHp -= hpLoss;
             }
 
-            ApplyPostBattleRewards(runState, victory, players);
+            ApplyPostBattleRewards(runState, victory, players, events);
             var playerAlive = players.Count(unit => unit.IsAlive);
             var enemyAlive = enemies.Count(unit => unit.IsAlive);
             var playerDamage = players.Sum(unit => unit.DamageDone);
@@ -295,7 +548,7 @@ namespace ProphecyCentury.Systems
             };
         }
 
-        private static void AddEvent(List<BattleEvent> events, float time, string kind, BattleRuntimeUnit source, BattleRuntimeUnit target, int amount, string message)
+        private static void AddEvent(List<BattleEvent> events, float time, string kind, BattleRuntimeUnit source, BattleRuntimeUnit target, int amount, string message, string destinationSlotId = null, string routeSlotIds = null)
         {
             if (events == null || events.Count >= MaxBattleEvents)
             {
@@ -307,17 +560,21 @@ namespace ProphecyCentury.Systems
                 Time = Math.Max(0f, time),
                 Kind = kind,
                 SourceUnitId = source?.UnitId,
+                SourceInstanceId = source?.InstanceId,
                 SourceName = source?.Name,
                 SourcePlayerSide = source?.PlayerSide ?? false,
                 SourceSlotId = source?.SlotId,
                 SourceHp = source?.CurrentHp ?? 0,
                 SourceMaxHp = source?.MaxHp ?? 0,
                 TargetUnitId = target?.UnitId,
+                TargetInstanceId = target?.InstanceId,
                 TargetName = target?.Name,
                 TargetPlayerSide = target?.PlayerSide ?? false,
                 TargetSlotId = target?.SlotId,
                 TargetHp = target?.CurrentHp ?? 0,
                 TargetMaxHp = target?.MaxHp ?? 0,
+                DestinationSlotId = destinationSlotId,
+                RouteSlotIds = routeSlotIds,
                 Amount = amount,
                 Message = message
             });
@@ -328,6 +585,7 @@ namespace ProphecyCentury.Systems
             return new BattleUnitSnapshot
             {
                 UnitId = unit.UnitId,
+                InstanceId = unit.InstanceId,
                 Name = unit.Name,
                 Star = unit.Definition?.star ?? 1,
                 IsGolden = unit.IsGolden,
@@ -517,6 +775,12 @@ namespace ProphecyCentury.Systems
             }
 
             TryParseSlot(slotId, out var row, out var col);
+            if (!TryMapInitialSlotToHex(slotId, playerSide, out var hexColumn, out var hexRow))
+            {
+                hexColumn = playerSide ? 0 : BattleHexColumnCount - 1;
+                hexRow = 0;
+            }
+
             var hp = Scale(definition.hp + (state?.shopBuffHp ?? 0), multiplier);
             var attack = Scale(definition.attack + (state?.shopBuffAttack ?? 0) + (state?.roundTempAttack ?? 0), multiplier);
             var defense = Scale(definition.defense + (state?.shopBuffDefense ?? 0), multiplier);
@@ -530,6 +794,7 @@ namespace ProphecyCentury.Systems
             return new BattleRuntimeUnit
             {
                 UnitId = definition.id,
+                InstanceId = $"{(playerSide ? "P" : "E")}:{slotId}:{definition.id}",
                 Name = definition.name,
                 Race = definition.race,
                 Faith = definition.faith,
@@ -540,8 +805,10 @@ namespace ProphecyCentury.Systems
                 SourceState = state,
                 PlayerSide = playerSide,
                 SlotId = slotId,
-                Row = row,
-                Col = playerSide ? col : -col,
+                Row = hexRow,
+                Col = hexColumn,
+                HexColumn = hexColumn,
+                HexRow = hexRow,
                 MaxHp = Math.Max(1, hp),
                 CurrentHp = Math.Max(1, hp),
                 Attack = Math.Max(1, attack),
@@ -602,8 +869,11 @@ namespace ProphecyCentury.Systems
                             break;
                         case "battle_start_self_refreshing_shield":
                             unit.ShieldLayers += Math.Max(1, skill.layers);
-                            unit.ShieldRefreshInterval = Math.Max(0.1f, SkillRefreshSeconds(skill, 5f));
-                            unit.ShieldRefreshTimer = unit.ShieldRefreshInterval;
+                            if (skill.refreshRounds <= 0)
+                            {
+                                unit.ShieldRefreshInterval = Math.Max(0.1f, SkillRefreshSeconds(skill, 5f));
+                                unit.ShieldRefreshTimer = unit.ShieldRefreshInterval;
+                            }
                             unit.SkillTriggers += 1;
                             break;
                         case "battle_start_self_attack_per_faith_count":
@@ -721,11 +991,11 @@ namespace ProphecyCentury.Systems
                             break;
                         case "battle_start_summon_units":
                         case "battle_start_and_death_summon_units":
-                            SummonUnits(allies, unit, skill, random, events, elapsed);
+                            SummonUnits(allies, enemies, unit, skill, random, events, elapsed);
                             unit.SkillTriggers += 1;
                             break;
                         case "battle_start_summon_and_buff_type":
-                            SummonUnits(allies, unit, skill, random, events, elapsed);
+                            SummonUnits(allies, enemies, unit, skill, random, events, elapsed);
                             foreach (var ally in allies.Where(ally => ally.IsAlive && MatchesSkillTarget(ally, skill)))
                             {
                                 AddBattleStats(ally, skill, 1);
@@ -750,9 +1020,23 @@ namespace ProphecyCentury.Systems
 
                                 MovePouncerNextToTarget(unit, pounceTarget);
                                 AddEvent(events, elapsed, "skill", unit, pounceTarget, 0, $"{unit.Name} pounces {pounceTarget.Name}");
-                                DealDamage(unit, pounceTarget, damage, allies, enemies, random, events, elapsed, skill.forceCrit);
+                                for (var hit = 0; hit < Math.Max(1, skill.times); hit += 1)
+                                {
+                                    if (!pounceTarget.IsAlive)
+                                    {
+                                        break;
+                                    }
+
+                                    DealDamage(unit, pounceTarget, damage, allies, enemies, random, events, elapsed, skill.forceCrit);
+                                }
+
+                                pounceTarget.StunTurns = Math.Max(pounceTarget.StunTurns, skill.stunTurns);
                                 pounceTarget.StunRemaining = Math.Max(pounceTarget.StunRemaining, skill.stunSeconds);
-                                if (skill.stunSeconds > 0f)
+                                if (skill.stunTurns > 0)
+                                {
+                                    AddEvent(events, elapsed, "control", unit, pounceTarget, skill.stunTurns, $"{pounceTarget.Name} stunned for {skill.stunTurns} turns");
+                                }
+                                else if (skill.stunSeconds > 0f)
                                 {
                                     AddEvent(events, elapsed, "control", unit, pounceTarget, (int)Math.Round(skill.stunSeconds * 1000f), $"{pounceTarget.Name} stunned for {skill.stunSeconds:0.#}s");
                                 }
@@ -763,8 +1047,16 @@ namespace ProphecyCentury.Systems
                         case "battle_start_lock_highest_hp_targets":
                             foreach (var locked in enemies.Where(enemy => enemy.IsAlive).OrderByDescending(enemy => enemy.CurrentHp).Take(Math.Max(1, skill.count)))
                             {
-                                locked.StunRemaining = Math.Max(locked.StunRemaining, skill.duration);
-                                AddEvent(events, elapsed, "control", unit, locked, (int)Math.Round(Math.Max(0.1f, skill.duration) * 1000f), $"{locked.Name} locked for {skill.duration:0.#}s");
+                                if (skill.moveLockTurns > 0)
+                                {
+                                    locked.MoveLockTurns = Math.Max(locked.MoveLockTurns, skill.moveLockTurns);
+                                    AddEvent(events, elapsed, "control", unit, locked, skill.moveLockTurns, $"{locked.Name} move locked for {skill.moveLockTurns} turns");
+                                }
+                                else
+                                {
+                                    locked.StunRemaining = Math.Max(locked.StunRemaining, skill.duration);
+                                    AddEvent(events, elapsed, "control", unit, locked, (int)Math.Round(Math.Max(0.1f, skill.duration) * 1000f), $"{locked.Name} locked for {skill.duration:0.#}s");
+                                }
                             }
                             unit.SkillTriggers += 1;
                             break;
@@ -795,18 +1087,9 @@ namespace ProphecyCentury.Systems
                         if (IncrementSkillCounter(attacker, skill.kind) >= Math.Max(1, skill.count))
                         {
                             attacker.SkillCounters[skill.kind] = 0;
-                            SummonUnits(allies, attacker, skill, random, events, elapsed);
+                            SummonUnits(allies, enemies, attacker, skill, random, events, elapsed);
                             attacker.SkillTriggers += 1;
                         }
-                        break;
-                    case "on_attack_multi_nearest_targets":
-                        foreach (var extraTarget in enemies.Where(enemy => enemy.IsAlive && enemy != target).OrderBy(enemy => Distance(target, enemy)).Take(Math.Max(0, skill.targets - 1)).ToList())
-                        {
-                            var extraDamage = Math.Max(1, attacker.Attack + attacker.Power * 8 - extraTarget.Defense);
-                            AddEvent(events, elapsed, "skill", attacker, extraTarget, 0, $"{attacker.Name} 追加攻击 {extraTarget.Name}");
-                            DealDamage(attacker, extraTarget, extraDamage, allies, enemies, random, events, elapsed);
-                        }
-                        attacker.SkillTriggers += Math.Max(0, skill.targets - 1) > 0 ? 1 : 0;
                         break;
                     case "on_attack_count_fire_rain_area_dot":
                         if (IncrementSkillCounter(attacker, skill.kind) >= Math.Max(1, skill.count))
@@ -845,6 +1128,7 @@ namespace ProphecyCentury.Systems
                     case "on_attack_mark_target_next_round_forest_gem_on_death":
                         target.ForestGemDeathMarkSource = attacker;
                         target.ForestGemDeathMarkAmount = Math.Max(1, skill.value);
+                        AddEvent(events, elapsed, "skill", attacker, target, target.ForestGemDeathMarkAmount, $"{attacker.Name} marks {target.Name} for next round forest gem");
                         attacker.SkillTriggers += 1;
                         break;
                 }
@@ -896,6 +1180,7 @@ namespace ProphecyCentury.Systems
             if (unit.ForestGemDeathMarkSource != null && unit.ForestGemDeathMarkSource.PlayerSide)
             {
                 unit.ForestGemDeathMarkSource.PendingRoundForestGems += Math.Max(1, unit.ForestGemDeathMarkAmount);
+                AddEvent(events, elapsed, "skill", unit.ForestGemDeathMarkSource, unit, Math.Max(1, unit.ForestGemDeathMarkAmount), $"{unit.ForestGemDeathMarkSource.Name} gains next round forest gem");
             }
 
             foreach (var skill in GetBattleSkills(unit))
@@ -903,7 +1188,7 @@ namespace ProphecyCentury.Systems
                 switch (skill.kind)
                 {
                     case "battle_start_and_death_summon_units":
-                        SummonUnits(allies, unit, skill, random, events, elapsed);
+                        SummonUnits(allies, enemies, unit, skill, random, events, elapsed);
                         unit.SkillTriggers += 1;
                         break;
                     case "battle_periodic_nearby_enemies_attack_and_death_explode":
@@ -915,7 +1200,7 @@ namespace ProphecyCentury.Systems
                             var multiplier = skill.kind == "battle_periodic_nearby_enemies_attack_and_death_explode"
                                 ? SkillDeathAttackMultiplier(skill)
                                 : Math.Max(1f, skill.attackMultiplier);
-                            var damage = Math.Max(1, skill.damage > 0 ? skill.damage : (int)Math.Round((unit.Attack + unit.Power * 8) * multiplier));
+                            var damage = Math.Max(1, skill.damage > 0 ? skill.damage : (int)Math.Round(CalculateDamage(unit, enemy) * multiplier));
                             AddEvent(events, elapsed, "skill", unit, enemy, 0, $"{unit.Name} 死亡爆炸");
                             DealDamage(unit, enemy, damage, allies, enemies, random, events, elapsed);
                             hitCount += 1;
@@ -927,6 +1212,8 @@ namespace ProphecyCentury.Systems
                             {
                                 ally.PendingRoundTempAttack += Math.Max(0, skill.nextRoundAttack);
                             }
+
+                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.nextRoundAttack), $"{unit.Name} grants next round team attack");
                         }
 
                         unit.SkillTriggers += 1;
@@ -935,6 +1222,7 @@ namespace ProphecyCentury.Systems
                         if (unit.PlayerSide)
                         {
                             unit.PendingNextRoundShopBuffAttack += Math.Max(0, skill.attack);
+                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.attack), $"{unit.Name} grants next round shop attack");
                         }
 
                         unit.SkillTriggers += 1;
@@ -943,6 +1231,7 @@ namespace ProphecyCentury.Systems
                         if (unit.PlayerSide)
                         {
                             unit.PendingRoundForestGems += Math.Max(0, skill.value);
+                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.value), $"{unit.Name} grants next round forest gem");
                         }
 
                         unit.SkillTriggers += 1;
@@ -961,7 +1250,19 @@ namespace ProphecyCentury.Systems
                     unit.Morale += Math.Max(1, skill.value);
                     unit.SkillTriggers += 1;
                 }
+
+                if (skill.kind == "on_damaged_survive_next_round_forest_gem" && unit.IsAlive)
+                {
+                    unit.PendingRoundForestGems += Math.Max(1, skill.value);
+                    unit.SkillTriggers += 1;
+                }
             }
+        }
+
+        private static int CalculateDamage(BattleRuntimeUnit attacker, BattleRuntimeUnit target)
+        {
+            var defenseFactor = 1f - target.Defense / (float)Math.Max(1, target.Defense + Math.Max(1, attacker.Power));
+            return Math.Max(1, (int)Math.Round(Math.Max(1, attacker.Attack) * defenseFactor));
         }
 
         private static void TickTimedSkills(List<BattleRuntimeUnit> units, List<BattleRuntimeUnit> enemies, Random random, List<BattleAreaEffect> areaEffects, List<BattleEvent> events = null, float elapsed = 0f)
@@ -1148,7 +1449,7 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private static void ApplyPostBattleRewards(RunState runState, bool victory, IReadOnlyList<BattleRuntimeUnit> players)
+        private static void ApplyPostBattleRewards(RunState runState, bool victory, IReadOnlyList<BattleRuntimeUnit> players, List<BattleEvent> events)
         {
             if (runState == null)
             {
@@ -1190,6 +1491,7 @@ namespace ProphecyCentury.Systems
                     if (skill.kind == "on_extra_attack_once_next_round_gold" && unit.MoraleExtraCount > 0)
                     {
                         runState.pendingBattleRewards.nextRoundGold += Math.Max(1, skill.value);
+                        AddEvent(events, events?.LastOrDefault()?.Time ?? 0f, "skill", unit, unit, Math.Max(1, skill.value), $"{unit.Name} grants next round gold");
                     }
 
                     if (skill.kind == "on_counter_count_next_round_gain_forest_gem" && unit.CounterCount >= Math.Max(1, skill.count))
@@ -1403,6 +1705,17 @@ namespace ProphecyCentury.Systems
             return skill.refreshSeconds > 0f ? skill.refreshSeconds : skill.duration > 0f ? skill.duration : fallback;
         }
 
+        private static int SkillRefreshRounds(SkillDefinition skill)
+        {
+            return skill == null ? 0 : Math.Max(0, skill.refreshRounds);
+        }
+
+        private static bool IsRoundInterval(int round, SkillDefinition skill)
+        {
+            var interval = Math.Max(1, skill?.intervalRounds ?? 1);
+            return round > 0 && (round - 1) % interval == 0;
+        }
+
         private static float SkillSnipeMultiplier(BattleRuntimeUnit unit, SkillDefinition skill)
         {
             if (skill == null)
@@ -1569,7 +1882,7 @@ namespace ProphecyCentury.Systems
             return count;
         }
 
-        private static void SummonUnits(List<BattleRuntimeUnit> allies, BattleRuntimeUnit source, SkillDefinition skill, Random random, List<BattleEvent> events = null, float elapsed = 0f)
+        private static void SummonUnits(List<BattleRuntimeUnit> allies, IReadOnlyList<BattleRuntimeUnit> enemies, BattleRuntimeUnit source, SkillDefinition skill, Random random, List<BattleEvent> events = null, float elapsed = 0f)
         {
             if (allies == null || source == null || skill == null || string.IsNullOrWhiteSpace(skill.summonUnitId))
             {
@@ -1585,7 +1898,7 @@ namespace ProphecyCentury.Systems
             var count = Math.Max(1, skill.count);
             for (var i = 0; i < count; i += 1)
             {
-                var slot = FindSummonSlot(allies, source, i);
+                var slot = FindSummonSlot(allies, enemies, source);
                 var summoned = CreateRuntimeUnit(null, source.PlayerSide, definition, slot, 1f);
                 if (summoned == null)
                 {
@@ -1599,19 +1912,56 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private static string FindSummonSlot(IReadOnlyList<BattleRuntimeUnit> allies, BattleRuntimeUnit source, int offset)
+        private static string FindSummonSlot(IReadOnlyList<BattleRuntimeUnit> allies, IReadOnlyList<BattleRuntimeUnit> enemies, BattleRuntimeUnit source)
         {
-            var occupied = new HashSet<string>(allies.Where(unit => unit.IsAlive).Select(unit => unit.SlotId));
-            var configOrder = ProphecyGameSession.Instance.Data.Config?.GetBoardOrder() ?? new List<string>();
-            foreach (var slot in configOrder)
+            if (source == null)
             {
-                if (!occupied.Contains(slot))
+                return FormatHexSlot(0, 0);
+            }
+
+            var occupied = new HashSet<string>((allies ?? Array.Empty<BattleRuntimeUnit>())
+                .Concat(enemies ?? Array.Empty<BattleRuntimeUnit>())
+                .Where(unit => unit != null && unit.IsAlive)
+                .Select(unit => HexKey(unit.HexColumn, unit.HexRow)));
+            var queue = new Queue<HexCoord>();
+            var visited = new HashSet<string>();
+            var start = new HexCoord(source.HexColumn, source.HexRow);
+            visited.Add(HexKey(start.Column, start.Row));
+            foreach (var neighbor in GetOrderedSummonNeighbors(source, start))
+            {
+                queue.Enqueue(neighbor);
+                visited.Add(HexKey(neighbor.Column, neighbor.Row));
+            }
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                var key = HexKey(current.Column, current.Row);
+                if (!occupied.Contains(key))
                 {
-                    return slot;
+                    return FormatHexSlot(current.Column, current.Row);
+                }
+
+                foreach (var next in GetOrderedSummonNeighbors(source, current))
+                {
+                    var nextKey = HexKey(next.Column, next.Row);
+                    if (visited.Add(nextKey))
+                    {
+                        queue.Enqueue(next);
+                    }
                 }
             }
 
-            return $"{Math.Max(1, source.Row)}-{Math.Max(1, source.Col + offset + 1)}";
+            return FormatHexSlot(source.HexColumn, source.HexRow);
+        }
+
+        private static IEnumerable<HexCoord> GetOrderedSummonNeighbors(BattleRuntimeUnit source, HexCoord center)
+        {
+            return GetHexNeighbors(center.Column, center.Row)
+                .OrderBy(coord => HexDistance(source.HexColumn, source.HexRow, coord.Column, coord.Row))
+                .ThenBy(coord => Math.Abs(coord.Row - source.HexRow))
+                .ThenBy(coord => source.PlayerSide ? coord.Column : -coord.Column)
+                .ThenBy(coord => coord.Row);
         }
 
         private static int EstimateScore(IEnumerable<BattleRuntimeUnit> units)
@@ -1661,7 +2011,7 @@ namespace ProphecyCentury.Systems
 
         private static float Distance(BattleRuntimeUnit left, BattleRuntimeUnit right)
         {
-            return Distance(left.Row, left.Col, right.Row, right.Col);
+            return HexDistance(left.HexColumn, left.HexRow, right.HexColumn, right.HexRow);
         }
 
         private static void MovePouncerNextToTarget(BattleRuntimeUnit unit, BattleRuntimeUnit target)
@@ -1671,18 +2021,240 @@ namespace ProphecyCentury.Systems
                 return;
             }
 
-            unit.Row = target.Row;
-            unit.Col = target.Col + (unit.PlayerSide ? -1 : 1);
-            unit.SlotId = $"{unit.Row}-{unit.Col}";
+            var destination = GetHexNeighbors(target.HexColumn, target.HexRow)
+                .OrderBy(coord => HexDistance(unit.HexColumn, unit.HexRow, coord.Column, coord.Row))
+                .FirstOrDefault();
+            unit.HexColumn = destination.Column;
+            unit.HexRow = destination.Row;
+            unit.Row = unit.HexRow;
+            unit.Col = unit.HexColumn;
+            unit.SlotId = FormatHexSlot(unit.HexColumn, unit.HexRow);
             unit.CurrentTarget = target;
             unit.TargetSearchTimer = 0f;
         }
 
         private static float Distance(int leftRow, int leftCol, int rightRow, int rightCol)
         {
-            var row = leftRow - rightRow;
-            var col = leftCol - rightCol;
-            return (float)Math.Sqrt(row * row + col * col);
+            return HexDistance(leftCol, leftRow, rightCol, rightRow);
+        }
+
+        private static bool TryMapInitialSlotToHex(string slotId, bool playerSide, out int column, out int row)
+        {
+            column = 0;
+            row = 0;
+            switch (slotId)
+            {
+                case "4-1":
+                    column = 0;
+                    row = 0;
+                    break;
+                case "4-2":
+                    column = 0;
+                    row = 1;
+                    break;
+                case "4-3":
+                    column = 0;
+                    row = 2;
+                    break;
+                case "4-4":
+                    column = 0;
+                    row = 3;
+                    break;
+                case "3-1":
+                    column = 1;
+                    row = 0;
+                    break;
+                case "3-2":
+                    column = 1;
+                    row = 1;
+                    break;
+                case "3-3":
+                    column = 1;
+                    row = 2;
+                    break;
+                case "2-1":
+                    column = 2;
+                    row = 1;
+                    break;
+                case "2-2":
+                    column = 2;
+                    row = 2;
+                    break;
+                case "1-1":
+                    column = 3;
+                    row = 1;
+                    break;
+                default:
+                    return TryParseHexSlot(slotId, out column, out row);
+            }
+
+            if (!playerSide)
+            {
+                column = BattleHexColumnCount - 1 - column;
+            }
+
+            return true;
+        }
+
+        private static List<HexCoord> FindHexPath(int startColumn, int startRow, int endColumn, int endRow, HashSet<string> occupied)
+        {
+            if (!IsValidHex(endColumn, endRow) || occupied.Contains(HexKey(endColumn, endRow)))
+            {
+                return null;
+            }
+
+            var start = new HexCoord(startColumn, startRow);
+            var end = new HexCoord(endColumn, endRow);
+            var queue = new Queue<HexCoord>();
+            var visited = new HashSet<string> { HexKey(start.Column, start.Row) };
+            var parent = new Dictionary<string, HexCoord>();
+            queue.Enqueue(start);
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                if (current.Column == end.Column && current.Row == end.Row)
+                {
+                    var path = new List<HexCoord>();
+                    var cursor = end;
+                    while (!(cursor.Column == start.Column && cursor.Row == start.Row))
+                    {
+                        path.Add(cursor);
+                        cursor = parent[HexKey(cursor.Column, cursor.Row)];
+                    }
+
+                    path.Reverse();
+                    return path;
+                }
+
+                foreach (var next in GetHexNeighbors(current.Column, current.Row))
+                {
+                    var key = HexKey(next.Column, next.Row);
+                    if (visited.Contains(key) || occupied.Contains(key))
+                    {
+                        continue;
+                    }
+
+                    visited.Add(key);
+                    parent[key] = current;
+                    queue.Enqueue(next);
+                }
+            }
+
+            return null;
+        }
+
+        private static IEnumerable<HexCoord> GetHexNeighbors(int column, int row)
+        {
+            if (!IsValidHex(column, row))
+            {
+                yield break;
+            }
+
+            var candidates = new List<HexCoord>
+            {
+                new HexCoord(column, row - 1),
+                new HexCoord(column, row + 1)
+            };
+
+            if (BattleHexRowsByColumn[column] == 4)
+            {
+                candidates.Add(new HexCoord(column - 1, row - 1));
+                candidates.Add(new HexCoord(column - 1, row));
+                candidates.Add(new HexCoord(column + 1, row - 1));
+                candidates.Add(new HexCoord(column + 1, row));
+            }
+            else
+            {
+                candidates.Add(new HexCoord(column - 1, row));
+                candidates.Add(new HexCoord(column - 1, row + 1));
+                candidates.Add(new HexCoord(column + 1, row));
+                candidates.Add(new HexCoord(column + 1, row + 1));
+            }
+
+            foreach (var candidate in candidates)
+            {
+                if (IsValidHex(candidate.Column, candidate.Row))
+                {
+                    yield return candidate;
+                }
+            }
+        }
+
+        private static int HexDistance(int startColumn, int startRow, int endColumn, int endRow)
+        {
+            if (startColumn == endColumn && startRow == endRow)
+            {
+                return 0;
+            }
+
+            var queue = new Queue<HexCoord>();
+            var distances = new Dictionary<string, int>();
+            queue.Enqueue(new HexCoord(startColumn, startRow));
+            distances[HexKey(startColumn, startRow)] = 0;
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                var currentDistance = distances[HexKey(current.Column, current.Row)];
+                foreach (var next in GetHexNeighbors(current.Column, current.Row))
+                {
+                    var key = HexKey(next.Column, next.Row);
+                    if (distances.ContainsKey(key))
+                    {
+                        continue;
+                    }
+
+                    var distance = currentDistance + 1;
+                    if (next.Column == endColumn && next.Row == endRow)
+                    {
+                        return distance;
+                    }
+
+                    distances[key] = distance;
+                    queue.Enqueue(next);
+                }
+            }
+
+            return 999;
+        }
+
+        private static bool IsValidHex(int column, int row)
+        {
+            return column >= 0
+                && column < BattleHexColumnCount
+                && row >= 0
+                && row < BattleHexRowsByColumn[column];
+        }
+
+        private static string HexKey(int column, int row)
+        {
+            return $"{column}:{row}";
+        }
+
+        private static string FormatHexSlot(int column, int row)
+        {
+            return $"h-{column + 1}-{row + 1}";
+        }
+
+        private static bool TryParseHexSlot(string slotId, out int column, out int row)
+        {
+            column = 0;
+            row = 0;
+            if (string.IsNullOrWhiteSpace(slotId) || !slotId.StartsWith("h-", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var parts = slotId.Split('-');
+            if (parts.Length != 3 || !int.TryParse(parts[1], out var parsedColumn) || !int.TryParse(parts[2], out var parsedRow))
+            {
+                return false;
+            }
+
+            column = parsedColumn - 1;
+            row = parsedRow - 1;
+            return IsValidHex(column, row);
         }
 
         private static float Clamp01(float value)
@@ -1741,17 +2313,21 @@ namespace ProphecyCentury.Systems
         public float Time;
         public string Kind;
         public string SourceUnitId;
+        public string SourceInstanceId;
         public string SourceName;
         public bool SourcePlayerSide;
         public string SourceSlotId;
         public int SourceHp;
         public int SourceMaxHp;
         public string TargetUnitId;
+        public string TargetInstanceId;
         public string TargetName;
         public bool TargetPlayerSide;
         public string TargetSlotId;
         public int TargetHp;
         public int TargetMaxHp;
+        public string DestinationSlotId;
+        public string RouteSlotIds;
         public int Amount;
         public string Message;
     }
@@ -1759,6 +2335,7 @@ namespace ProphecyCentury.Systems
     public sealed class BattleUnitSnapshot
     {
         public string UnitId;
+        public string InstanceId;
         public string Name;
         public int Star;
         public bool IsGolden;
@@ -1778,9 +2355,22 @@ namespace ProphecyCentury.Systems
         public bool Summoned;
     }
 
+    internal struct HexCoord
+    {
+        public HexCoord(int column, int row)
+        {
+            Column = column;
+            Row = row;
+        }
+
+        public int Column;
+        public int Row;
+    }
+
     internal sealed class BattleRuntimeUnit
     {
         public string UnitId;
+        public string InstanceId;
         public string Name;
         public string Race;
         public string Faith;
@@ -1793,6 +2383,8 @@ namespace ProphecyCentury.Systems
         public string SlotId;
         public int Row;
         public int Col;
+        public int HexColumn;
+        public int HexRow;
         public int MaxHp;
         public int CurrentHp;
         public int Attack;
@@ -1814,6 +2406,8 @@ namespace ProphecyCentury.Systems
         public int ForcedCounterattackTriggers;
         public int ShieldLayers;
         public float StunRemaining;
+        public int StunTurns;
+        public int MoveLockTurns;
         public float InvincibleRemaining;
         public float ShieldRefreshInterval;
         public float ShieldRefreshTimer;
