@@ -260,7 +260,9 @@ namespace ProphecyCentury.Systems
             {
                 unitId = definition.id,
                 name = definition.name,
-                star = definition.star
+                star = definition.star,
+                baseCount = ResolveStartCount(definition),
+                maxCount = 0
             };
             run.handCards.Add(gained);
             ManageEventResolver.ResolveGainUnit(run, gained);
@@ -338,6 +340,7 @@ namespace ProphecyCentury.Systems
         private bool TrySynthesizeAll(RunState run)
         {
             var synthesized = SynthesisSystem.TrySynthesizeAll(run);
+            ManageEventResolver.RefreshBoardAuras(run);
             _synthesizedSinceLastConsume |= synthesized;
             return synthesized;
         }
@@ -424,7 +427,14 @@ namespace ProphecyCentury.Systems
             for (var i = 0; i < reward.count && run.handCards.Count < HandMaxCount && pool.Count > 0; i += 1)
             {
                 var unit = pool[_random.Next(pool.Count)];
-                run.handCards.Add(new UnitCardState { unitId = unit.id, name = unit.name, star = unit.star });
+                run.handCards.Add(new UnitCardState
+                {
+                    unitId = unit.id,
+                    name = unit.name,
+                    star = unit.star,
+                    baseCount = ResolveStartCount(unit),
+                    maxCount = 0
+                });
                 added += 1;
             }
 
@@ -446,6 +456,16 @@ namespace ProphecyCentury.Systems
             }
 
             return added;
+        }
+
+        private static int ResolveStartCount(UnitDefinition unit)
+        {
+            if (unit == null)
+            {
+                return 1;
+            }
+
+            return Math.Max(1, unit.defaultCount > 0 ? unit.defaultCount : unit.startCount > 0 ? unit.startCount : unit.baseCount > 0 ? unit.baseCount : 1);
         }
     }
 }

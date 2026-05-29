@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using ProphecyCentury.Core;
+using ProphecyCentury.Data;
 using ProphecyCentury.Model;
 
 namespace ProphecyCentury.Systems
@@ -108,6 +110,8 @@ namespace ProphecyCentury.Systems
 
         private static BoardUnitState CloneToBoardUnit(UnitCardState card, string boardSlotId)
         {
+            var definition = ProphecyGameSession.Instance.Data.FindUnit(card.unitId);
+            var startCount = ResolveStartCount(definition);
             return new BoardUnitState
             {
                 unitId = card.unitId,
@@ -120,11 +124,16 @@ namespace ProphecyCentury.Systems
                 fromShopPurchase = card.fromShopPurchase,
                 shopBuffHp = card.shopBuffHp,
                 shopBuffAttack = card.shopBuffAttack,
+                boardAuraAttack = card.boardAuraAttack,
                 shopBuffDefense = card.shopBuffDefense,
                 shopBuffPower = card.shopBuffPower,
                 shopBuffSpeed = card.shopBuffSpeed,
                 shopBuffLuck = card.shopBuffLuck,
                 shopBuffMorale = card.shopBuffMorale,
+                baseCount = Math.Max(1, card.baseCount > 0 ? card.baseCount : startCount),
+                maxCount = 0,
+                forestGemCount = card.forestGemCount,
+                roundTempCount = card.roundTempCount,
                 roundTempAttack = card.roundTempAttack,
                 roundTempPower = card.roundTempPower,
                 roundTempMorale = card.roundTempMorale,
@@ -139,6 +148,16 @@ namespace ProphecyCentury.Systems
                 battleProgressCounters = card.battleProgressCounters?.Select(counter => new BattleProgressCounterState { key = counter.key, value = counter.value }).ToList() ?? new System.Collections.Generic.List<BattleProgressCounterState>(),
                 boardSlotId = boardSlotId
             };
+        }
+
+        private static int ResolveStartCount(UnitDefinition definition)
+        {
+            if (definition == null)
+            {
+                return 1;
+            }
+
+            return Math.Max(1, definition.defaultCount > 0 ? definition.defaultCount : definition.startCount > 0 ? definition.startCount : definition.baseCount > 0 ? definition.baseCount : 1);
         }
 
         private static int GetUnitSellReward(UnitCardState unit)

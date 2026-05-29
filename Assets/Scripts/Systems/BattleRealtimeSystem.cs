@@ -13,6 +13,9 @@ namespace ProphecyCentury.Systems
         private const float TargetSearchInterval = 1f;
         private const float AttackRangeSlack = 36f;
         private const int MaxBattleEvents = 800;
+        private const float LUCK_CRIT_CHANCE_PER_POINT = 0.06f;
+        private const float LUCK_CRIT_DAMAGE_MULTIPLIER = 1.5f;
+        private const float MORALE_EXTRA_ATTACK_CHANCE_PER_POINT = 0.04f;
 
         public BattleRealtimeResult Resolve(IReadOnlyList<BattleUnitSnapshot> playerSnapshots, IReadOnlyList<BattleUnitSnapshot> enemySnapshots)
         {
@@ -140,11 +143,11 @@ namespace ProphecyCentury.Systems
                             AddEvent(events, elapsed, "skill", unit, unit, 0, $"{unit.Name} enters stealth");
                             break;
                         case "battle_start_lowest_power_ally_gain_source_power":
-                            var targetAlly = allies.Where(ally => ally.IsAlive).OrderBy(ally => ally.Power).FirstOrDefault();
+                            var targetAlly = allies.Where(ally => ally.IsAlive).OrderBy(ally => ally.CurrentCount).FirstOrDefault();
                             if (targetAlly != null)
                             {
-                                targetAlly.Power += unit.Power * Math.Max(1, skill.multiplier == 0 ? 1 : skill.multiplier);
-                                AddEvent(events, elapsed, "skill", unit, targetAlly, targetAlly.Power, $"{targetAlly.Name} 获得法强");
+                                AddTemporaryCount(targetAlly, Math.Max(1, skill.value));
+                                AddEvent(events, elapsed, "skill", unit, targetAlly, Math.Max(1, skill.value), $"{targetAlly.Name} 临时数量增加");
                             }
                             break;
                         case "battle_start_summon_units":
@@ -166,7 +169,7 @@ namespace ProphecyCentury.Systems
                                 unit.InvincibleRemaining = Math.Max(unit.InvincibleRemaining, skill.invincibleSeconds);
                                 MovePouncerNextToTarget(unit, pounceTarget);
                                 var multiplier = skill.attackMultiplier > 0f ? skill.attackMultiplier : 3f;
-                                var damage = Math.Max(1, (int)Math.Round(unit.Attack * multiplier + unit.Power * 8 - pounceTarget.Defense));
+                                var damage = Math.Max(1, (int)Math.Round(CalculateDamage(unit, pounceTarget, random) * multiplier));
                                 for (var hit = 0; hit < Math.Max(1, skill.times); hit += 1)
                                 {
                                     if (!pounceTarget.IsAlive)
@@ -268,15 +271,8 @@ namespace ProphecyCentury.Systems
                 attacker.HasAttackAnchor = true;
                 attacker.AttackAnchorX = attacker.X;
                 attacker.AttackAnchorY = attacker.Y;
-                AddEvent(events, elapsed, "attack", attacker, target, 0, $"{attacker.Name} 攻击 {target.Name}");
-                var damage = CalculateDamage(attacker, target);
-                var didCrit = ResolveForceCrit(attacker, random, out var critMultiplier);
-                if (didCrit)
-                {
-                    damage = (int)Math.Ceiling(damage * Math.Max(critMultiplier, ProphecyGameSession.Instance.Data.Config?.critDamageMultiple ?? 1.5f));
-                }
-
-                var actual = DealDamage(attacker, target, damage, attackers, defenders, random, events, elapsed, didCrit);
+                ResolveAllyActionTempCountBonuses(attacker, attackers, events, elapsed);
+                var actual = ResolveAttackDamage(attacker, target, attackers, defenders, random, events, elapsed, $"{attacker.Name} 攻击 {target.Name}");
                 if (actual > 0)
                 {
                     ResolveOnAttack(attacker, target, attackers, defenders, random, areaEffects, actual, elapsed, events);
@@ -287,8 +283,12 @@ namespace ProphecyCentury.Systems
                 {
                     attacker.CurrentTarget = moraleExtraTarget;
                     AddEvent(events, elapsed, "morale_extra", attacker, moraleExtraTarget, 0, $"{attacker.Name} 触发追击");
-                    var extraDamage = CalculateDamage(attacker, moraleExtraTarget);
-                    DealDamage(attacker, moraleExtraTarget, extraDamage, attackers, defenders, random, events, elapsed);
+                    var extraActual = ResolveAttackDamage(attacker, moraleExtraTarget, attackers, defenders, random, events, elapsed, $"{attacker.Name} 追击 {moraleExtraTarget.Name}");
+                    if (extraActual > 0)
+                    {
+                        ResolveOnAttack(attacker, moraleExtraTarget, attackers, defenders, random, areaEffects, extraActual, elapsed, events);
+                    }
+
                     attacker.MoraleExtraCount += 1;
                     foreach (var skill in GetBattleSkills(attacker))
                     {
@@ -301,6 +301,49 @@ namespace ProphecyCentury.Systems
                     }
                 }
             }
+        }
+
+        private static void ResolveAllyActionTempCountBonuses(RealtimeBattleUnit actor, List<RealtimeBattleUnit> allies, List<BattleEvent> events, float elapsed)
+        {
+            if (actor == null || allies == null)
+            {
+                return;
+            }
+
+            foreach (var receiver in allies.Where(unit => unit.IsAlive))
+            {
+                foreach (var skill in GetBattleSkills(receiver))
+                {
+                    if (skill.kind != "battle_periodic_temp_power")
+                    {
+                        continue;
+                    }
+
+                    var gain = Math.Max(1, skill.value);
+                    AddTemporaryCount(receiver, gain);
+                    AddEvent(events, elapsed, "count_gain", actor, receiver, gain, $"{receiver.Name} 因 {actor.Name} 行动，临时数量 +{gain}");
+                }
+            }
+        }
+
+        private static int ResolveAttackDamage(RealtimeBattleUnit attacker, RealtimeBattleUnit target, List<RealtimeBattleUnit> allies, List<RealtimeBattleUnit> enemies, Random random, List<BattleEvent> events, float elapsed, string attackMessage)
+        {
+            var damage = CalculateDamage(attacker, target, random);
+            var forceCrit = ResolveForceCrit(attacker, random, out var critMultiplier);
+            var luckyCrit = !forceCrit && random.NextDouble() < Math.Min(0.95f, Math.Max(0f, attacker.Luck * LUCK_CRIT_CHANCE_PER_POINT));
+            var didCrit = forceCrit || luckyCrit;
+            if (didCrit)
+            {
+                damage = (int)Math.Ceiling(damage * Math.Max(critMultiplier, LUCK_CRIT_DAMAGE_MULTIPLIER));
+            }
+
+            if (luckyCrit)
+            {
+                AddEvent(events, elapsed, "lucky_crit", attacker, target, 0, $"{attacker.Name} 幸运！");
+            }
+
+            AddEvent(events, elapsed, "attack", attacker, target, 0, attackMessage);
+            return DealDamage(attacker, target, damage, allies, enemies, random, events, elapsed, didCrit);
         }
 
         private static void ResolveOnAttack(RealtimeBattleUnit attacker, RealtimeBattleUnit target, List<RealtimeBattleUnit> allies, List<RealtimeBattleUnit> enemies, Random random, List<RealtimeAreaEffect> areaEffects, int damage, float elapsed, List<BattleEvent> events)
@@ -386,10 +429,9 @@ namespace ProphecyCentury.Systems
 
                 foreach (var skill in GetBattleSkills(unit))
                 {
-                    if (skill.kind == "battle_periodic_temp_power" && TickSkillTimer(unit, skill.kind, Math.Max(0.1f, SkillIntervalSeconds(skill, 3f))))
+                    if (skill.kind == "battle_periodic_temp_power")
                     {
-                        unit.Power += Math.Max(1, skill.value);
-                        AddEvent(events, elapsed, "skill", unit, unit, skill.value, $"{unit.Name} gains temporary power");
+                        continue;
                     }
                     else if (skill.kind == "battle_periodic_nearby_enemies_attack_and_death_explode" && TickSkillTimer(unit, skill.kind, Math.Max(0.1f, skill.interval <= 0f ? 1f : skill.interval)))
                     {
@@ -424,7 +466,10 @@ namespace ProphecyCentury.Systems
             }
 
             var before = target.Hp;
-            target.Hp = Math.Max(0, target.Hp - Math.Max(1, damage));
+            target.CurrentTotalHp = Math.Max(0, target.CurrentTotalHp - Math.Max(1, damage));
+            target.CurrentCount = target.CurrentTotalHp <= 0 ? 0 : (int)Math.Ceiling(target.CurrentTotalHp / (float)Math.Max(1, target.HpPerUnit));
+            target.Hp = target.CurrentTotalHp;
+            target.MaxHp = Math.Max(target.MaxHp, target.BaseCount * Math.Max(1, target.HpPerUnit));
             var actual = before - target.Hp;
             if (source != null)
             {
@@ -432,7 +477,7 @@ namespace ProphecyCentury.Systems
             }
 
             AddEvent(events, elapsed, critical ? "critical_damage" : "damage", source, target, actual, $"{source?.Name ?? "Effect"} deals {actual} damage to {target.Name}");
-            if (target.Hp <= 0 && before > 0)
+            if ((target.Hp <= 0 || target.CurrentCount <= 0) && before > 0)
             {
                 if (source != null)
                 {
@@ -489,7 +534,7 @@ namespace ProphecyCentury.Systems
                     case "on_death_next_round_shop_cards_gain_attack":
                         if (unit.PlayerSide)
                         {
-                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.attack), $"{unit.Name} grants next round shop attack");
+                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.attack), $"{unit.Name} 使下回合商店攻击提升");
                         }
                         break;
                     case "on_death_next_round_forest_gem":
@@ -660,10 +705,15 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private static int CalculateDamage(RealtimeBattleUnit attacker, RealtimeBattleUnit target)
+        private static int CalculateDamage(RealtimeBattleUnit attacker, RealtimeBattleUnit target, Random random = null)
         {
-            var defenseFactor = 1f - target.Defense / (float)Math.Max(1, target.Defense + Math.Max(1, attacker.Power));
-            return Math.Max(1, (int)Math.Round(Math.Max(1, attacker.Attack) * defenseFactor));
+            var damageMin = Math.Max(1, attacker.DamageMin);
+            var damageMax = Math.Max(damageMin, attacker.DamageMax);
+            var unitDamage = random == null || damageMin == damageMax
+                ? (damageMin + damageMax) * 0.5f
+                : random.Next(damageMin, damageMax + 1);
+            var attackFactor = (20f + Math.Max(0, attacker.Attack)) / Math.Max(1f, 20f + Math.Max(0, target.Defense));
+            return Math.Max(1, (int)Math.Round(Math.Max(1, attacker.CurrentCount) * unitDamage * attackFactor));
         }
 
         private static bool ResolveForceCrit(RealtimeBattleUnit attacker, Random random, out float critMultiplier)
@@ -682,10 +732,7 @@ namespace ProphecyCentury.Systems
                 if (skill.kind == "passive_every_nth_attack_force_crit" && attacker.AttackCount > 0 && attacker.AttackCount % Math.Max(1, skill.count) == 0)
                 {
                     forceCrit = true;
-                    if (attacker.Power >= Math.Max(0, skill.threshold))
-                    {
-                        critMultiplier = Math.Max(critMultiplier, Math.Max(1.5f, skill.multiplier));
-                    }
+                    critMultiplier = Math.Max(critMultiplier, Math.Max(1.5f, skill.multiplier));
                 }
 
                 if (skill.kind == "on_attack_chance_force_crit" && random.NextDouble() < Math.Max(0f, skill.chance))
@@ -695,6 +742,21 @@ namespace ProphecyCentury.Systems
             }
 
             return forceCrit;
+        }
+
+        private static void AddTemporaryCount(RealtimeBattleUnit unit, int amount)
+        {
+            if (unit == null || amount <= 0)
+            {
+                return;
+            }
+
+            var hpPerUnit = Math.Max(1, unit.HpPerUnit);
+            unit.BaseCount = Math.Max(unit.BaseCount, unit.CurrentCount + amount);
+            unit.CurrentCount += amount;
+            unit.CurrentTotalHp += amount * hpPerUnit;
+            unit.Hp = unit.CurrentTotalHp;
+            unit.MaxHp = Math.Max(unit.MaxHp, unit.BaseCount * hpPerUnit);
         }
 
         private static void SummonUnits(List<RealtimeBattleUnit> allies, RealtimeBattleUnit source, SkillDefinition skill, List<BattleEvent> events, float elapsed)
@@ -707,18 +769,30 @@ namespace ProphecyCentury.Systems
 
             for (var i = 0; i < Math.Max(1, skill.count); i += 1)
             {
+                var startCount = ResolveStartCount(definition);
+                var hpPerUnit = Math.Max(1, definition.hpPerUnit > 0 ? definition.hpPerUnit : definition.hp > 0 ? definition.hp : 1);
+                var summonCount = Math.Max(1, skill.value > 0 ? skill.value : startCount);
+                var totalHp = Math.Max(1, summonCount * hpPerUnit);
                 var snapshot = new BattleUnitSnapshot
                 {
                     UnitId = definition.id,
                     Name = definition.name,
                     Star = definition.star,
                     SlotId = $"{source.Row}-{Math.Max(1, source.Col + i + 1)}",
-                    MaxHp = Math.Max(1, definition.hp),
-                    CurrentHp = Math.Max(1, definition.hp),
+                    MaxHp = totalHp,
+                    CurrentHp = totalHp,
+                    BaseCount = summonCount,
+                    CurrentCount = summonCount,
+                    MaxCount = summonCount,
+                    HpPerUnit = hpPerUnit,
+                    CurrentTotalHp = totalHp,
                     Attack = Math.Max(1, definition.attack),
                     Defense = Math.Max(0, definition.defense),
                     Power = Math.Max(1, definition.power),
+                    DamageMin = Math.Max(1, definition.damageMin),
+                    DamageMax = Math.Max(Math.Max(1, definition.damageMin), definition.damageMax),
                     Speed = Math.Max(1, definition.speed),
+                    Luck = Math.Max(0, definition.luck),
                     Morale = Math.Max(0, definition.morale),
                     Range = Math.Max(1f, definition.range),
                     Size = Math.Max(20, definition.size),
@@ -793,10 +867,18 @@ namespace ProphecyCentury.Systems
                 SlotId = unit.SlotId,
                 MaxHp = unit.MaxHp,
                 CurrentHp = unit.Hp,
+                BaseCount = unit.BaseCount,
+                CurrentCount = unit.CurrentCount,
+                MaxCount = unit.MaxCount,
+                HpPerUnit = unit.HpPerUnit,
+                CurrentTotalHp = unit.CurrentTotalHp,
                 Attack = unit.Attack,
                 Defense = unit.Defense,
                 Power = unit.Power,
+                DamageMin = unit.DamageMin,
+                DamageMax = unit.DamageMax,
                 Speed = unit.Speed,
+                Luck = unit.Luck,
                 Morale = unit.Morale,
                 Range = unit.Range,
                 Size = unit.Size,
@@ -855,7 +937,17 @@ namespace ProphecyCentury.Systems
 
         private static float MoraleChance(int morale, float rate)
         {
-            return Math.Min(0.6f, Math.Max(0f, morale * Math.Max(0f, rate)));
+            return Math.Min(0.95f, Math.Max(0f, morale * MORALE_EXTRA_ATTACK_CHANCE_PER_POINT));
+        }
+
+        private static int ResolveStartCount(UnitDefinition definition)
+        {
+            if (definition == null)
+            {
+                return 1;
+            }
+
+            return Math.Max(1, definition.defaultCount > 0 ? definition.defaultCount : definition.startCount > 0 ? definition.startCount : definition.baseCount > 0 ? definition.baseCount : 1);
         }
 
         private static void AddBattleStats(RealtimeBattleUnit unit, SkillDefinition skill, int multiplier)
@@ -946,7 +1038,9 @@ namespace ProphecyCentury.Systems
                 TickInterval = tick,
                 TickTimer = tick,
                 Attack = source.Attack,
-                Power = source.Power,
+                CurrentCount = Math.Max(1, source.CurrentCount),
+                DamageMin = Math.Max(1, source.DamageMin),
+                DamageMax = Math.Max(Math.Max(1, source.DamageMin), source.DamageMax),
                 AttackMultiplier = skill.attackMultiplier > 0f ? skill.attackMultiplier : 1f
             });
             AddEvent(events, elapsed, "skill", source, target, 0, $"{source.Name} 召唤火雨");
@@ -969,7 +1063,9 @@ namespace ProphecyCentury.Systems
                     effect.TickTimer += Math.Max(0.1f, effect.TickInterval);
                     foreach (var target in enemies.Where(enemy => enemy.IsAlive && Distance(effect.CenterX, effect.CenterY, enemy.X, enemy.Y) <= effect.Radius).ToList())
                     {
-                        var damage = Math.Max(1, (int)Math.Round((effect.Attack + effect.Power * 8 - target.Defense) * Math.Max(0.1f, effect.AttackMultiplier)));
+                        var unitDamage = (Math.Max(1, effect.DamageMin) + Math.Max(Math.Max(1, effect.DamageMin), effect.DamageMax)) * 0.5f;
+                        var factor = (20f + Math.Max(0, effect.Attack)) / Math.Max(1f, 20f + Math.Max(0, target.Defense));
+                        var damage = Math.Max(1, (int)Math.Round(Math.Max(1, effect.CurrentCount) * unitDamage * factor * Math.Max(0.1f, effect.AttackMultiplier)));
                         AddEvent(events, elapsed, "skill", effect.Source, target, 0, $"{effect.Source.Name} 火雨命中 {target.Name}");
                         DealDamage(effect.Source, target, damage, sourceAllies, enemies, random, events, elapsed);
                     }
@@ -996,12 +1092,20 @@ namespace ProphecyCentury.Systems
                 Faith = Definition?.faith;
                 Type = Definition?.type;
                 Tags = Definition?.tags ?? Array.Empty<string>();
-                MaxHp = Math.Max(1, snapshot.MaxHp);
-                Hp = Math.Max(1, snapshot.CurrentHp > 0 ? snapshot.CurrentHp : snapshot.MaxHp);
+                BaseCount = Math.Max(1, snapshot.BaseCount > 0 ? snapshot.BaseCount : snapshot.CurrentCount > 0 ? snapshot.CurrentCount : ResolveStartCount(Definition));
+                MaxCount = BaseCount;
+                HpPerUnit = Math.Max(1, snapshot.HpPerUnit > 0 ? snapshot.HpPerUnit : Definition != null && Definition.hpPerUnit > 0 ? Definition.hpPerUnit : Definition != null && Definition.hp > 0 ? Definition.hp : 1);
+                CurrentCount = Math.Max(0, snapshot.CurrentCount > 0 ? snapshot.CurrentCount : BaseCount);
+                CurrentTotalHp = Math.Max(0, snapshot.CurrentTotalHp > 0 ? snapshot.CurrentTotalHp : CurrentCount * HpPerUnit);
+                MaxHp = Math.Max(1, BaseCount * HpPerUnit);
+                Hp = Math.Max(0, CurrentTotalHp);
                 Attack = Math.Max(1, snapshot.Attack);
                 Defense = Math.Max(0, snapshot.Defense);
                 Power = Math.Max(1, snapshot.Power);
+                DamageMin = Math.Max(1, snapshot.DamageMin > 0 ? snapshot.DamageMin : Definition?.damageMin ?? 1);
+                DamageMax = Math.Max(DamageMin, snapshot.DamageMax > 0 ? snapshot.DamageMax : Definition?.damageMax ?? DamageMin);
                 Speed = Math.Max(1, snapshot.Speed);
+                Luck = Math.Max(0, snapshot.Luck);
                 Morale = Math.Max(0, snapshot.Morale);
                 Range = Math.Max(1f, snapshot.Range);
                 Size = Math.Max(20, snapshot.Size);
@@ -1026,10 +1130,18 @@ namespace ProphecyCentury.Systems
             public string[] Tags = Array.Empty<string>();
             public int MaxHp;
             public int Hp;
+            public int BaseCount;
+            public int CurrentCount;
+            public int MaxCount;
+            public int HpPerUnit;
+            public int CurrentTotalHp;
             public int Attack;
             public int Defense;
             public int Power;
+            public int DamageMin;
+            public int DamageMax;
             public int Speed;
+            public int Luck;
             public int Morale;
             public float Range;
             public int Size;
@@ -1066,7 +1178,7 @@ namespace ProphecyCentury.Systems
             public int ForestGemDeathMarkAmount;
             public readonly Dictionary<string, int> SkillCounters = new Dictionary<string, int>();
             public readonly Dictionary<string, float> SkillTimers = new Dictionary<string, float>();
-            public bool IsAlive => Hp > 0;
+            public bool IsAlive => Hp > 0 && CurrentCount > 0;
         }
 
         private sealed class RealtimeAreaEffect
@@ -1079,7 +1191,9 @@ namespace ProphecyCentury.Systems
             public float TickInterval;
             public float TickTimer;
             public int Attack;
-            public int Power;
+            public int CurrentCount;
+            public int DamageMin;
+            public int DamageMax;
             public float AttackMultiplier;
         }
 

@@ -89,6 +89,11 @@ namespace ProphecyCentury.UI
 
         public void SetHealth(int hp, int maxHp)
         {
+            SetHealth(hp, maxHp, null);
+        }
+
+        public void SetHealth(int hp, int maxHp, string healthText)
+        {
             if (!EnsureReferences())
             {
                 return;
@@ -103,6 +108,33 @@ namespace ProphecyCentury.UI
                 rect.anchorMax = new Vector2(amount, 1f);
                 rect.offsetMin = Vector2.zero;
                 rect.offsetMax = Vector2.zero;
+            }
+
+            var healthLabel = transform.Find("HealthBar/Label")?.GetComponent<Text>();
+            if (healthLabel == null)
+            {
+                var healthBar = transform.Find("HealthBar");
+                if (healthBar != null)
+                {
+                    var labelObject = new GameObject("Label", typeof(Text));
+                    labelObject.transform.SetParent(healthBar, false);
+                    var labelRect = labelObject.GetComponent<RectTransform>();
+                    labelRect.anchorMin = Vector2.zero;
+                    labelRect.anchorMax = Vector2.one;
+                    labelRect.offsetMin = Vector2.zero;
+                    labelRect.offsetMax = Vector2.zero;
+                    healthLabel = labelObject.GetComponent<Text>();
+                    healthLabel.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                    healthLabel.fontSize = 32;
+                    healthLabel.alignment = TextAnchor.MiddleCenter;
+                    healthLabel.color = Color.white;
+                    healthLabel.raycastTarget = false;
+                }
+            }
+
+            if (healthLabel != null)
+            {
+                healthLabel.text = healthText ?? $"{Mathf.Max(0, hp)}/{Mathf.Max(1, maxHp)}";
             }
         }
 

@@ -14,6 +14,8 @@ namespace ProphecyCentury.UI
         private readonly RunFlowController _flow = new RunFlowController();
         private RunSceneController _controller;
         private GameObject _toolbar;
+        private const int PlaytestMaxLuck = 16;
+        private const int PlaytestMaxMorale = 24;
 
         private static readonly string[] ShopIds =
         {
@@ -75,6 +77,21 @@ namespace ProphecyCentury.UI
             if (Input.GetKeyDown(KeyCode.G))
             {
                 AddGold();
+            }
+
+            if (Input.GetKeyDown(KeyCode.B))
+            {
+                MaximizeLuck();
+            }
+
+            if (Input.GetKeyDown(KeyCode.N))
+            {
+                MaximizeMorale();
+            }
+
+            if (Input.GetKeyDown(KeyCode.M))
+            {
+                ResetPlaytestStats();
             }
         }
 
@@ -197,6 +214,88 @@ namespace ProphecyCentury.UI
             RefreshView();
         }
 
+        [ContextMenu("Maximize Luck")]
+        public void MaximizeLuck()
+        {
+            var session = ProphecyGameSession.Instance;
+            if (session == null)
+            {
+                Debug.LogWarning("[ProphecyCentury] Cannot maximize luck: session missing.");
+                return;
+            }
+
+            if (!session.HasCurrentRun)
+            {
+                session.StartNewRun();
+            }
+
+            if (session.Data?.Config != null)
+            {
+                session.Data.Config.critRateCap = Mathf.Max(session.Data.Config.critRateCap, 0.95f);
+            }
+
+            var run = session.CurrentRun;
+            var changed = 0;
+            var definitionChanged = 0;
+
+            ForEachUnitDefinition(session, definition => definitionChanged += MaximizeDefinitionLuck(definition) ? 1 : 0);
+            ForEachRunCard(run, card => changed += MaximizeCardLuck(card) ? 1 : 0);
+
+            var critCap = session.Data?.Config?.critRateCap ?? 0f;
+            Debug.Log($"[ProphecyCentury] GM maximized luck for {changed} cards and {definitionChanged} unit definitions. Luck>={PlaytestMaxLuck}, CritCap={critCap:0.##}.");
+            RefreshView();
+        }
+
+        [ContextMenu("Maximize Morale")]
+        public void MaximizeMorale()
+        {
+            var session = ProphecyGameSession.Instance;
+            if (session == null)
+            {
+                Debug.LogWarning("[ProphecyCentury] Cannot maximize morale: session missing.");
+                return;
+            }
+
+            if (!session.HasCurrentRun)
+            {
+                session.StartNewRun();
+            }
+
+            var run = session.CurrentRun;
+            var changed = 0;
+            var definitionChanged = 0;
+
+            ForEachUnitDefinition(session, definition => definitionChanged += MaximizeDefinitionMorale(definition) ? 1 : 0);
+            ForEachRunCard(run, card => changed += MaximizeCardMorale(card) ? 1 : 0);
+
+            Debug.Log($"[ProphecyCentury] GM maximized morale for {changed} cards and {definitionChanged} unit definitions. Morale>={PlaytestMaxMorale}.");
+            RefreshView();
+        }
+
+        [ContextMenu("Reset Playtest Stats")]
+        public void ResetPlaytestStats()
+        {
+            var session = ProphecyGameSession.Instance;
+            if (session == null)
+            {
+                Debug.LogWarning("[ProphecyCentury] Cannot reset playtest stats: session missing.");
+                return;
+            }
+
+            session.Data?.LoadAll();
+
+            if (!session.HasCurrentRun)
+            {
+                session.StartNewRun();
+            }
+
+            var changed = 0;
+            ForEachRunCard(session.CurrentRun, card => changed += ResetCardLuckAndMorale(card) ? 1 : 0);
+
+            Debug.Log($"[ProphecyCentury] GM reset playtest luck and morale. Cleared {changed} cards and reloaded unit definitions/config.");
+            RefreshView();
+        }
+
         [ContextMenu("Test Small Merchant Morale Extra")]
         public void TestSmallMerchantMoraleExtra()
         {
@@ -274,7 +373,7 @@ namespace ProphecyCentury.UI
             }
 
             var rate = session.Data.Config?.moraleExtraAttackRate ?? 0.08f;
-            var expectedChance = Mathf.Min(0.6f, Mathf.Max(0f, merchant.morale * Mathf.Max(0f, rate)));
+            var expectedChance = Mathf.Min(0.95f, Mathf.Max(0f, merchant.morale * Mathf.Max(0f, rate)));
             var observedChance = totalAttacks > 0 ? totalExtras / (float)totalAttacks : 0f;
             Debug.Log(
                 $"[ProphecyCentury] Small merchant settlement test: simulations={simulations}, " +
@@ -302,17 +401,24 @@ namespace ProphecyCentury.UI
             if (existing != null)
             {
                 _toolbar = existing.gameObject;
-                return;
+            }
+            else
+            {
+                _toolbar = new GameObject("GMToolbar", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup));
+                _toolbar.transform.SetParent(canvas.transform, false);
             }
 
-            _toolbar = new GameObject("GMToolbar", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup));
-            _toolbar.transform.SetParent(canvas.transform, false);
+            for (var i = _toolbar.transform.childCount - 1; i >= 0; i -= 1)
+            {
+                Destroy(_toolbar.transform.GetChild(i).gameObject);
+            }
+
             var rect = _toolbar.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(0f, 1f);
             rect.pivot = new Vector2(0f, 1f);
             rect.anchoredPosition = new Vector2(14f, -14f);
-            rect.sizeDelta = new Vector2(768f, 40f);
+            rect.sizeDelta = new Vector2(1144f, 40f);
 
             var background = _toolbar.GetComponent<Image>();
             background.color = new Color32(8, 8, 16, 190);
@@ -332,6 +438,9 @@ namespace ProphecyCentury.UI
             CreateToolbarButton("\u5b9e\u65f6 F7", ToggleRealtimeBattlePreview);
             CreateToolbarButton("\u8ffd\u51fb\u6d4b\u8bd5 F6", TestSmallMerchantMoraleExtra);
             CreateToolbarButton("\u91d1\u5e01 +10 G", AddGold);
+            CreateToolbarButton("\u5e78\u8fd0 B", MaximizeLuck);
+            CreateToolbarButton("\u58eb\u6c14 N", MaximizeMorale);
+            CreateToolbarButton("\u91cd\u7f6e M", ResetPlaytestStats);
             _toolbar.transform.SetAsLastSibling();
         }
 
@@ -432,8 +541,131 @@ namespace ProphecyCentury.UI
                 shopBuffSpeed = card.shopBuffSpeed,
                 shopBuffLuck = card.shopBuffLuck,
                 shopBuffMorale = card.shopBuffMorale,
+                boardAuraAttack = card.boardAuraAttack,
+                baseCount = card.baseCount,
+                maxCount = card.maxCount,
                 boardSlotId = slotId
             };
+        }
+
+        private static void ForEachUnitDefinition(ProphecyGameSession session, System.Action<UnitDefinition> action)
+        {
+            if (session?.Data?.Units == null || action == null)
+            {
+                return;
+            }
+
+            foreach (var definition in session.Data.Units)
+            {
+                if (definition != null)
+                {
+                    action(definition);
+                }
+            }
+        }
+
+        private static void ForEachRunCard(RunState run, System.Action<UnitCardState> action)
+        {
+            if (run == null || action == null)
+            {
+                return;
+            }
+
+            foreach (var unit in run.boardUnits)
+            {
+                action(unit);
+            }
+
+            foreach (var card in run.handCards)
+            {
+                action(card);
+            }
+
+            foreach (var card in run.shopCards)
+            {
+                action(card);
+            }
+        }
+
+        private static bool MaximizeDefinitionLuck(UnitDefinition definition)
+        {
+            if (definition == null || definition.luck >= PlaytestMaxLuck)
+            {
+                return false;
+            }
+
+            definition.luck = PlaytestMaxLuck;
+            return true;
+        }
+
+        private static bool MaximizeDefinitionMorale(UnitDefinition definition)
+        {
+            if (definition == null || definition.morale >= PlaytestMaxMorale)
+            {
+                return false;
+            }
+
+            definition.morale = PlaytestMaxMorale;
+            return true;
+        }
+
+        private static bool MaximizeCardLuck(UnitCardState card)
+        {
+            if (card == null)
+            {
+                return false;
+            }
+
+            var definition = FindUnit(card.unitId);
+            var baseLuck = definition?.luck ?? 0;
+            var currentLuck = baseLuck + card.shopBuffLuck;
+
+            if (currentLuck < PlaytestMaxLuck)
+            {
+                card.shopBuffLuck += PlaytestMaxLuck - currentLuck;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool MaximizeCardMorale(UnitCardState card)
+        {
+            if (card == null)
+            {
+                return false;
+            }
+
+            var definition = FindUnit(card.unitId);
+            var baseMorale = definition?.morale ?? 0;
+            var currentMorale = baseMorale + card.shopBuffMorale + card.roundTempMorale;
+
+            if (currentMorale < PlaytestMaxMorale)
+            {
+                card.shopBuffMorale += PlaytestMaxMorale - currentMorale;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool ResetCardLuckAndMorale(UnitCardState card)
+        {
+            if (card == null)
+            {
+                return false;
+            }
+
+            var changed = card.shopBuffLuck != 0
+                || card.shopBuffMorale != 0
+                || card.roundTempMorale != 0
+                || card.pendingNextRoundPermanentLuck != 0;
+
+            card.shopBuffLuck = 0;
+            card.shopBuffMorale = 0;
+            card.roundTempMorale = 0;
+            card.pendingNextRoundPermanentLuck = 0;
+            return changed;
         }
 
         private static UnitDefinition FindUnit(string unitId)

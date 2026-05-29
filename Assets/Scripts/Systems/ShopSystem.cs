@@ -332,11 +332,14 @@ namespace ProphecyCentury.Systems
                     continue;
                 }
 
+                var countBonus = Math.Max(0, runState.manageResources?.shopGeneratedCountBonus ?? 0);
                 var card = new UnitCardState
                 {
                     unitId = unit.id,
                     name = unit.name,
                     star = unit.star,
+                    baseCount = ResolveStartCount(unit) + countBonus,
+                    maxCount = 0,
                     shopPoolCost = 1,
                     shopBuffAttack = Math.Max(0, runState.manageResources?.shopGeneratedBuffAttack ?? 0),
                     shopPoolReserved = false
@@ -368,6 +371,16 @@ namespace ProphecyCentury.Systems
 
             var clampedIndex = Clamp(shopLevel - 1, 0, stars.Count - 1);
             return stars[clampedIndex];
+        }
+
+        private static int ResolveStartCount(UnitDefinition unit)
+        {
+            if (unit == null)
+            {
+                return 1;
+            }
+
+            return Math.Max(1, unit.defaultCount > 0 ? unit.defaultCount : unit.startCount > 0 ? unit.startCount : unit.baseCount > 0 ? unit.baseCount : 1);
         }
 
         private static int Clamp(int value, int min, int max)

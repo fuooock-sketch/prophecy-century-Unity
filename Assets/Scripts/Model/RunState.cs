@@ -48,6 +48,11 @@ namespace ProphecyCentury.Model
         public int shopBuffSpeed;
         public int shopBuffLuck;
         public int shopBuffMorale;
+        public int boardAuraAttack;
+        public int baseCount;
+        public int maxCount;
+        public int forestGemCount;
+        public int roundTempCount;
         public int roundTempAttack;
         public int roundTempPower;
         public int roundTempMorale;
@@ -83,6 +88,7 @@ namespace ProphecyCentury.Model
         public string devourerUnitId;
         public string devourerName;
         public UnitCardState devouredCard;
+        public int gainedCount;
     }
 
     [Serializable]
@@ -104,11 +110,47 @@ namespace ProphecyCentury.Model
     }
 
     [Serializable]
+    public sealed class CountGainEventState
+    {
+        public string sourceSlotId;
+        public string sourceName;
+        public string targetSlotId;
+        public string targetName;
+        public int amount;
+    }
+
+    [Serializable]
+    public sealed class EntryEffectEventState
+    {
+        public string targetSlotId;
+        public string targetName;
+    }
+
+    [Serializable]
+    public sealed class HandAddEventState
+    {
+        public string sourceSlotId;
+        public string sourceName;
+        public string unitId;
+        public string unitName;
+        public int handIndex;
+    }
+
+    [Serializable]
+    public sealed class AttackChangeEventState
+    {
+        public string targetSlotId;
+        public string targetName;
+        public int amount;
+    }
+
+    [Serializable]
     public sealed class ShopBuffEventState
     {
         public string sourceSlotId;
         public string sourceName;
         public int attack;
+        public int count;
         public List<int> shopIndices = new List<int>();
     }
 
@@ -117,6 +159,10 @@ namespace ProphecyCentury.Model
     {
         public List<ForestGemGiftEventState> forestGemGiftEvents = new List<ForestGemGiftEventState>();
         public List<UnitEvolveEventState> evolveEvents = new List<UnitEvolveEventState>();
+        public List<CountGainEventState> countGainEvents = new List<CountGainEventState>();
+        public List<EntryEffectEventState> entryEffectEvents = new List<EntryEffectEventState>();
+        public List<HandAddEventState> handAddEvents = new List<HandAddEventState>();
+        public List<AttackChangeEventState> attackChangeEvents = new List<AttackChangeEventState>();
         public List<ShopBuffEventState> shopBuffEvents = new List<ShopBuffEventState>();
     }
 
@@ -144,6 +190,7 @@ namespace ProphecyCentury.Model
         public int forestGiftRoundTotal;
         public int forestGiftRoundActions;
         public int shopGeneratedBuffAttack;
+        public int shopGeneratedCountBonus;
     }
 
     [Serializable]

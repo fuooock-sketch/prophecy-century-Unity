@@ -225,21 +225,44 @@ namespace ProphecyCentury.UI
         private static string BuildStatsLeft(UnitDefinition data, UnitCardState unit)
         {
             var builder = new StringBuilder();
-            builder.AppendLine(StatLine("攻击", data.attack, unit.shopBuffAttack + unit.roundTempAttack));
+            builder.AppendLine(StatLine("数量", ResolveBaseCount(data, unit).ToString(), null));
+            builder.AppendLine(StatLine("攻击", data.attack, unit.shopBuffAttack + unit.roundTempAttack + unit.boardAuraAttack));
             builder.AppendLine(StatLine("防御", data.defense, unit.shopBuffDefense));
-            builder.AppendLine(StatLine("力量", data.power, unit.shopBuffPower + unit.roundTempPower));
-            builder.Append(StatLine("生命", data.hp, unit.shopBuffHp));
+            builder.AppendLine(StatLine("伤害", $"{Mathf.Max(1, data.damageMin)}-{Mathf.Max(Mathf.Max(1, data.damageMin), data.damageMax)}", null));
+            builder.Append(StatLine("单体血量", Mathf.Max(1, data.hpPerUnit > 0 ? data.hpPerUnit : data.hp), unit.shopBuffHp));
             return builder.ToString();
         }
 
         private static string BuildStatsRight(UnitDefinition data, UnitCardState unit)
         {
             var builder = new StringBuilder();
-            builder.AppendLine(StatLine("射程", FormatRange(data.range), null));
+            var morale = data.morale + unit.shopBuffMorale + unit.roundTempMorale;
+            var luck = data.luck + unit.shopBuffLuck;
+            builder.AppendLine(StatLine("先机", data.initiative.ToString(), null));
             builder.AppendLine(StatLine("速度", data.speed, unit.shopBuffSpeed));
-            builder.AppendLine(StatLine("士气", data.morale, unit.shopBuffMorale + unit.roundTempMorale));
-            builder.Append(StatLine("幸运", data.luck, unit.shopBuffLuck));
+            builder.AppendLine(StatLine("士气", morale.ToString(), null));
+            builder.AppendLine(StatLine("追加攻击率", $"{morale * 4}%", null));
+            builder.AppendLine(StatLine("运气", luck.ToString(), null));
+            builder.AppendLine(StatLine("暴击率", $"{luck * 6}%", null));
+            builder.AppendLine(StatLine("射程", FormatRange(data.attackRange > 0f ? data.attackRange : data.range), null));
+            builder.Append(StatLine("体型", data.size.ToString(), null));
             return builder.ToString();
+        }
+
+        private static int ResolveBaseCount(UnitDefinition definition, UnitCardState card)
+        {
+            var startCount = ResolveStartCount(definition);
+            return Mathf.Max(1, (card != null && card.baseCount > 0 ? card.baseCount : startCount) + (card?.roundTempCount ?? 0));
+        }
+
+        private static int ResolveStartCount(UnitDefinition definition)
+        {
+            if (definition == null)
+            {
+                return 1;
+            }
+
+            return Mathf.Max(1, definition.defaultCount > 0 ? definition.defaultCount : definition.startCount > 0 ? definition.startCount : definition.baseCount > 0 ? definition.baseCount : 1);
         }
 
         private static string StatLine(string label, int baseValue, int bonus)

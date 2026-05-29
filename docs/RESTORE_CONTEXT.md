@@ -1,6 +1,6 @@
 # Prophecy Century Unity Restore Context
 
-Last updated: 2026-05-17
+Last updated: 2026-05-28
 
 ## Goal
 
@@ -1757,6 +1757,52 @@ Use the already-open Unity Editor. Do not start a second Unity batchmode process
   - added `Morale` to `BattleUnitSnapshot` and `BattleRealtimeSystem.RealtimeBattleUnit`.
   - snapshots created by authoritative battle, realtime battle, and summon playback now carry morale into realtime preview.
   - this fixes `BattleRealtimeSystem.cs(233,83) CS1061` after adding realtime morale extra attacks.
+
+### 2026-05-28 - Battle Field Layout, Floating Text, And Morale Follow-Up Fixes
+
+- Battle field scale and unit readability:
+  - Enlarged battle unit text to `32` in `BattleUnitView.prefab`, `BattleUnitView.cs`, and fallback/runtime battle label creation paths.
+  - Expanded the battle field root reference bounds to roughly `2400x1040` by using larger `ApplyBattleFieldRootRect` offsets.
+  - Increased battle hex max cell width and battle unit scale ceiling so the battlefield fills more of the target area.
+  - Simplified the battle player panel during combat: the large left panel is reduced to a compact portrait plus HP bar so it no longer blocks the battlefield.
+- Battle floating text pass:
+  - Damage floating text now uses `-X❤️`.
+  - Count-loss floating text is separate and delayed after damage text, currently using the same target position as damage.
+  - Global floating-text scale-in animation was removed; only critical HP damage keeps the enlarged hit animation.
+  - All floating text, including manage-phase feedback, now gets a black outline.
+  - Critical damage no longer displays separate `暴击` text; lucky criticals are communicated by a source-unit cue before the attack.
+- Manage-phase devour feedback:
+  - Selling hand/board units now consumes devour feedback events and plays a visible devour animation for units such as `格尔兽`.
+  - Devour feedback is hooked into the sell paths after number-change feedback.
+- Luck and morale combat feedback:
+  - UI morale cap display was aligned from `0.6f` to `0.95f`.
+  - Lucky criticals now emit a `lucky_crit` battle event before the attack.
+  - Playback shows `幸运！` above the attacking unit, then plays the attack; the target still receives `-X❤️`, with enlarged animation only for critical HP damage.
+  - Morale follow-up attacks emit `morale_extra`; playback shows `士气高涨！` above the attacker before the follow-up attack.
+  - Lucky critical and morale follow-up can occur together: a morale follow-up attack can lucky-crit, but follow-up attacks do not recursively trigger additional morale follow-ups.
+- Battle event playback filtering:
+  - `morale_extra` and `lucky_crit` events are treated as important playback events.
+  - Follow-up events after `morale_extra` are forced into playback so the cue, follow-up attack, damage, and death result are kept together.
+  - `morale_check` debug events are excluded from visual playback.
+- Playtest shortcuts:
+  - `RuntimePlaytestTools` now exposes separate shortcuts:
+    - `B`: maximize luck only and raise runtime critical cap to `0.95`.
+    - `N`: maximize morale only.
+    - `M`: reset playtest luck/morale by reloading runtime data and clearing current-run luck/morale test buffs.
+  - The GM toolbar was expanded with `幸运 B`, `士气 N`, and `重置 M` buttons.
+  - Existing toolbar instances are rebuilt on startup so old hotkey buttons do not linger after script reload.
+- Morale follow-up root-cause fix:
+  - The active authoritative battle path uses `round/turn` hex turns and attacks through `ApplyTurnAttack()`.
+  - Previous morale follow-up logic lived in the older `TickSide()` path, so current battles could show lucky criticals but never perform morale follow-up checks.
+  - Added `TryApplyMoraleExtraAttack()` after `ApplyTurnAttack()` so the current battle path now writes `morale_check`, emits `morale_extra` on success, and immediately applies the follow-up attack.
+  - Raised authoritative battle event capacity from `600` to `2000` so debug and high-frequency feedback events are less likely to truncate important combat events.
+- Debugging notes:
+  - Battle turn logs are written to `Application.persistentDataPath/battle_turn_debug.log`.
+  - On the current Windows test machine this was found at `C:\Users\huawe\AppData\LocalLow\DefaultCompany\prophecy_century\battle_turn_debug.log`.
+  - Before the `ApplyTurnAttack()` fix, the log had no `morale_check` or `morale_extra` lines, proving that the active battle path was bypassing the old morale follow-up code.
+- Verification status:
+  - Static checks with `git diff --check` passed for touched files, aside from normal LF-to-CRLF warnings.
+  - Unity compile was not fully run by Codex after the final morale fix; user should let Unity recompile, press `N`, start battle, and verify the sequence `士气高涨！ -> follow-up attack -> second damage`.
 
 ## Remaining Migration Roadmap Estimate
 

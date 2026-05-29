@@ -36,6 +36,10 @@ sysinfo.txt
 .idea/
 *.DotSettings.user
 
+# Python tooling caches
+__pycache__/
+*.py[cod]
+
 # OS files
 .DS_Store
 Thumbs.db

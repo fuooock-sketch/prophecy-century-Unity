@@ -7,8 +7,10 @@ using ProphecyCentury.Model;
 
 namespace ProphecyCentury.Systems
 {
-    public sealed class SynthesisSystem
+public sealed class SynthesisSystem
     {
+        private static readonly int[] CountLossByStar = { 0, 3, 2, 2, 1, 1, 0 };
+
         public bool TrySynthesizeAll(RunState runState)
         {
             var didSynthesize = false;
@@ -101,6 +103,9 @@ namespace ProphecyCentury.Systems
                 shopBuffSpeed = inherited.speed - (definition?.speed ?? inherited.speed),
                 shopBuffLuck = inherited.luck - (definition?.luck ?? inherited.luck),
                 shopBuffMorale = inherited.morale - (definition?.morale ?? inherited.morale),
+                baseCount = ResolveSynthesisCount(definition, sourceUnits),
+                maxCount = 0,
+                forestGemCount = sourceUnits.Sum(unit => Math.Max(0, unit.forestGemCount)),
                 forestGemsAttached = sourceUnits.Sum(unit => Math.Max(0, unit.forestGemsAttached)),
                 forestGemsReceived = sourceUnits.Sum(unit => Math.Max(0, unit.forestGemsReceived)),
                 manageGiftActionBucket = sourceUnits.Max(unit => unit.manageGiftActionBucket),
@@ -163,6 +168,34 @@ namespace ProphecyCentury.Systems
             }
 
             return unit.isGolden ? 3 : 1;
+        }
+
+        private static int ResolveBaseCount(UnitDefinition definition, UnitCardState unit)
+        {
+            if (unit == null)
+            {
+                return ResolveStartCount(definition);
+            }
+
+            return Math.Max(1, (unit.baseCount > 0 ? unit.baseCount : ResolveStartCount(definition)) + unit.roundTempCount);
+        }
+
+        private static int ResolveStartCount(UnitDefinition definition)
+        {
+            if (definition == null)
+            {
+                return 1;
+            }
+
+            return Math.Max(1, definition.defaultCount > 0 ? definition.defaultCount : definition.startCount > 0 ? definition.startCount : definition.baseCount > 0 ? definition.baseCount : 1);
+        }
+
+        private static int ResolveSynthesisCount(UnitDefinition definition, IReadOnlyList<UnitCardState> sourceUnits)
+        {
+            var total = sourceUnits?.Sum(unit => ResolveBaseCount(definition, unit)) ?? ResolveStartCount(definition);
+            var star = Math.Max(1, Math.Min(6, definition?.star ?? sourceUnits?.FirstOrDefault()?.star ?? 1));
+            var loss = CountLossByStar[star];
+            return Math.Max(1, total - loss);
         }
 
         private struct SynthesisCandidate

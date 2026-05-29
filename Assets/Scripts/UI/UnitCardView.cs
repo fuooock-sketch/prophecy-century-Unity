@@ -259,7 +259,7 @@ namespace ProphecyCentury.UI
                 ApplyStyle(style, false, selected, true, mode);
                 SetText(starsLabel, string.Empty);
                 SetText(nameLabel, string.IsNullOrWhiteSpace(prefix) ? ManageEventResolver.ForestGemCardName : $"{prefix}  {ManageEventResolver.ForestGemCardName}");
-                SetText(statsLabel, $"使用：攻击 +{ManageEventResolver.ForestGemAttackGain}");
+                SetText(statsLabel, $"使用：获得数量 +{ManageEventResolver.ForestGemReinforceCount}");
                 SetText(tagsLabel, "密林  消耗品");
                 SetText(gemLabel, string.Empty);
                 SetIcon(iconImage, null);
@@ -287,15 +287,17 @@ namespace ProphecyCentury.UI
             }
 
             var star = Mathf.Clamp(definition?.star ?? card?.star ?? 0, 0, 6);
-            var attack = (definition?.attack ?? 0) + (card?.shopBuffAttack ?? 0) + (card?.roundTempAttack ?? 0);
+            var attack = (definition?.attack ?? 0) + (card?.shopBuffAttack ?? 0) + (card?.roundTempAttack ?? 0) + (card?.boardAuraAttack ?? 0);
             var defense = (definition?.defense ?? 0) + (card?.shopBuffDefense ?? 0);
-            var power = (definition?.power ?? 0) + (card?.shopBuffPower ?? 0) + (card?.roundTempPower ?? 0);
+            var count = ResolveBaseCount(definition, card);
+            var damageMin = Mathf.Max(1, definition?.damageMin ?? 1);
+            var damageMax = Mathf.Max(damageMin, definition?.damageMax ?? damageMin);
 
             SetText(starsLabel, new string('★', star));
             SetText(nameLabel, displayName);
             SetText(statsLabel, mode == UnitCardPresentationMode.Board
-                ? $"\u653b{attack} \u9632{defense} \u529b{power}"
-                : $"\u653b {attack}  \u529b {power}");
+                ? $"数{count} 攻{attack} 防{defense}"
+                : $"数 {count}  伤 {damageMin}-{damageMax}");
             SetText(tagsLabel, definition == null ? string.Empty : $"{definition.race}  {definition.typeLabel}  {definition.faith}");
             SetText(gemLabel, FormatBoardGemText(definition, card, mode));
             SetIcon(iconImage, card?.name ?? definition?.name);
@@ -708,6 +710,22 @@ namespace ProphecyCentury.UI
             return threshold > 0
                 ? $"◆ {Mathf.Max(0, card.forestGemsAttached)}/{threshold}"
                 : string.Empty;
+        }
+
+        private static int ResolveBaseCount(UnitDefinition definition, UnitCardState card)
+        {
+            var startCount = ResolveStartCount(definition);
+            return Mathf.Max(1, (card != null && card.baseCount > 0 ? card.baseCount : startCount) + (card?.roundTempCount ?? 0));
+        }
+
+        private static int ResolveStartCount(UnitDefinition definition)
+        {
+            if (definition == null)
+            {
+                return 1;
+            }
+
+            return Mathf.Max(1, definition.defaultCount > 0 ? definition.defaultCount : definition.startCount > 0 ? definition.startCount : definition.baseCount > 0 ? definition.baseCount : 1);
         }
 
         private static int GetEvolveGemThreshold(UnitDefinition definition, UnitCardState card)

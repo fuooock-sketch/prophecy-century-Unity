@@ -519,8 +519,9 @@ namespace ProphecyCentury.UI
         {
             return string.Join("\n", new[]
             {
-                $"生命 {unit.hp}    攻击 {unit.attack}    防御 {unit.defense}",
-                $"力量 {unit.power}    速度 {unit.speed}    幸运 {unit.luck}    士气 {unit.morale}",
+                $"数量 {ResolveStartCount(unit)}    攻击 {unit.attack}    防御 {unit.defense}",
+                $"伤害 {unit.damageMin}-{unit.damageMax}    单体血量 {ResolveHpPerUnit(unit)}",
+                $"先机 {unit.initiative}    速度 {unit.speed}    运气 {unit.luck}    士气 {unit.morale}",
                 "点击卡牌打开完整详情。"
             });
         }
@@ -536,8 +537,9 @@ namespace ProphecyCentury.UI
                 $"类型：{FormatRawType(unit.type)}    隐藏/衍生：{(unit.hidden ? "是" : "否")}    标签：{tags}",
                 string.Empty,
                 "基础属性",
-                $"生命 {unit.hp}    攻击 {unit.attack}    防御 {unit.defense}    力量 {unit.power}",
-                $"速度 {unit.speed}    幸运 {unit.luck}    士气 {unit.morale}    攻速 {unit.attackInterval:0.##}s    射程 {unit.range:0.##}    体型 {unit.size}",
+                $"数量 {ResolveStartCount(unit)}    单体血量 {ResolveHpPerUnit(unit)}    攻击 {unit.attack}    防御 {unit.defense}",
+                $"伤害 {unit.damageMin}-{unit.damageMax}    先机 {unit.initiative}    速度 {unit.speed}",
+                $"幸运 {unit.luck}（暴击率 {unit.luck * 6}%）    士气 {unit.morale}（追加攻击率 {unit.morale * 4}%）    射程 {unit.range:0.##}    体型 {unit.size}",
                 string.Empty,
                 "普通经营技能",
                 ValueOrNone(unit.talentText),
@@ -900,6 +902,26 @@ namespace ProphecyCentury.UI
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
             rect.anchoredPosition = Vector2.zero;
+        }
+
+        private static int ResolveStartCount(UnitDefinition unit)
+        {
+            if (unit == null)
+            {
+                return 1;
+            }
+
+            return Mathf.Max(1, unit.defaultCount > 0 ? unit.defaultCount : unit.startCount > 0 ? unit.startCount : unit.baseCount > 0 ? unit.baseCount : 1);
+        }
+
+        private static int ResolveHpPerUnit(UnitDefinition unit)
+        {
+            if (unit == null)
+            {
+                return 1;
+            }
+
+            return Mathf.Max(1, unit.hpPerUnit > 0 ? unit.hpPerUnit : unit.hp);
         }
     }
 }
