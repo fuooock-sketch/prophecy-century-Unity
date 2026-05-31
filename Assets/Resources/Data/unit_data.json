@@ -1,0 +1,4536 @@
+[
+    {
+        "id": "small_merchant",
+        "name": "小商人",
+        "star": 1,
+        "race": "甘地",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 16,
+        "attack": 5,
+        "defense": 3,
+        "power": 1,
+        "speed": 3,
+        "luck": 0,
+        "morale": 2,
+        "attackInterval": 0.95,
+        "range": 8.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "—",
+        "goldTalentText": "—",
+        "battleText": "造成追击后，下回合开始时获得+1金币（每场战斗仅生效1次）",
+        "goldBattleText": "造成追击后，下回合开始时获得+2金币（每场战斗仅生效1次）",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "on_extra_attack_once_next_round_gold",
+                "value": 1,
+                "oncePerBattle": true
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_extra_attack_once_next_round_gold",
+                "value": 2,
+                "oncePerBattle": true
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 2,
+        "startCount": 18,
+        "defaultCount": 18,
+        "baseCount": 18,
+        "maxCount": 0,
+        "hpPerUnit": 16,
+        "damageMin": 1,
+        "damageMax": 3,
+        "initiative": 5,
+        "attackRange": 8.0,
+        "firstPurchaseHp": 288,
+        "firstPurchaseAverageDamage": 36,
+        "skillText": "—\n—\n造成追击后，下回合开始时获得+1金币（每场战斗仅生效1次）\n造成追击后，下回合开始时获得+2金币（每场战斗仅生效1次）",
+        "designOnlyInitialBaseDamage": 36
+    },
+    {
+        "id": "bright_warrior",
+        "name": "光明武士",
+        "star": 1,
+        "race": "甘地",
+        "faith": "莱特",
+        "type": "melee",
+        "typeLabel": "战士",
+        "hp": 23,
+        "attack": 6,
+        "defense": 6,
+        "power": 1,
+        "speed": 5,
+        "luck": 0,
+        "morale": 1,
+        "attackInterval": 0.95,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合结束时，如果相邻格子中有莱特信仰者，本部队+10数量。",
+        "goldTalentText": "回合结束时，如果相邻格子中有莱特信仰者，本部队+20数量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "round_end_if_adjacent_faith_self_gain_attack",
+                "faith": "莱特",
+                "value": 10
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_if_adjacent_faith_self_gain_attack",
+                "faith": "莱特",
+                "value": 20
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 1,
+        "limit": 12,
+        "startCount": 23,
+        "defaultCount": 23,
+        "baseCount": 23,
+        "maxCount": 0,
+        "hpPerUnit": 23,
+        "damageMin": 1,
+        "damageMax": 4,
+        "initiative": 5,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 529,
+        "firstPurchaseAverageDamage": 57,
+        "skillText": "回合结束时，如果相邻格子中有莱特信仰者，本部队+10数量。\n回合结束时，如果相邻格子中有莱特信仰者，本部队+20数量。\n—\n—",
+        "designOnlyInitialBaseDamage": 57
+    },
+    {
+        "id": "elf",
+        "name": "精灵",
+        "star": 1,
+        "race": "甘地",
+        "faith": "莱特",
+        "type": "melee",
+        "typeLabel": "魔灵",
+        "hp": 17,
+        "attack": 6,
+        "defense": 4,
+        "power": 1,
+        "speed": 6,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.8499999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "每入场1支甘地部队，本部队+10数量。",
+        "goldTalentText": "每入场1支甘地部队，本部队+20数量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "while_on_board_on_entry_race_self_gain_attack",
+                "race": "甘地",
+                "value": 10
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "while_on_board_on_entry_race_self_gain_attack",
+                "race": "甘地",
+                "value": 20
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 1,
+        "limit": 12,
+        "startCount": 21,
+        "defaultCount": 21,
+        "baseCount": 21,
+        "maxCount": 0,
+        "hpPerUnit": 17,
+        "damageMin": 3,
+        "damageMax": 4,
+        "initiative": 7,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 357,
+        "firstPurchaseAverageDamage": 73,
+        "skillText": "每入场1支甘地部队，本部队+10数量。\n每入场1支甘地部队，本部队+20数量。\n—\n—",
+        "designOnlyInitialBaseDamage": 73
+    },
+    {
+        "id": "blacksmith",
+        "name": "铁匠",
+        "star": 2,
+        "race": "甘地",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "",
+        "hp": 26,
+        "attack": 7,
+        "defense": 8,
+        "power": 2,
+        "speed": 3,
+        "luck": 2,
+        "morale": 1,
+        "attackInterval": 1.0499999999999998,
+        "range": 8.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "—",
+        "goldTalentText": "—",
+        "battleText": "每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+1；自身数量少于等于1时，技能失效。",
+        "goldBattleText": "每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+2；；自身数量少于等于1时，技能失效。",
+        "talents": [
+            {
+                "kind": "while_on_board_on_entry_race_gain_stats",
+                "race": "甘地",
+                "defense": 2
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "while_on_board_on_entry_race_gain_stats",
+                "race": "甘地",
+                "defense": 2,
+                "attack": 10
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_round_self_hp_loss_team_temp_attack",
+                "selfHpLoss": 40,
+                "attack": 20,
+                "intervalRounds": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_round_self_hp_loss_team_temp_attack",
+                "selfHpLoss": 40,
+                "attack": 40,
+                "intervalRounds": 1
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 12,
+        "startCount": 15,
+        "defaultCount": 15,
+        "baseCount": 15,
+        "maxCount": 0,
+        "hpPerUnit": 26,
+        "damageMin": 3,
+        "damageMax": 4,
+        "initiative": 3,
+        "attackRange": 8.0,
+        "firstPurchaseHp": 390,
+        "firstPurchaseAverageDamage": 52,
+        "skillText": "—\n—\n每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+1；自身数量少于等于1时，技能失效。\n每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+2；；自身数量少于等于1时，技能失效。",
+        "designOnlyInitialBaseDamage": 52
+    },
+    {
+        "id": "monk",
+        "name": "僧侣",
+        "star": 2,
+        "race": "甘地",
+        "faith": "莱特",
+        "type": "range",
+        "typeLabel": "法师",
+        "hp": 22,
+        "attack": 6,
+        "defense": 5,
+        "power": 1,
+        "speed": 3,
+        "luck": 0,
+        "morale": 1,
+        "attackInterval": 1.0,
+        "range": 8.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "与自己同一排的所有部队都视为甘地部队。",
+        "goldTalentText": "同一排和前一排的所有部队都视为甘地部队。",
+        "battleText": "己方每有1支莱特信仰者的部队，本部队临时+20%数量（至少为1）。",
+        "goldBattleText": "己方每有1支莱特信仰者的部队，本部队临时+30%数量（至少为1）。",
+        "talents": [
+            {
+                "kind": "same_row_units_count_as_race",
+                "race": "甘地"
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "same_row_units_count_as_race",
+                "race": "甘地"
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_self_stats_per_faith_count",
+                "faith": "莱特",
+                "attack": 50
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_self_stats_per_faith_count",
+                "faith": "莱特",
+                "attack": 50,
+                "morale": 50
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 12,
+        "startCount": 14,
+        "defaultCount": 14,
+        "baseCount": 14,
+        "maxCount": 0,
+        "hpPerUnit": 22,
+        "damageMin": 3,
+        "damageMax": 5,
+        "initiative": 4,
+        "attackRange": 8.0,
+        "firstPurchaseHp": 308,
+        "firstPurchaseAverageDamage": 56,
+        "skillText": "与自己同一排的所有部队都视为甘地部队。\n同一排和前一排的所有部队都视为甘地部队。\n己方每有1支莱特信仰者的部队，本部队临时+20%数量（至少为1）。\n己方每有1支莱特信仰者的部队，本部队临时+30%数量（至少为1）。",
+        "designOnlyInitialBaseDamage": 56
+    },
+    {
+        "id": "knight",
+        "name": "骑士",
+        "star": 2,
+        "race": "甘地",
+        "faith": "莱特",
+        "type": "range",
+        "typeLabel": "战士",
+        "hp": 32,
+        "attack": 8,
+        "defense": 9,
+        "power": 2,
+        "speed": 7,
+        "luck": 1,
+        "morale": 2,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合开始时，如果场上至少有5支甘地部队，本部队临时数量+（5*回合数）。",
+        "goldTalentText": "回合开始时，如果场上至少有5支甘地部队，本部队临时数量+（10*回合数）。",
+        "battleText": "开战后，瞬间冲到最近的敌人，造成1次暴击伤害和1轮的眩晕",
+        "goldBattleText": "开战后，瞬间冲到最近的敌人，连续造成2次暴击伤害和1轮的眩晕",
+        "talents": [
+            {
+                "kind": "round_start_if_race_count_temp_power",
+                "race": "甘地",
+                "threshold": 5,
+                "roundOffset": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_start_if_race_count_temp_power",
+                "race": "甘地",
+                "threshold": 5,
+                "roundOffset": 4
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_pounce_nearest_damage",
+                "attackMultiplier": 1,
+                "forceCrit": true,
+                "stunTurns": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_pounce_nearest_damage",
+                "attackMultiplier": 1,
+                "forceCrit": true,
+                "stunTurns": 1,
+                "times": 2
+            }
+        ],
+        "sizeTier": 2,
+        "limit": 12,
+        "startCount": 14,
+        "defaultCount": 14,
+        "baseCount": 14,
+        "maxCount": 0,
+        "hpPerUnit": 32,
+        "damageMin": 4,
+        "damageMax": 6,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 448,
+        "firstPurchaseAverageDamage": 70,
+        "skillText": "回合开始时，如果场上至少有5支甘地部队，本部队临时数量+（5*回合数）。\n回合开始时，如果场上至少有5支甘地部队，本部队临时数量+（10*回合数）。\n开战后，瞬间冲到最近的敌人，造成1次暴击伤害和1轮的眩晕\n开战后，瞬间冲到最近的敌人，连续造成2次暴击伤害和1轮的眩晕",
+        "designOnlyInitialBaseDamage": 70
+    },
+    {
+        "id": "assassin",
+        "name": "刺客",
+        "star": 3,
+        "race": "甘地",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "",
+        "hp": 30,
+        "attack": 11,
+        "defense": 7,
+        "power": 2,
+        "speed": 6,
+        "luck": 3,
+        "morale": 1,
+        "attackInterval": 0.75,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合结束时，如果场上甘地部队达到5支，本部队+10数量。",
+        "goldTalentText": "回合结束时，如果场上甘地部队达到5支，本部队+15数量。",
+        "battleText": "潜行。第1次造成的伤害必定暴击；如果当前数量超过初始数量2倍，则为3倍暴击。",
+        "goldBattleText": "潜行。前2次造成的伤害必定暴击；如果当前数量超过初始数量2倍，则为6倍暴击。",
+        "talents": [
+            {
+                "kind": "round_end_if_race_count_self_gain_attack",
+                "race": "甘地",
+                "threshold": 5,
+                "value": 10
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_if_race_count_self_gain_attack",
+                "race": "甘地",
+                "threshold": 5,
+                "value": 15
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_stealth"
+            },
+            {
+                "kind": "passive_every_nth_attack_force_crit",
+                "count": 3,
+                "threshold": 5,
+                "multiplier": 3
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_stealth"
+            },
+            {
+                "kind": "passive_every_nth_attack_force_crit",
+                "count": 2,
+                "threshold": 5,
+                "multiplier": 4
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 8,
+        "startCount": 10,
+        "defaultCount": 10,
+        "baseCount": 10,
+        "maxCount": 0,
+        "hpPerUnit": 30,
+        "damageMin": 5,
+        "damageMax": 8,
+        "initiative": 9,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 300,
+        "firstPurchaseAverageDamage": 65,
+        "skillText": "回合结束时，如果场上甘地部队达到5支，本部队+10数量。\n回合结束时，如果场上甘地部队达到5支，本部队+15数量。\n潜行。第1次造成的伤害必定暴击；如果当前数量超过初始数量2倍，则为3倍暴击。\n潜行。前2次造成的伤害必定暴击；如果当前数量超过初始数量2倍，则为6倍暴击。",
+        "designOnlyInitialBaseDamage": 65
+    },
+    {
+        "id": "priest",
+        "name": "牧师",
+        "star": 3,
+        "race": "甘地",
+        "faith": "莱特",
+        "type": "range",
+        "typeLabel": "法师",
+        "hp": 31,
+        "attack": 9,
+        "defense": 7,
+        "power": 3,
+        "speed": 3,
+        "luck": 2,
+        "morale": 1,
+        "attackInterval": 1.0,
+        "range": 4.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "每入场5支甘地部队，随机获得1支甘地部队",
+        "goldTalentText": "每入场5支甘地部队，随机获得2支甘地部队",
+        "battleText": "开战后，随机给友方2支部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
+        "goldBattleText": "开战后，随机给友方4支部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
+        "talents": [
+            {
+                "kind": "while_on_board_every_n_entry_race_add_random_unit_to_hand",
+                "race": "甘地",
+                "threshold": 5,
+                "count": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "while_on_board_every_n_entry_race_add_random_unit_to_hand",
+                "race": "甘地",
+                "threshold": 5,
+                "count": 2
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_team_shield",
+                "layers": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_team_shield",
+                "layers": 2
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 8,
+        "startCount": 9,
+        "defaultCount": 9,
+        "baseCount": 9,
+        "maxCount": 0,
+        "hpPerUnit": 31,
+        "damageMin": 4,
+        "damageMax": 6,
+        "initiative": 4,
+        "attackRange": 4.0,
+        "firstPurchaseHp": 279,
+        "firstPurchaseAverageDamage": 45,
+        "skillText": "每入场5支甘地部队，随机获得1支甘地部队\n每入场5支甘地部队，随机获得2支甘地部队\n开战后，随机给友方2支部队增加一个护盾，护盾可以完全抵挡最多1次的伤害\n开战后，随机给友方4支部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
+        "designOnlyInitialBaseDamage": 45
+    },
+    {
+        "id": "wanderer",
+        "name": "流浪者",
+        "star": 3,
+        "race": "甘地",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 33,
+        "attack": 11,
+        "defense": 10,
+        "power": 3,
+        "speed": 4,
+        "luck": 3,
+        "morale": 2,
+        "attackInterval": 0.7999999999999999,
+        "range": 6.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "本部队累计+10数量，随机获得1张甘地卡牌（每回合限1次）。",
+        "goldTalentText": "本部队累计+10数量，随机获得2张甘地卡牌（每回合限1次）。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "while_on_board_attack_gain_threshold_add_random_unit_to_hand",
+                "race": "甘地",
+                "threshold": 50,
+                "count": 1,
+                "value": 10
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "while_on_board_attack_gain_threshold_add_random_unit_to_hand",
+                "race": "甘地",
+                "threshold": 50,
+                "count": 2,
+                "value": 10
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 2,
+        "limit": 8,
+        "startCount": 10,
+        "defaultCount": 10,
+        "baseCount": 10,
+        "maxCount": 0,
+        "hpPerUnit": 33,
+        "damageMin": 5,
+        "damageMax": 8,
+        "initiative": 8,
+        "attackRange": 6.0,
+        "firstPurchaseHp": 330,
+        "firstPurchaseAverageDamage": 65,
+        "skillText": "本部队累计+10数量，随机获得1张甘地卡牌（每回合限1次）。\n本部队累计+10数量，随机获得2张甘地卡牌（每回合限1次）。\n—\n—",
+        "designOnlyInitialBaseDamage": 65
+    },
+    {
+        "id": "martial_master",
+        "name": "武学大师",
+        "star": 4,
+        "race": "甘地",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "战士",
+        "hp": 51,
+        "attack": 14,
+        "defense": 14,
+        "power": 4,
+        "speed": 5,
+        "luck": 3,
+        "morale": 3,
+        "attackInterval": 0.8499999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "每获得1支甘地部队，本部队+2数量（购买、发现、随机获得均计入）。",
+        "goldTalentText": "每获得1支甘地部队，本部队+4数量（购买、发现、随机获得均计入）。",
+        "battleText": "每次攻击都会造成周围1距离内的范围伤害",
+        "goldBattleText": "每次攻击都会造成周围2距离内的范围伤害",
+        "talents": [
+            {
+                "kind": "round_start_retrigger_race_round_end_talents",
+                "times": 1,
+                "race": "甘地",
+                "value": 2
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_start_retrigger_race_round_end_talents",
+                "times": 2,
+                "race": "甘地",
+                "value": 4
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "on_attack_count_formula_aoe",
+                "count": 1,
+                "radius": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_attack_count_formula_aoe",
+                "count": 1,
+                "radius": 2
+            }
+        ],
+        "sizeTier": 3,
+        "limit": 5,
+        "startCount": 7,
+        "defaultCount": 7,
+        "baseCount": 7,
+        "maxCount": 0,
+        "hpPerUnit": 51,
+        "damageMin": 7,
+        "damageMax": 10,
+        "initiative": 7,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 357,
+        "firstPurchaseAverageDamage": 59,
+        "skillText": "每获得1支甘地部队，本部队+2数量（购买、发现、随机获得均计入）。\n每获得1支甘地部队，本部队+4数量（购买、发现、随机获得均计入）。\n每次攻击都会造成周围1距离内的范围伤害\n每次攻击都会造成周围2距离内的范围伤害",
+        "designOnlyInitialBaseDamage": 59
+    },
+    {
+        "id": "light_mentor",
+        "name": "光明导师",
+        "star": 4,
+        "race": "甘地",
+        "faith": "莱特",
+        "type": "range",
+        "typeLabel": "法师",
+        "hp": 41,
+        "attack": 12,
+        "defense": 10,
+        "power": 4,
+        "speed": 3,
+        "luck": 2,
+        "morale": 1,
+        "attackInterval": 1.0,
+        "range": 8.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "—",
+        "goldTalentText": "—",
+        "battleText": "开战后，在最近的2个格子中分别召唤出1支数量为1、单体血量10不会攻击和移动的幻影部队，幻影也算作莱特信仰者",
+        "goldBattleText": "开战后，在最近的3个格子中分别召唤出1支数量为1、单体血量10不会攻击和移动的幻影部队，幻影也算作莱特信仰者",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "battle_start_summon_units",
+                "summonUnitId": "light_illusion",
+                "count": 2
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_summon_units",
+                "summonUnitId": "light_illusion",
+                "count": 4
+            }
+        ],
+        "sizeTier": 2,
+        "limit": 5,
+        "startCount": 6,
+        "defaultCount": 6,
+        "baseCount": 6,
+        "maxCount": 0,
+        "hpPerUnit": 41,
+        "damageMin": 6,
+        "damageMax": 9,
+        "initiative": 4,
+        "attackRange": 8.0,
+        "firstPurchaseHp": 246,
+        "firstPurchaseAverageDamage": 45,
+        "skillText": "—\n—\n开战后，在最近的2个格子中分别召唤出1支数量为1、单体血量10不会攻击和移动的幻影部队，幻影也算作莱特信仰者\n开战后，在最近的3个格子中分别召唤出1支数量为1、单体血量10不会攻击和移动的幻影部队，幻影也算作莱特信仰者",
+        "designOnlyInitialBaseDamage": 45
+    },
+    {
+        "id": "garrison_guard",
+        "name": "卫戍协兵",
+        "star": 5,
+        "race": "甘地",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "战士",
+        "hp": 67,
+        "attack": 16,
+        "defense": 21,
+        "power": 2,
+        "speed": 3,
+        "luck": 3,
+        "morale": 3,
+        "attackInterval": 1.0,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "任意友军获得1次获得数量时，全军获得+1数量。",
+        "goldTalentText": "任意友军获得1次获得数量时，全军获得+2数量。",
+        "battleText": "我方任意部队产生1次暴击，本部队临时数量+10。",
+        "goldBattleText": "我方任意部队产生1次暴击，本部队临时数量+20。",
+        "talents": [
+            {
+                "kind": "on_gain_defense_team_gain_attack",
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_gain_defense_team_gain_attack",
+                "value": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 2,
+        "limit": 3,
+        "startCount": 4,
+        "defaultCount": 4,
+        "baseCount": 4,
+        "maxCount": 0,
+        "hpPerUnit": 67,
+        "damageMin": 8,
+        "damageMax": 11,
+        "initiative": 4,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 268,
+        "firstPurchaseAverageDamage": 38,
+        "skillText": "任意友军获得1次获得数量时，全军获得+1数量。\n任意友军获得1次获得数量时，全军获得+2数量。\n我方任意部队产生1次暴击，本部队临时数量+10。\n我方任意部队产生1次暴击，本部队临时数量+20。",
+        "designOnlyInitialBaseDamage": 38
+    },
+    {
+        "id": "light_envoy",
+        "name": "莱特使者",
+        "star": 5,
+        "race": "甘地",
+        "faith": "莱特",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 58,
+        "attack": 14,
+        "defense": 15,
+        "power": 3,
+        "speed": 3,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 1.0,
+        "range": 5.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合开始时，如果场上至少有6支莱特信仰者部队，则随机发现1支莱特信仰者部队。",
+        "goldTalentText": "回合开始时，如果场上至少有6支莱特信仰者部队，则随机发现2支莱特信仰者部队。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "battle_start_if_team_faith_count_next_round_discover",
+                "faith": "莱特",
+                "threshold": 6,
+                "count": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_if_team_faith_count_next_round_discover",
+                "faith": "莱特",
+                "threshold": 6,
+                "count": 2
+            }
+        ],
+        "sizeTier": 2,
+        "limit": 3,
+        "startCount": 4,
+        "defaultCount": 4,
+        "baseCount": 4,
+        "maxCount": 0,
+        "hpPerUnit": 58,
+        "damageMin": 7,
+        "damageMax": 11,
+        "initiative": 4,
+        "attackRange": 5.0,
+        "firstPurchaseHp": 232,
+        "firstPurchaseAverageDamage": 36,
+        "skillText": "回合开始时，如果场上至少有6支莱特信仰者部队，则随机发现1支莱特信仰者部队。\n回合开始时，如果场上至少有6支莱特信仰者部队，则随机发现2支莱特信仰者部队。\n—\n—",
+        "designOnlyInitialBaseDamage": 36
+    },
+    {
+        "id": "royal_swordsman",
+        "name": "皇家剑士",
+        "star": 6,
+        "race": "甘地",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "战士",
+        "hp": 86,
+        "attack": 21,
+        "defense": 21,
+        "power": 5,
+        "speed": 3,
+        "luck": 2,
+        "morale": 2,
+        "attackInterval": 0.95,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合结束时，全体战士+1数量。",
+        "goldTalentText": "回合结束时，全体战士+2数量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "round_end_tagged_units_gain_attack_and_defense",
+                "targetTag": "战士",
+                "attackValue": 10,
+                "defenseValue": 1,
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_tagged_units_gain_attack_and_defense",
+                "targetTag": "战士",
+                "attackValue": 20,
+                "defenseValue": 2,
+                "value": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 2,
+        "limit": 3,
+        "startCount": 2,
+        "defaultCount": 2,
+        "baseCount": 2,
+        "maxCount": 0,
+        "hpPerUnit": 86,
+        "damageMin": 11,
+        "damageMax": 17,
+        "initiative": 5,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 172,
+        "firstPurchaseAverageDamage": 28,
+        "skillText": "回合结束时，全体战士+1数量。\n回合结束时，全体战士+2数量。\n—\n—",
+        "designOnlyInitialBaseDamage": 28
+    },
+    {
+        "id": "echo_of_light",
+        "name": "莱特的回响",
+        "star": 6,
+        "race": "甘地",
+        "faith": "莱特",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 74,
+        "attack": 22,
+        "defense": 18,
+        "power": 6,
+        "speed": 6,
+        "luck": 2,
+        "morale": 3,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "莱特信仰者每累计获得数量5次，本部队获得+1数量。",
+        "goldTalentText": "莱特信仰者每累计获得数量5次，本部队获得+2数量。",
+        "battleText": "开战后，己方每有1名莱特信仰者，全军临时获得+10数量。",
+        "goldBattleText": "开战后，己方每有1名莱特信仰者，全军临时获得+15数量。",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "battle_start_team_attack_per_faith_count",
+                "faith": "莱特",
+                "valuePerFaith": 4,
+                "value": 10
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_team_attack_per_faith_count",
+                "faith": "莱特",
+                "valuePerFaith": 8,
+                "value": 15
+            }
+        ],
+        "sizeTier": 3,
+        "limit": 3,
+        "startCount": 2,
+        "defaultCount": 2,
+        "baseCount": 2,
+        "maxCount": 0,
+        "hpPerUnit": 74,
+        "damageMin": 12,
+        "damageMax": 18,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 148,
+        "firstPurchaseAverageDamage": 30,
+        "skillText": "莱特信仰者每累计获得数量5次，本部队获得+1数量。\n莱特信仰者每累计获得数量5次，本部队获得+2数量。\n开战后，己方每有1名莱特信仰者，全军临时获得+10数量。\n开战后，己方每有1名莱特信仰者，全军临时获得+15数量。",
+        "designOnlyInitialBaseDamage": 30
+    },
+    {
+        "id": "frost_spirit",
+        "name": "冰霜魔灵",
+        "star": 1,
+        "race": "甘德",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "魔灵",
+        "hp": 16,
+        "attack": 6,
+        "defense": 3,
+        "power": 1,
+        "speed": 2,
+        "luck": 1,
+        "morale": 0,
+        "attackInterval": 0.8999999999999999,
+        "range": 6.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "离场时，获得+1金币，场上随机1支部队获得+1数量。",
+        "goldTalentText": "离场时，获得+2金币，场上随机1支部队获得+2量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "leave_board_gain_gold",
+                "value": 1,
+                "power": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "leave_board_gain_gold",
+                "value": 2,
+                "power": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 1,
+        "limit": 12,
+        "startCount": 21,
+        "defaultCount": 21,
+        "baseCount": 21,
+        "maxCount": 0,
+        "hpPerUnit": 16,
+        "damageMin": 3,
+        "damageMax": 4,
+        "initiative": 6,
+        "attackRange": 6.0,
+        "firstPurchaseHp": 336,
+        "firstPurchaseAverageDamage": 73,
+        "skillText": "离场时，获得+1金币，场上随机1支部队获得+1数量。\n离场时，获得+2金币，场上随机1支部队获得+2量。\n—\n—",
+        "designOnlyInitialBaseDamage": 73
+    },
+    {
+        "id": "stubborn_apprentice",
+        "name": "犟嘴学徒",
+        "star": 1,
+        "race": "甘德",
+        "faith": "艾瑞",
+        "type": "range",
+        "typeLabel": "法师",
+        "hp": 17,
+        "attack": 5,
+        "defense": 3,
+        "power": 2,
+        "speed": 2,
+        "luck": 0,
+        "morale": 1,
+        "attackInterval": 0.8999999999999999,
+        "range": 8.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "入场时，场上随机1支甘德部队获得+1数量。",
+        "goldTalentText": "入场时，场上随机2支甘德部队获得+1数量。",
+        "battleText": "每次受到伤害会立刻进行1次反击。",
+        "goldBattleText": "每次受到伤害会立刻进行连续2次反击。",
+        "talents": [
+            {
+                "kind": "on_entry_random_race_units_gain_power",
+                "race": "甘德",
+                "power": 1,
+                "count": 1,
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_entry_random_race_units_gain_power",
+                "race": "甘德",
+                "power": 1,
+                "count": 2,
+                "value": 1
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "first_hits_counterattack",
+                "count": 3,
+                "repeat": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "first_hits_counterattack",
+                "count": 3,
+                "repeat": 2
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 12,
+        "startCount": 20,
+        "defaultCount": 20,
+        "baseCount": 20,
+        "maxCount": 0,
+        "hpPerUnit": 17,
+        "damageMin": 1,
+        "damageMax": 4,
+        "initiative": 6,
+        "attackRange": 8.0,
+        "firstPurchaseHp": 340,
+        "firstPurchaseAverageDamage": 50,
+        "skillText": "入场时，场上随机1支甘德部队获得+1数量。\n入场时，场上随机2支甘德部队获得+1数量。\n每次受到伤害会立刻进行1次反击。\n每次受到伤害会立刻进行连续2次反击。",
+        "designOnlyInitialBaseDamage": 50
+    },
+    {
+        "id": "fire_elemental",
+        "name": "火元素",
+        "star": 1,
+        "race": "甘德",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "元素",
+        "hp": 19,
+        "attack": 7,
+        "defense": 5,
+        "power": 1,
+        "speed": 6,
+        "luck": 2,
+        "morale": 1,
+        "attackInterval": 0.75,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "每获得1次数量，本部队额外获得+4数量。",
+        "goldTalentText": "每获得1次数量，本部队额外获得+8数量。",
+        "battleText": "每次攻击造成周围1距离范围伤害；阵亡时自爆，造成周围1距离范围伤害。",
+        "goldBattleText": "每次攻击造成周围2距离范围伤害；阵亡时自爆，造成周围2距离范围伤害。",
+        "talents": [
+            {
+                "kind": "on_gain_power_self_gain_attack",
+                "value": 4
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_gain_power_self_gain_attack",
+                "value": 8
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_periodic_nearby_enemies_attack_and_death_explode",
+                "radius": 3,
+                "attackMultiplier": 1,
+                "deathAttackMultiplier": 2,
+                "interval": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_periodic_nearby_enemies_attack_and_death_explode",
+                "radius": 6,
+                "attackMultiplier": 1,
+                "deathAttackMultiplier": 3,
+                "interval": 1
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 12,
+        "startCount": 22,
+        "defaultCount": 22,
+        "baseCount": 22,
+        "maxCount": 0,
+        "hpPerUnit": 19,
+        "damageMin": 3,
+        "damageMax": 5,
+        "initiative": 9,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 418,
+        "firstPurchaseAverageDamage": 88,
+        "skillText": "每获得1次数量，本部队额外获得+4数量。\n每获得1次数量，本部队额外获得+8数量。\n每次攻击造成周围1距离范围伤害；阵亡时自爆，造成周围1距离范围伤害。\n每次攻击造成周围2距离范围伤害；阵亡时自爆，造成周围2距离范围伤害。",
+        "designOnlyInitialBaseDamage": 88
+    },
+    {
+        "id": "novice_elementalist",
+        "name": "低级元素使",
+        "star": 2,
+        "race": "甘德",
+        "faith": "艾瑞",
+        "type": "melee",
+        "typeLabel": "法师",
+        "hp": 22,
+        "attack": 8,
+        "defense": 5,
+        "power": 2,
+        "speed": 3,
+        "luck": 1,
+        "morale": 2,
+        "attackInterval": 0.8999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "每入场1支元素部队，使其与场上同名元素获得+1数量。",
+        "goldTalentText": "每入场1支元素部队，使其与场上同名元素获得+2数量。",
+        "battleText": "开战后，在最近的格子中召唤1支临时火元素部队，数量与场上数量最多的火元素一致，至少为10。",
+        "goldBattleText": "开战后，在最近的两个格子中分别召唤1支临时火元素部队，数量与场上数量最多的火元素一致，至少为10。",
+        "talents": [
+            {
+                "kind": "while_on_board_on_entry_same_id_tagged_units_gain_power",
+                "power": 1,
+                "tag": "元素",
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "while_on_board_on_entry_same_id_tagged_units_gain_power",
+                "power": 2,
+                "tag": "元素",
+                "value": 2
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_summon_units",
+                "count": 1,
+                "summonUnitId": "fire_elemental"
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_summon_units",
+                "count": 2,
+                "summonUnitId": "fire_elemental"
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 8,
+        "startCount": 13,
+        "defaultCount": 13,
+        "baseCount": 13,
+        "maxCount": 0,
+        "hpPerUnit": 22,
+        "damageMin": 4,
+        "damageMax": 6,
+        "initiative": 6,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 286,
+        "firstPurchaseAverageDamage": 65,
+        "skillText": "每入场1支元素部队，使其与场上同名元素获得+1数量。\n每入场1支元素部队，使其与场上同名元素获得+2数量。\n开战后，在最近的格子中召唤1支临时火元素部队，数量与场上数量最多的火元素一致，至少为10。\n开战后，在最近的两个格子中分别召唤1支临时火元素部队，数量与场上数量最多的火元素一致，至少为10。",
+        "designOnlyInitialBaseDamage": 65
+    },
+    {
+        "id": "water_elemental",
+        "name": "水元素",
+        "star": 2,
+        "race": "甘德",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "元素",
+        "hp": 24,
+        "attack": 10,
+        "defense": 7,
+        "power": 2,
+        "speed": 5,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "场上每有1支火元素部队，就使全体元素临时+2攻击。",
+        "goldTalentText": "场上每有1支火元素部队，就使全体元素临时+4攻击。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "while_on_board_per_ally_id_buff_type_attack",
+                "allyId": "fire_elemental",
+                "targetTag": "元素",
+                "attack": 20
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "while_on_board_per_ally_id_buff_type_attack",
+                "allyId": "fire_elemental",
+                "targetTag": "元素",
+                "attack": 40
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 2,
+        "limit": 8,
+        "startCount": 15,
+        "defaultCount": 15,
+        "baseCount": 15,
+        "maxCount": 0,
+        "hpPerUnit": 24,
+        "damageMin": 4,
+        "damageMax": 7,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 360,
+        "firstPurchaseAverageDamage": 82,
+        "skillText": "场上每有1支火元素部队，就使全体元素临时+2攻击。\n场上每有1支火元素部队，就使全体元素临时+4攻击。\n—\n—",
+        "designOnlyInitialBaseDamage": 82
+    },
+    {
+        "id": "null_mage",
+        "name": "无魔者",
+        "star": 3,
+        "race": "甘德",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 33,
+        "attack": 13,
+        "defense": 9,
+        "power": 1,
+        "speed": 6,
+        "luck": 1,
+        "morale": 0,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "—",
+        "goldTalentText": "—",
+        "battleText": "开战后，每有一支友方部队行动，则临时获得+4数量。",
+        "goldBattleText": "开战后，每有一支友方部队行动，则临时获得+8数量。",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "battle_periodic_temp_power",
+                "intervalRounds": 1,
+                "value": 4
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_periodic_temp_power",
+                "intervalRounds": 1,
+                "value": 8
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 5,
+        "startCount": 10,
+        "defaultCount": 10,
+        "baseCount": 10,
+        "maxCount": 0,
+        "hpPerUnit": 33,
+        "damageMin": 6,
+        "damageMax": 9,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 330,
+        "firstPurchaseAverageDamage": 75,
+        "skillText": "—\n—\n开战后，每有一支友方部队行动，则临时获得+4数量。\n开战后，每有一支友方部队行动，则临时获得+8数量。",
+        "designOnlyInitialBaseDamage": 75
+    },
+    {
+        "id": "carpet_mage",
+        "name": "飞毯法师",
+        "star": 3,
+        "race": "甘德",
+        "faith": "艾瑞",
+        "type": "melee",
+        "typeLabel": "法师",
+        "hp": 29,
+        "attack": 9,
+        "defense": 7,
+        "power": 3,
+        "speed": 7,
+        "luck": 2,
+        "morale": 1,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "入场时，祝福一支指定部队，使其获得相当于其自身10%的数量（至少为1）。",
+        "goldTalentText": "入场时，祝福一支指定部队，使其获得相当于其自身20%的数量（至少为1）。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "enter_target_unit_permanent_power",
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "enter_target_unit_permanent_power",
+                "value": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 2,
+        "limit": 5,
+        "startCount": 10,
+        "defaultCount": 10,
+        "baseCount": 10,
+        "maxCount": 0,
+        "hpPerUnit": 29,
+        "damageMin": 5,
+        "damageMax": 7,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 290,
+        "firstPurchaseAverageDamage": 60,
+        "skillText": "入场时，祝福一支指定部队，使其获得相当于其自身10%的数量（至少为1）。\n入场时，祝福一支指定部队，使其获得相当于其自身20%的数量（至少为1）。\n—\n—",
+        "designOnlyInitialBaseDamage": 60
+    },
+    {
+        "id": "puppet_spirit",
+        "name": "傀儡魔灵",
+        "star": 3,
+        "race": "甘德",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "魔灵",
+        "hp": 34,
+        "attack": 12,
+        "defense": 10,
+        "power": 3,
+        "speed": 3,
+        "luck": 1,
+        "morale": 3,
+        "attackInterval": 0.8499999999999999,
+        "range": 4.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "离场时，元素和艾瑞信仰者获得+5数量。",
+        "goldTalentText": "离场时，元素和艾瑞信仰者获得+10数量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "leave_board_tagged_units_gain_stats",
+                "power": 1,
+                "targetTags": [
+                    "元素"
+                ],
+                "byFaith": {
+                    "艾瑞": {
+                        "power": 1
+                    }
+                },
+                "value": 5
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "leave_board_tagged_units_gain_stats",
+                "power": 2,
+                "targetTags": [
+                    "元素"
+                ],
+                "byFaith": {
+                    "艾瑞": {
+                        "power": 2
+                    }
+                },
+                "value": 10
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 1,
+        "limit": 5,
+        "startCount": 10,
+        "defaultCount": 10,
+        "baseCount": 10,
+        "maxCount": 0,
+        "hpPerUnit": 34,
+        "damageMin": 5,
+        "damageMax": 8,
+        "initiative": 7,
+        "attackRange": 4.0,
+        "firstPurchaseHp": 340,
+        "firstPurchaseAverageDamage": 65,
+        "skillText": "离场时，元素和艾瑞信仰者获得+5数量。\n离场时，元素和艾瑞信仰者获得+10数量。\n—\n—",
+        "designOnlyInitialBaseDamage": 65
+    },
+    {
+        "id": "wind_elemental",
+        "name": "风元素",
+        "star": 4,
+        "race": "甘德",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "元素",
+        "hp": 43,
+        "attack": 14,
+        "defense": 10,
+        "power": 2,
+        "speed": 7,
+        "luck": 1,
+        "morale": 2,
+        "attackInterval": 0.75,
+        "range": 5.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "场上至少有4支甘德部队，给所有部队临时+1先机。",
+        "goldTalentText": "场上至少有4支甘德部队，给所有部队临时+2先机。",
+        "battleText": "开战后，全体元素可以连续攻击2次。",
+        "goldBattleText": "开战后，全体元素可以连续攻击3次。",
+        "talents": [
+            {
+                "kind": "while_on_board_race_threshold_team_speed",
+                "race": "甘德",
+                "threshold": 4,
+                "value": 5
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "while_on_board_race_threshold_team_speed",
+                "race": "甘德",
+                "threshold": 4,
+                "value": 8
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_speed_threshold_attack_interval_reduce",
+                "reduce": 0.5,
+                "threshold": 8
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_speed_threshold_attack_interval_half",
+                "threshold": 10
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 5,
+        "startCount": 6,
+        "defaultCount": 6,
+        "baseCount": 6,
+        "maxCount": 0,
+        "hpPerUnit": 43,
+        "damageMin": 6,
+        "damageMax": 10,
+        "initiative": 9,
+        "attackRange": 5.0,
+        "firstPurchaseHp": 258,
+        "firstPurchaseAverageDamage": 48,
+        "skillText": "场上至少有4支甘德部队，给所有部队临时+1先机。\n场上至少有4支甘德部队，给所有部队临时+2先机。\n开战后，全体元素可以连续攻击2次。\n开战后，全体元素可以连续攻击3次。",
+        "designOnlyInitialBaseDamage": 48
+    },
+    {
+        "id": "earth_elemental",
+        "name": "土元素",
+        "star": 4,
+        "race": "甘德",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "元素",
+        "hp": 55,
+        "attack": 12,
+        "defense": 17,
+        "power": 1,
+        "speed": 2,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 1.0999999999999999,
+        "range": 6.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "每离场4支魔灵部队，全体元素获得+4数量。",
+        "goldTalentText": "每离场2支魔灵部队，全体元素获得+4数量。",
+        "battleText": "开战后，当前数量最低的友方部队临时获得固定数量+3。",
+        "goldBattleText": "开战后，当前数量最低的友方部队临时获得固定数量+6。",
+        "talents": [
+            {
+                "kind": "on_leave_tag_count_tagged_units_gain_power",
+                "targetTag": "元素",
+                "power": 1,
+                "threshold": 4,
+                "tag": "魔灵",
+                "value": 4
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_leave_tag_count_tagged_units_gain_power",
+                "targetTag": "元素",
+                "power": 1,
+                "threshold": 2,
+                "tag": "魔灵",
+                "value": 4
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_lowest_power_ally_gain_source_power",
+                "multiplier": 1,
+                "value": 3,
+                "temporary": true
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_lowest_power_ally_gain_source_power",
+                "multiplier": 2,
+                "value": 6,
+                "temporary": true
+            }
+        ],
+        "sizeTier": 3,
+        "limit": 5,
+        "startCount": 6,
+        "defaultCount": 6,
+        "baseCount": 6,
+        "maxCount": 0,
+        "hpPerUnit": 55,
+        "damageMin": 6,
+        "damageMax": 8,
+        "initiative": 2,
+        "attackRange": 6.0,
+        "firstPurchaseHp": 330,
+        "firstPurchaseAverageDamage": 42,
+        "skillText": "每离场4支魔灵部队，全体元素获得+4数量。\n每离场2支魔灵部队，全体元素获得+4数量。\n开战后，当前数量最低的友方部队临时获得固定数量+3。\n开战后，当前数量最低的友方部队临时获得固定数量+6。",
+        "designOnlyInitialBaseDamage": 42
+    },
+    {
+        "id": "academy_gardener",
+        "name": "学院园丁",
+        "star": 4,
+        "race": "甘德",
+        "faith": "艾瑞",
+        "type": "melee",
+        "typeLabel": "",
+        "hp": 55,
+        "attack": 11,
+        "defense": 16,
+        "power": 2,
+        "speed": 3,
+        "luck": 2,
+        "morale": 1,
+        "attackInterval": 0.8999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "—",
+        "goldTalentText": "—",
+        "battleText": "每有1支元素部队在战斗中阵亡，剩下的元素临时获得+10数量。",
+        "goldBattleText": "每有1支元素部队在战斗中阵亡，剩下的元素临时获得+20数量。",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "on_ally_death_tagged_units_temp_power",
+                "targetTag": "元素",
+                "power": 1,
+                "deadTag": "元素",
+                "value": 10
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_ally_death_tagged_units_temp_power",
+                "targetTag": "元素",
+                "power": 2,
+                "deadTag": "元素",
+                "value": 20
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 5,
+        "startCount": 7,
+        "defaultCount": 7,
+        "baseCount": 7,
+        "maxCount": 0,
+        "hpPerUnit": 55,
+        "damageMin": 4,
+        "damageMax": 8,
+        "initiative": 6,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 385,
+        "firstPurchaseAverageDamage": 42,
+        "skillText": "—\n—\n每有1支元素部队在战斗中阵亡，剩下的元素临时获得+10数量。\n每有1支元素部队在战斗中阵亡，剩下的元素临时获得+20数量。",
+        "designOnlyInitialBaseDamage": 42
+    },
+    {
+        "id": "archmage",
+        "name": "魔导师",
+        "star": 5,
+        "race": "甘德",
+        "faith": "艾瑞",
+        "type": "range",
+        "typeLabel": "法师",
+        "hp": 50,
+        "attack": 17,
+        "defense": 13,
+        "power": 4,
+        "speed": 2,
+        "luck": 3,
+        "morale": 2,
+        "attackInterval": 0.95,
+        "range": 8.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "每次获得数量时，其他所有部队各获得+2数量。",
+        "goldTalentText": "每次获得数量时，其他所有部队各获得+4数量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "while_on_board_self_gain_stat_team_gain_power",
+                "allowEvents": [
+                    "on_gain_power"
+                ],
+                "value": 2
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "while_on_board_self_gain_stat_team_gain_power",
+                "allowEvents": [
+                    "on_gain_power"
+                ],
+                "value": 4
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 2,
+        "limit": 3,
+        "startCount": 1,
+        "defaultCount": 1,
+        "baseCount": 1,
+        "maxCount": 0,
+        "hpPerUnit": 50,
+        "damageMin": 9,
+        "damageMax": 15,
+        "initiative": 5,
+        "attackRange": 8.0,
+        "firstPurchaseHp": 50,
+        "firstPurchaseAverageDamage": 12,
+        "skillText": "每次获得数量时，其他所有部队各获得+2数量。\n每次获得数量时，其他所有部队各获得+4数量。\n—\n—",
+        "designOnlyInitialBaseDamage": 12
+    },
+    {
+        "id": "element_master",
+        "name": "元素大师",
+        "star": 5,
+        "race": "甘德",
+        "faith": "艾瑞",
+        "type": "melee",
+        "typeLabel": "法师",
+        "hp": 52,
+        "attack": 14,
+        "defense": 13,
+        "power": 3,
+        "speed": 3,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.8999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "—",
+        "goldTalentText": "—",
+        "battleText": "每次攻击后，在最近的格子中召唤1支临时火元素部队（数量为10），这支火元素阵亡后，此技能才会再次生效。",
+        "goldBattleText": "每次攻击后，在最近的2个格子中各召唤1支临时火元素部队（每支数量为10），这两支火元素都阵亡后，此技能才会再次生效。",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "on_attack_count_summon",
+                "summonUnitId": "fire_elemental",
+                "count": 4,
+                "duration": 5
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_attack_count_summon",
+                "summonUnitId": "fire_elemental",
+                "count": 2,
+                "duration": 5
+            }
+        ],
+        "sizeTier": 2,
+        "limit": 3,
+        "startCount": 2,
+        "defaultCount": 2,
+        "baseCount": 2,
+        "maxCount": 0,
+        "hpPerUnit": 52,
+        "damageMin": 6,
+        "damageMax": 11,
+        "initiative": 6,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 104,
+        "firstPurchaseAverageDamage": 17,
+        "skillText": "—\n—\n每次攻击后，在最近的格子中召唤1支临时火元素部队（数量为10），这支火元素阵亡后，此技能才会再次生效。\n每次攻击后，在最近的2个格子中各召唤1支临时火元素部队（每支数量为10），这两支火元素都阵亡后，此技能才会再次生效。",
+        "designOnlyInitialBaseDamage": 17
+    },
+    {
+        "id": "demon_lord",
+        "name": "魔尊",
+        "star": 6,
+        "race": "甘德",
+        "faith": "艾瑞",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 81,
+        "attack": 17,
+        "defense": 20,
+        "power": 5,
+        "speed": 3,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.8999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "获得数量时，将获得的数量随机转移给场上的任意1支友方部队。",
+        "goldTalentText": "获得数量时，将获得的数量随机转移给场上的任意2支友方部队。",
+        "battleText": "每次行动时，如果自身没有护盾，则获得1个护盾，能够完全抵挡1次伤害。",
+        "goldBattleText": "每次行动时，如果自身没有护盾，则获得1个护盾，能够完全抵挡2次伤害。",
+        "talents": [
+            {
+                "kind": "on_gain_power_convert_to_attack_random_board_unit",
+                "value": 10
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_gain_power_convert_to_attack_random_board_unit",
+                "value": 10,
+                "goldValue": 20
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_self_refreshing_shield",
+                "layers": 1,
+                "refreshRounds": 3
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_self_refreshing_shield",
+                "layers": 1,
+                "refreshRounds": 2
+            }
+        ],
+        "sizeTier": 3,
+        "limit": 3,
+        "startCount": 2,
+        "defaultCount": 2,
+        "baseCount": 2,
+        "maxCount": 0,
+        "hpPerUnit": 81,
+        "damageMin": 8,
+        "damageMax": 14,
+        "initiative": 6,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 162,
+        "firstPurchaseAverageDamage": 22,
+        "skillText": "获得数量时，将获得的数量随机转移给场上的任意1支友方部队。\n获得数量时，将获得的数量随机转移给场上的任意2支友方部队。\n每次行动时，如果自身没有护盾，则获得1个护盾，能够完全抵挡1次伤害。\n每次行动时，如果自身没有护盾，则获得1个护盾，能够完全抵挡2次伤害。",
+        "designOnlyInitialBaseDamage": 22
+    },
+    {
+        "id": "elder_spirit",
+        "name": "大魔灵",
+        "star": 6,
+        "race": "甘德",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "魔灵",
+        "hp": 66,
+        "attack": 22,
+        "defense": 16,
+        "power": 4,
+        "speed": 3,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.8499999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "离场时，场上的元素和法师均获得+2数量。",
+        "goldTalentText": "离场时，场上的元素和法师均获得+4数量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "leave_board_tagged_units_gain_stats",
+                "targetTags": [
+                    "元素",
+                    "法师"
+                ],
+                "power": 1,
+                "value": 2
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "leave_board_tagged_units_gain_stats",
+                "targetTags": [
+                    "元素",
+                    "法师"
+                ],
+                "power": 2,
+                "value": 4
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 2,
+        "limit": 3,
+        "startCount": 1,
+        "defaultCount": 1,
+        "baseCount": 1,
+        "maxCount": 0,
+        "hpPerUnit": 66,
+        "damageMin": 11,
+        "damageMax": 20,
+        "initiative": 7,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 66,
+        "firstPurchaseAverageDamage": 15,
+        "skillText": "离场时，场上的元素和法师均获得+2数量。\n离场时，场上的元素和法师均获得+4数量。\n—\n—",
+        "designOnlyInitialBaseDamage": 15
+    },
+    {
+        "id": "magic_dragon",
+        "name": "魔法龙",
+        "star": 6,
+        "race": "甘德",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "元素",
+        "hp": 78,
+        "attack": 22,
+        "defense": 20,
+        "power": 5,
+        "speed": 6,
+        "luck": 3,
+        "morale": 1,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "—",
+        "goldTalentText": "—",
+        "battleText": "开战后，在最近3个格子分别召唤1支临时火元素部队，每支固定数量为22。",
+        "goldBattleText": "开战后，在最近3个格子分别召唤1支临时火元素部队，每支固定数量为26。",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "battle_start_summon_and_buff_type",
+                "count": 3,
+                "targetId": "fire_elemental",
+                "value": 22,
+                "power": 1,
+                "summonUnitId": "fire_elemental",
+                "temporary": true
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_summon_and_buff_type",
+                "count": 3,
+                "targetId": "fire_elemental",
+                "value": 26,
+                "power": 2,
+                "summonUnitId": "fire_elemental",
+                "temporary": true
+            }
+        ],
+        "sizeTier": 3,
+        "limit": 3,
+        "startCount": 2,
+        "defaultCount": 2,
+        "baseCount": 2,
+        "maxCount": 0,
+        "hpPerUnit": 78,
+        "damageMin": 10,
+        "damageMax": 19,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 156,
+        "firstPurchaseAverageDamage": 29,
+        "skillText": "—\n—\n开战后，在最近3个格子分别召唤1支临时火元素部队，每支固定数量为22。\n开战后，在最近3个格子分别召唤1支临时火元素部队，每支固定数量为26。",
+        "designOnlyInitialBaseDamage": 29
+    },
+    {
+        "id": "forest_guard",
+        "name": "林地卫兵",
+        "star": 1,
+        "race": "甘席",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "战士",
+        "hp": 24,
+        "attack": 6,
+        "defense": 7,
+        "power": 1,
+        "speed": 4,
+        "luck": 1,
+        "morale": 0,
+        "attackInterval": 0.8499999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "入场时，获得1颗【密林宝钻】。",
+        "goldTalentText": "入场时，获得2颗【密林宝钻】。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_entry_gain_forest_gem_self",
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_entry_gain_forest_gem_self",
+                "value": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 1,
+        "limit": 12,
+        "startCount": 23,
+        "defaultCount": 23,
+        "baseCount": 23,
+        "maxCount": 0,
+        "hpPerUnit": 24,
+        "damageMin": 3,
+        "damageMax": 4,
+        "initiative": 7,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 552,
+        "firstPurchaseAverageDamage": 80,
+        "skillText": "入场时，获得1颗【密林宝钻】。\n入场时，获得2颗【密林宝钻】。\n—\n—",
+        "designOnlyInitialBaseDamage": 80
+    },
+    {
+        "id": "ranger_rider",
+        "name": "游骑兵",
+        "star": 1,
+        "race": "甘席",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "战士",
+        "hp": 24,
+        "attack": 6,
+        "defense": 7,
+        "power": 1,
+        "speed": 5,
+        "luck": 0,
+        "morale": 1,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合结束时，本部队获得+1数量；被赐予5颗【密林宝钻】则进阶为精锐游骑兵。",
+        "goldTalentText": "回合结束时，本部队获得+2数量；被赐予5颗【密林宝钻】则进阶为精锐游骑兵。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "round_end_self_gain_attack",
+                "value": 1
+            },
+            {
+                "kind": "on_receive_gift_self_evolve",
+                "threshold": 10,
+                "targetUnitId": "elite_ranger_rider",
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_self_gain_attack",
+                "value": 2
+            },
+            {
+                "kind": "on_receive_gift_self_evolve",
+                "threshold": 10,
+                "targetUnitId": "elite_ranger_rider",
+                "value": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 2,
+        "limit": 12,
+        "startCount": 23,
+        "defaultCount": 23,
+        "baseCount": 23,
+        "maxCount": 0,
+        "hpPerUnit": 24,
+        "damageMin": 1,
+        "damageMax": 4,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 552,
+        "firstPurchaseAverageDamage": 57,
+        "skillText": "回合结束时，本部队获得+1数量；被赐予5颗【密林宝钻】则进阶为精锐游骑兵。\n回合结束时，本部队获得+2数量；被赐予5颗【密林宝钻】则进阶为精锐游骑兵。\n—\n—",
+        "designOnlyInitialBaseDamage": 57
+    },
+    {
+        "id": "elite_ranger_rider",
+        "name": "精锐游骑兵",
+        "star": 2,
+        "race": "甘席",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "战士",
+        "hp": 32,
+        "attack": 9,
+        "defense": 10,
+        "power": 1,
+        "speed": 5,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [
+            "0"
+        ],
+        "hidden": true,
+        "talentText": "回合结束时，本部队获得数量+1。",
+        "goldTalentText": "回合结束时，本部队获得数量+2。",
+        "battleText": "开战后，临时先机+2",
+        "goldBattleText": "开战后，临时先机+4",
+        "talents": [
+            {
+                "kind": "round_end_self_gain_attack",
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_self_gain_attack",
+                "value": 2
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "on_damaged_count_temp_morale",
+                "count": 3,
+                "value": 50
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_damaged_count_temp_morale",
+                "count": 1,
+                "value": 50
+            }
+        ],
+        "sizeTier": 2,
+        "limit": 12,
+        "startCount": 16,
+        "defaultCount": 16,
+        "baseCount": 16,
+        "maxCount": 0,
+        "hpPerUnit": 32,
+        "damageMin": 4,
+        "damageMax": 6,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 512,
+        "firstPurchaseAverageDamage": 80,
+        "skillText": "回合结束时，本部队获得数量+1。\n回合结束时，本部队获得数量+2。\n开战后，临时先机+2\n开战后，临时先机+4",
+        "designOnlyInitialBaseDamage": 80
+    },
+    {
+        "id": "forest_scout",
+        "name": "林地密探",
+        "star": 2,
+        "race": "甘席",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 22,
+        "attack": 8,
+        "defense": 5,
+        "power": 2,
+        "speed": 4,
+        "luck": 1,
+        "morale": 2,
+        "attackInterval": 0.7999999999999999,
+        "range": 8.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "离场时，获得2颗【密林宝钻】。",
+        "goldTalentText": "离场时，获得4颗【密林宝钻】。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_leave_gain_forest_gem_hand",
+                "value": 2
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_leave_gain_forest_gem_hand",
+                "value": 4
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 1,
+        "limit": 12,
+        "startCount": 12,
+        "defaultCount": 12,
+        "baseCount": 12,
+        "maxCount": 0,
+        "hpPerUnit": 22,
+        "damageMin": 3,
+        "damageMax": 6,
+        "initiative": 8,
+        "attackRange": 8.0,
+        "firstPurchaseHp": 264,
+        "firstPurchaseAverageDamage": 54,
+        "skillText": "离场时，获得2颗【密林宝钻】。\n离场时，获得4颗【密林宝钻】。\n—\n—",
+        "designOnlyInitialBaseDamage": 54
+    },
+    {
+        "id": "ranger",
+        "name": "游侠",
+        "star": 2,
+        "race": "甘席",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 24,
+        "attack": 8,
+        "defense": 6,
+        "power": 2,
+        "speed": 4,
+        "luck": 1,
+        "morale": 0,
+        "attackInterval": 0.8499999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "入场时，获得1颗【密林宝钻】\n场上部队累计获得10次数量时，进阶为神剑游侠",
+        "goldTalentText": "入场时，获得2颗【密林宝钻】\n场上部队累计获得10次数量时，进阶为神剑游侠",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_entry_gain_forest_gem_self",
+                "value": 1
+            },
+            {
+                "kind": "while_on_board_attack_gain_threshold_evolve",
+                "threshold": 50,
+                "targetUnitId": "sword_ranger"
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_entry_gain_forest_gem_self",
+                "value": 2
+            },
+            {
+                "kind": "while_on_board_attack_gain_threshold_evolve",
+                "threshold": 50,
+                "targetUnitId": "sword_ranger"
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 1,
+        "limit": 12,
+        "startCount": 14,
+        "defaultCount": 14,
+        "baseCount": 14,
+        "maxCount": 0,
+        "hpPerUnit": 24,
+        "damageMin": 4,
+        "damageMax": 6,
+        "initiative": 7,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 336,
+        "firstPurchaseAverageDamage": 70,
+        "skillText": "入场时，获得1颗【密林宝钻】\n场上部队累计获得10次数量时，进阶为神剑游侠\n入场时，获得2颗【密林宝钻】\n场上部队累计获得10次数量时，进阶为神剑游侠\n—\n—",
+        "designOnlyInitialBaseDamage": 70
+    },
+    {
+        "id": "sword_ranger",
+        "name": "神剑游侠",
+        "star": 3,
+        "race": "甘席",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 30,
+        "attack": 10,
+        "defense": 8,
+        "power": 2,
+        "speed": 4,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.8499999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [
+            "0"
+        ],
+        "hidden": true,
+        "talentText": "每赐予本部队1次【密林宝钻】时，额外获得+4数量。",
+        "goldTalentText": "每赐予本部队1次【密林宝钻】时，额外获得+8数量。",
+        "battleText": "受到攻击后如果存活，下回合开始时，获得1颗【密林宝钻】。",
+        "goldBattleText": "受到攻击后如果存活，下回合开始时，获得2颗【密林宝钻】。",
+        "talents": [
+            {
+                "kind": "on_gain_forest_gem_self_gain_attack",
+                "value": 4
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_gain_forest_gem_self_gain_attack",
+                "value": 8
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "on_damaged_survive_next_round_forest_gem",
+                "value": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_damaged_survive_next_round_forest_gem",
+                "value": 2
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 8,
+        "startCount": 9,
+        "defaultCount": 9,
+        "baseCount": 9,
+        "maxCount": 0,
+        "hpPerUnit": 30,
+        "damageMin": 4,
+        "damageMax": 8,
+        "initiative": 7,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 270,
+        "firstPurchaseAverageDamage": 54,
+        "skillText": "每赐予本部队1次【密林宝钻】时，额外获得+4数量。\n每赐予本部队1次【密林宝钻】时，额外获得+8数量。\n受到攻击后如果存活，下回合开始时，获得1颗【密林宝钻】。\n受到攻击后如果存活，下回合开始时，获得2颗【密林宝钻】。",
+        "designOnlyInitialBaseDamage": 54
+    },
+    {
+        "id": "watchful_support",
+        "name": "机警后援",
+        "star": 3,
+        "race": "甘席",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "",
+        "hp": 36,
+        "attack": 8,
+        "defense": 10,
+        "power": 3,
+        "speed": 3,
+        "luck": 2,
+        "morale": 1,
+        "attackInterval": 0.8999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合结束时，前一排所有部队各被赐予1颗【密林宝钻】。",
+        "goldTalentText": "回合结束时，前一排所有部队各被赐予2颗【密林宝钻】。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "round_end_forward_adjacent_units_gain_attack_and_gift",
+                "attack": 10,
+                "gift": 2,
+                "targetMode": "forward_row_all"
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_forward_adjacent_units_gain_attack_and_gift",
+                "attack": 20,
+                "gift": 4,
+                "targetMode": "forward_row_all"
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 2,
+        "limit": 8,
+        "startCount": 10,
+        "defaultCount": 10,
+        "baseCount": 10,
+        "maxCount": 0,
+        "hpPerUnit": 36,
+        "damageMin": 3,
+        "damageMax": 6,
+        "initiative": 6,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 360,
+        "firstPurchaseAverageDamage": 45,
+        "skillText": "回合结束时，前一排所有部队各被赐予1颗【密林宝钻】。\n回合结束时，前一排所有部队各被赐予2颗【密林宝钻】。\n—\n—",
+        "designOnlyInitialBaseDamage": 45
+    },
+    {
+        "id": "river_captain",
+        "name": "河边队长",
+        "star": 3,
+        "race": "甘席",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "战士",
+        "hp": 42,
+        "attack": 13,
+        "defense": 13,
+        "power": 3,
+        "speed": 3,
+        "luck": 1,
+        "morale": 3,
+        "attackInterval": 0.8999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "入场时，左右两侧的部队被赐予1颗【密林宝钻】。",
+        "goldTalentText": "入场时，左右两侧的部队被赐予2颗【密林宝钻】。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_entry_side_units_gift_forest_gem",
+                "value": 5
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_entry_side_units_gift_forest_gem",
+                "value": 10
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 2,
+        "limit": 8,
+        "startCount": 11,
+        "defaultCount": 11,
+        "baseCount": 11,
+        "maxCount": 0,
+        "hpPerUnit": 42,
+        "damageMin": 6,
+        "damageMax": 8,
+        "initiative": 6,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 462,
+        "firstPurchaseAverageDamage": 77,
+        "skillText": "入场时，左右两侧的部队被赐予1颗【密林宝钻】。\n入场时，左右两侧的部队被赐予2颗【密林宝钻】。\n—\n—",
+        "designOnlyInitialBaseDamage": 77
+    },
+    {
+        "id": "sky_watcher",
+        "name": "高翎守望者",
+        "star": 3,
+        "race": "甘席",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "魔灵",
+        "hp": 30,
+        "attack": 10,
+        "defense": 8,
+        "power": 3,
+        "speed": 2,
+        "luck": 1,
+        "morale": 2,
+        "attackInterval": 0.8499999999999999,
+        "range": 6.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "任意部队上阵时，获得1颗【密林宝钻】。",
+        "goldTalentText": "任意部队上阵时，获得2颗【密林宝钻】。",
+        "battleText": "攻击时，有额外25%概率产生暴击",
+        "goldBattleText": "攻击时，有额外35%概率产生暴击",
+        "talents": [
+            {
+                "kind": "on_entry_any_unit_gain_forest_gem_self",
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_entry_any_unit_gain_forest_gem_self",
+                "value": 2
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "on_attack_chance_force_crit",
+                "chance": 0.25
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_attack_chance_force_crit",
+                "chance": 0.35
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 8,
+        "startCount": 9,
+        "defaultCount": 9,
+        "baseCount": 9,
+        "maxCount": 0,
+        "hpPerUnit": 30,
+        "damageMin": 4,
+        "damageMax": 7,
+        "initiative": 7,
+        "attackRange": 6.0,
+        "firstPurchaseHp": 270,
+        "firstPurchaseAverageDamage": 49,
+        "skillText": "任意部队上阵时，获得1颗【密林宝钻】。\n任意部队上阵时，获得2颗【密林宝钻】。\n攻击时，有额外25%概率产生暴击\n攻击时，有额外35%概率产生暴击",
+        "designOnlyInitialBaseDamage": 49
+    },
+    {
+        "id": "archer",
+        "name": "弓箭手",
+        "star": 3,
+        "race": "甘席",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "射手",
+        "hp": 28,
+        "attack": 11,
+        "defense": 7,
+        "power": 2,
+        "speed": 3,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.7999999999999999,
+        "range": 6.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "每被赐予1颗【密林宝钻】，本部队额外获得+1数量；被赐予5颗则进阶为幻影射手。",
+        "goldTalentText": "每被赐予1颗【密林宝钻】，本部队额外获得+2数量；被赐予5颗则进阶为幻影射手。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_receive_gift_self_gain_attack",
+                "value": 1
+            },
+            {
+                "kind": "on_receive_gift_self_evolve",
+                "threshold": 10,
+                "targetUnitId": "phantom_archer",
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_receive_gift_self_gain_attack",
+                "value": 2
+            },
+            {
+                "kind": "on_receive_gift_self_evolve",
+                "threshold": 10,
+                "targetUnitId": "phantom_archer",
+                "value": 2
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "on_death_next_round_forest_gem",
+                "value": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_death_next_round_forest_gem",
+                "value": 2
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 8,
+        "startCount": 7,
+        "defaultCount": 7,
+        "baseCount": 7,
+        "maxCount": 0,
+        "hpPerUnit": 28,
+        "damageMin": 4,
+        "damageMax": 8,
+        "initiative": 8,
+        "attackRange": 6.0,
+        "firstPurchaseHp": 196,
+        "firstPurchaseAverageDamage": 42,
+        "skillText": "每被赐予1颗【密林宝钻】，本部队额外获得+1数量；被赐予5颗则进阶为幻影射手。\n每被赐予1颗【密林宝钻】，本部队额外获得+2数量；被赐予5颗则进阶为幻影射手。\n—\n—",
+        "designOnlyInitialBaseDamage": 42
+    },
+    {
+        "id": "phantom_archer",
+        "name": "幻影射手",
+        "star": 4,
+        "race": "甘席",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "射手",
+        "hp": 38,
+        "attack": 14,
+        "defense": 10,
+        "power": 2,
+        "speed": 3,
+        "luck": 2,
+        "morale": 1,
+        "attackInterval": 0.75,
+        "range": 8.0,
+        "size": 1,
+        "tags": [
+            "0"
+        ],
+        "hidden": true,
+        "talentText": "其他部队被出售时，被出售部队被赐予的所有【密林宝钻】都会转移给本部队。",
+        "goldTalentText": "其他部队被出售时，本部队获得数量+1，并继承被出售部队被赐予的所有【密林宝钻】。",
+        "battleText": "首次攻击改为朝敌方最后排的一支部队射出一箭，如果距离不少于8，则必定造成3倍暴击。",
+        "goldBattleText": "首次攻击改为朝敌方最后排的一支部队射出一箭，如果距离不少于6，则必定造成6倍暴击。",
+        "talents": [
+            {
+                "kind": "on_other_sell_absorb_attached_gems_and_gain_attack",
+                "value": 5
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_other_sell_absorb_attached_gems_and_gain_attack",
+                "value": 1
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_delay_snipe_backline",
+                "delay": 2,
+                "giftThreshold": 20,
+                "critMultiplier": 3
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_delay_snipe_backline",
+                "delay": 2,
+                "giftThreshold": 20,
+                "critMultiplier": 6
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 5,
+        "startCount": 4,
+        "defaultCount": 4,
+        "baseCount": 4,
+        "maxCount": 0,
+        "hpPerUnit": 38,
+        "damageMin": 6,
+        "damageMax": 11,
+        "initiative": 9,
+        "attackRange": 8.0,
+        "firstPurchaseHp": 152,
+        "firstPurchaseAverageDamage": 34,
+        "skillText": "其他部队被出售时，被出售部队被赐予的所有【密林宝钻】都会转移给本部队。\n其他部队被出售时，本部队获得数量+1，并继承被出售部队被赐予的所有【密林宝钻】。\n首次攻击改为朝敌方最后排的一支部队射出一箭，如果距离不少于8，则必定造成3倍暴击。\n首次攻击改为朝敌方最后排的一支部队射出一箭，如果距离不少于6，则必定造成6倍暴击。",
+        "designOnlyInitialBaseDamage": 34
+    },
+    {
+        "id": "burrow_mole",
+        "name": "掘地鼠",
+        "star": 4,
+        "race": "甘席",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "战士",
+        "hp": 54,
+        "attack": 16,
+        "defense": 15,
+        "power": 3,
+        "speed": 6,
+        "luck": 3,
+        "morale": 2,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "任意部队进阶时，本部队被赐予1颗【密林宝钻】并获得1颗【密林宝钻】。",
+        "goldTalentText": "任意部队进阶时，本部队被赐予2颗【密林宝钻】并获得2颗【密林宝钻】。",
+        "battleText": "—",
+        "goldBattleText": "开战后，进入潜行状态，首次攻击造成5倍单体伤害结算，然后退出潜行状态",
+        "talents": [
+            {
+                "kind": "on_instant_evolve_self_gift_and_gain_attack",
+                "gift": 4,
+                "gain": 8
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_instant_evolve_self_gift_and_gain_attack",
+                "gift": 4,
+                "gain": 16
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_stealth_assassinate_lowest_hp",
+                "delay": 0.6,
+                "attackMultiplier": 5
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 5,
+        "startCount": 7,
+        "defaultCount": 7,
+        "baseCount": 7,
+        "maxCount": 0,
+        "hpPerUnit": 54,
+        "damageMin": 8,
+        "damageMax": 12,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 378,
+        "firstPurchaseAverageDamage": 70,
+        "skillText": "任意部队进阶时，本部队被赐予1颗【密林宝钻】并获得1颗【密林宝钻】。\n任意部队进阶时，本部队被赐予2颗【密林宝钻】并获得2颗【密林宝钻】。\n—\n开战后，进入潜行状态，首次攻击造成5倍单体伤害结算，然后退出潜行状态",
+        "designOnlyInitialBaseDamage": 70
+    },
+    {
+        "id": "mercenary_captain",
+        "name": "佣兵队长",
+        "star": 4,
+        "race": "甘席",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 41,
+        "attack": 16,
+        "defense": 11,
+        "power": 4,
+        "speed": 4,
+        "luck": 4,
+        "morale": 3,
+        "attackInterval": 0.8499999999999999,
+        "range": 4.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "场上任意部队获得数量时，【密林宝钻】提供的数量额外+1；每回合最多触发3次。",
+        "goldTalentText": "场上任意部队获得数量时，【密林宝钻】提供的数量额外+2；每回合最多触发3次。",
+        "battleText": "每次攻击都会对额外的1支部队产生伤害，无论那支部队有多远。",
+        "goldBattleText": "每次攻击都会对额外的2支部队产生伤害，无论那2支部队有多远。",
+        "talents": [
+            {
+                "kind": "on_receive_gift_total_discover_race_unit_once",
+                "race": "甘席",
+                "threshold": 10,
+                "count": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_receive_gift_total_discover_race_unit_once",
+                "race": "甘席",
+                "threshold": 10,
+                "count": 2
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "on_attack_multi_nearest_targets",
+                "targets": 2
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_attack_multi_nearest_targets",
+                "targets": 4
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 5,
+        "startCount": 6,
+        "defaultCount": 6,
+        "baseCount": 6,
+        "maxCount": 0,
+        "hpPerUnit": 41,
+        "damageMin": 8,
+        "damageMax": 13,
+        "initiative": 7,
+        "attackRange": 4.0,
+        "firstPurchaseHp": 246,
+        "firstPurchaseAverageDamage": 63,
+        "skillText": "场上任意部队获得数量时，【密林宝钻】提供的数量额外+1；每回合最多触发3次。\n场上任意部队获得数量时，【密林宝钻】提供的数量额外+2；每回合最多触发3次。\n每次攻击都会对额外的1支部队产生伤害，无论那支部队有多远。\n每次攻击都会对额外的2支部队产生伤害，无论那2支部队有多远。",
+        "designOnlyInitialBaseDamage": 63
+    },
+    {
+        "id": "feather_guard",
+        "name": "羽卫",
+        "star": 4,
+        "race": "甘席",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "射手",
+        "hp": 39,
+        "attack": 14,
+        "defense": 10,
+        "power": 2,
+        "speed": 4,
+        "luck": 5,
+        "morale": 4,
+        "attackInterval": 0.7,
+        "range": 8.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合结束时，如果手牌中没有【密林宝钻】，获得+5数量。",
+        "goldTalentText": "回合结束时，如果手牌中没有【密林宝钻】，获得数量+10。",
+        "battleText": "每次攻击都会对额外的2支部队产生伤害，无论那支部队有多远；被精锐羽林卫攻击过的部队如果死亡，下回合开始获得1颗【密林宝钻】。",
+        "goldBattleText": "每次攻击都会对额外的3支部队产生伤害，无论那支部队有多远；被精锐羽林卫攻击过的部队如果死亡，下回合开始获得1颗【密林宝钻】。",
+        "talents": [
+            {
+                "kind": "round_end_if_no_forest_gem_in_hand_self_gain_attack",
+                "attack": 10,
+                "value": 5
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_if_no_forest_gem_in_hand_self_gain_attack",
+                "attack": 20,
+                "value": 10
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "on_attack_multi_nearest_targets",
+                "targets": 3
+            },
+            {
+                "kind": "on_attack_mark_target_next_round_forest_gem_on_death",
+                "value": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_attack_multi_nearest_targets",
+                "targets": 4
+            },
+            {
+                "kind": "on_attack_mark_target_next_round_forest_gem_on_death",
+                "value": 1
+            }
+        ],
+        "sizeTier": 2,
+        "limit": 5,
+        "startCount": 5,
+        "defaultCount": 5,
+        "baseCount": 5,
+        "maxCount": 0,
+        "hpPerUnit": 39,
+        "damageMin": 6,
+        "damageMax": 11,
+        "initiative": 10,
+        "attackRange": 8.0,
+        "firstPurchaseHp": 195,
+        "firstPurchaseAverageDamage": 42,
+        "skillText": "回合结束时，如果手牌中没有【密林宝钻】，获得+5数量。\n回合结束时，如果手牌中没有【密林宝钻】，获得数量+10。\n每次攻击都会对额外的2支部队产生伤害，无论那支部队有多远；被精锐羽林卫攻击过的部队如果死亡，下回合开始获得1颗【密林宝钻】。\n每次攻击都会对额外的3支部队产生伤害，无论那支部队有多远；被精锐羽林卫攻击过的部队如果死亡，下回合开始获得1颗【密林宝钻】。",
+        "designOnlyInitialBaseDamage": 42
+    },
+    {
+        "id": "forest_general",
+        "name": "林地将军",
+        "star": 5,
+        "race": "甘席",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "",
+        "hp": 61,
+        "attack": 16,
+        "defense": 16,
+        "power": 3,
+        "speed": 5,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "阵上每发生赐予【密林宝钻】的行为累计5次，所有阵上部队获得+1数量。",
+        "goldTalentText": "阵上每发生赐予【密林宝钻】的行为累计5次，所有阵上部队获得+2数量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_gift_action_team_gain_attack_every_n",
+                "threshold": 5,
+                "attack": 10,
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_gift_action_team_gain_attack_every_n",
+                "threshold": 5,
+                "attack": 20,
+                "value": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 2,
+        "limit": 3,
+        "startCount": 4,
+        "defaultCount": 4,
+        "baseCount": 4,
+        "maxCount": 0,
+        "hpPerUnit": 61,
+        "damageMin": 8,
+        "damageMax": 13,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 244,
+        "firstPurchaseAverageDamage": 42,
+        "skillText": "阵上每发生赐予【密林宝钻】的行为累计5次，所有阵上部队获得+1数量。\n阵上每发生赐予【密林宝钻】的行为累计5次，所有阵上部队获得+2数量。\n—\n—",
+        "designOnlyInitialBaseDamage": 42
+    },
+    {
+        "id": "cheetah",
+        "name": "猎豹",
+        "star": 5,
+        "race": "甘席",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "战士",
+        "hp": 62,
+        "attack": 18,
+        "defense": 15,
+        "power": 3,
+        "speed": 8,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.7,
+        "range": 5.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "阵上每发生赐予【密林宝钻】的行为累计5次，本部队获得+4数量。",
+        "goldTalentText": "阵上每发生赐予【密林宝钻】的行为累计5次，本部队获得+8数量。",
+        "battleText": "如果阵亡，下回合开始时获得1颗【密林宝钻】。",
+        "goldBattleText": "如果阵亡，下回合开始时获得2颗【密林宝钻】。",
+        "talents": [
+            {
+                "kind": "on_receive_gift_total_team_gain_power_every_n",
+                "power": 1,
+                "threshold": 30,
+                "value": 4
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_receive_gift_total_team_gain_power_every_n",
+                "power": 2,
+                "threshold": 30,
+                "value": 8
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 3,
+        "limit": 3,
+        "startCount": 4,
+        "defaultCount": 4,
+        "baseCount": 4,
+        "maxCount": 0,
+        "hpPerUnit": 62,
+        "damageMin": 10,
+        "damageMax": 15,
+        "initiative": 10,
+        "attackRange": 5.0,
+        "firstPurchaseHp": 248,
+        "firstPurchaseAverageDamage": 50,
+        "skillText": "阵上每发生赐予【密林宝钻】的行为累计5次，本部队获得+4数量。\n阵上每发生赐予【密林宝钻】的行为累计5次，本部队获得+8数量。\n如果阵亡，下回合开始时获得1颗【密林宝钻】。\n如果阵亡，下回合开始时获得2颗【密林宝钻】。",
+        "designOnlyInitialBaseDamage": 50
+    },
+    {
+        "id": "twin_tower_mage",
+        "name": "双塔术士",
+        "star": 6,
+        "race": "甘席",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "射手",
+        "hp": 65,
+        "attack": 18,
+        "defense": 16,
+        "power": 6,
+        "speed": 3,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.8499999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合结束时，获得3颗【密林宝钻】。",
+        "goldTalentText": "回合结束时，获得6颗【密林宝钻】。",
+        "battleText": "每次攻击都会自损5%数量（至少为1），对周围2格范围内的所有敌方部队造成伤害。",
+        "goldBattleText": "每次攻击都会自损5%数量（至少为1），对周围4格范围内的所有敌方部队造成伤害。",
+        "talents": [
+            {
+                "kind": "round_end_gain_forest_gem_self",
+                "value": 6
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_gain_forest_gem_self",
+                "value": 12
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "on_attack_if_team_gift_total_aoe",
+                "threshold": 50,
+                "radius": 6
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_attack_if_team_gift_total_aoe",
+                "threshold": 100,
+                "radius": 12
+            }
+        ],
+        "sizeTier": 1,
+        "limit": 3,
+        "startCount": 1,
+        "defaultCount": 1,
+        "baseCount": 1,
+        "maxCount": 0,
+        "hpPerUnit": 65,
+        "damageMin": 8,
+        "damageMax": 15,
+        "initiative": 7,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 65,
+        "firstPurchaseAverageDamage": 11,
+        "skillText": "回合结束时，获得3颗【密林宝钻】。\n回合结束时，获得6颗【密林宝钻】。\n每次攻击都会自损5%数量（至少为1），对周围2格范围内的所有敌方部队造成伤害。\n每次攻击都会自损5%数量（至少为1），对周围4格范围内的所有敌方部队造成伤害。",
+        "designOnlyInitialBaseDamage": 11
+    },
+    {
+        "id": "xilinding",
+        "name": "席林迪翁",
+        "star": 6,
+        "race": "甘席",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 68,
+        "attack": 20,
+        "defense": 17,
+        "power": 3,
+        "speed": 2,
+        "luck": 3,
+        "morale": 1,
+        "attackInterval": 0.8999999999999999,
+        "range": 8.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "获得【密林宝钻】时，自动赐予本部队，然后所有阵上部队获得+1数量。",
+        "goldTalentText": "获得【密林宝钻】时，自动赐予本部队，然后所有阵上部队获得+2数量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_gain_forest_gem_auto_gift_self_team_attack",
+                "attack": 5,
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_gain_forest_gem_auto_gift_self_team_attack",
+                "attack": 10,
+                "value": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 2,
+        "limit": 3,
+        "startCount": 1,
+        "defaultCount": 1,
+        "baseCount": 1,
+        "maxCount": 0,
+        "hpPerUnit": 68,
+        "damageMin": 10,
+        "damageMax": 18,
+        "initiative": 6,
+        "attackRange": 8.0,
+        "firstPurchaseHp": 68,
+        "firstPurchaseAverageDamage": 14,
+        "skillText": "获得【密林宝钻】时，自动赐予本部队，然后所有阵上部队获得+1数量。\n获得【密林宝钻】时，自动赐予本部队，然后所有阵上部队获得+2数量。\n—\n—",
+        "designOnlyInitialBaseDamage": 14
+    },
+    {
+        "id": "mire_fiend",
+        "name": "淤魔",
+        "star": 6,
+        "race": "甘席",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "元素",
+        "hp": 94,
+        "attack": 23,
+        "defense": 25,
+        "power": 3,
+        "speed": 2,
+        "luck": 4,
+        "morale": 2,
+        "attackInterval": 1.0999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合结束时，本部队被赐予3颗【密林宝钻】；被赐予10颗【密林宝钻】则进阶为血淤魔",
+        "goldTalentText": "回合结束时，本部队被赐予4颗【密林宝钻】；被赐予10颗【密林宝钻】则进阶为血淤魔",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "round_end_self_gift_forest_gem",
+                "value": 3
+            },
+            {
+                "kind": "on_receive_gift_self_evolve",
+                "threshold": 30,
+                "targetUnitId": "blood_mire_fiend"
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_self_gift_forest_gem",
+                "value": 6
+            },
+            {
+                "kind": "on_receive_gift_self_evolve",
+                "threshold": 30,
+                "targetUnitId": "blood_mire_fiend"
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "sizeTier": 3,
+        "limit": 3,
+        "startCount": 2,
+        "defaultCount": 2,
+        "baseCount": 2,
+        "maxCount": 0,
+        "hpPerUnit": 94,
+        "damageMin": 13,
+        "damageMax": 20,
+        "initiative": 2,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 188,
+        "firstPurchaseAverageDamage": 33,
+        "skillText": "回合结束时，本部队被赐予3颗【密林宝钻】；被赐予10颗【密林宝钻】则进阶为血淤魔\n回合结束时，本部队被赐予4颗【密林宝钻】；被赐予10颗【密林宝钻】则进阶为血淤魔\n—\n—",
+        "designOnlyInitialBaseDamage": 33
+    },
+    {
+        "id": "blood_mire_fiend",
+        "name": "血淤魔",
+        "star": 6,
+        "race": "甘席",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "元素",
+        "hp": 95,
+        "attack": 24,
+        "defense": 25,
+        "power": 3,
+        "speed": 2,
+        "luck": 3,
+        "morale": 1,
+        "attackInterval": 1.0999999999999999,
+        "range": 1.0,
+        "size": 1,
+        "tags": [
+            "0"
+        ],
+        "hidden": true,
+        "talentText": "每当有部队获得数量（无论在场上、手牌还是商店），【密林宝钻】提供的获得数量+1；每回合最多触发5次。",
+        "goldTalentText": "每当有部队获得数量（无论在场上、手牌还是商店），【密林宝钻】提供的获得数量+2；每回合最多触发5次。",
+        "battleText": "开战后，将敌方1名总血量最高的部队锁住，使其无法移动，但可以攻击和反击，持续2个轮次。",
+        "goldBattleText": "开战后，将敌方1名总血量最高的部队锁住，使其无法移动，但可以攻击和反击，持续3个轮次。",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "battle_start_lock_highest_hp_targets",
+                "count": 1,
+                "moveLockTurns": 2
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_lock_highest_hp_targets",
+                "count": 1,
+                "moveLockTurns": 3
+            }
+        ],
+        "sizeTier": 3,
+        "limit": 3,
+        "startCount": 1,
+        "defaultCount": 1,
+        "baseCount": 1,
+        "maxCount": 0,
+        "hpPerUnit": 95,
+        "damageMin": 14,
+        "damageMax": 21,
+        "initiative": 2,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 95,
+        "firstPurchaseAverageDamage": 17,
+        "skillText": "每当有部队获得数量（无论在场上、手牌还是商店），【密林宝钻】提供的获得数量+1；每回合最多触发5次。\n每当有部队获得数量（无论在场上、手牌还是商店），【密林宝钻】提供的获得数量+2；每回合最多触发5次。\n开战后，将敌方1名总血量最高的部队锁住，使其无法移动，但可以攻击和反击，持续2个轮次。\n开战后，将敌方1名总血量最高的部队锁住，使其无法移动，但可以攻击和反击，持续3个轮次。",
+        "designOnlyInitialBaseDamage": 17
+    },
+    {
+        "id": "ger_beast",
+        "name": "格尔兽",
+        "star": 1,
+        "race": "甘格尔",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "野兽",
+        "hp": 20,
+        "attack": 6,
+        "defense": 5,
+        "power": 1,
+        "speed": 5,
+        "luck": 0,
+        "morale": 0,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "sizeTier": 2,
+        "size": 1,
+        "tags": [],
+        "talentText": "入场时，随机吞噬商店中的1张卡牌，获得“该卡默认数量/10”的数量（至少为1）。",
+        "goldTalentText": "入场时，随机吞噬商店中的1张卡牌，获得“该卡默认数量/5”的数量（至少为1）。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_entry_devour_random_shop_gain_stats",
+                "stats": {
+                    "attack": 1
+                },
+                "ratio": 0.1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_entry_devour_random_shop_gain_stats",
+                "stats": {
+                    "attack": 1
+                },
+                "ratio": 0.2
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_aura_sync_unit_id_attack_to_highest",
+                "targetUnitId": "ger_beast"
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_aura_sync_unit_id_attack_to_highest",
+                "targetUnitId": "ger_beast"
+            }
+        ],
+        "limit": 12,
+        "startCount": 21,
+        "defaultCount": 21,
+        "baseCount": 21,
+        "maxCount": 0,
+        "hpPerUnit": 20,
+        "damageMin": 3,
+        "damageMax": 4,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 420,
+        "firstPurchaseAverageDamage": 73,
+        "skillText": "入场时，随机吞噬商店中的1张卡牌，获得“该卡默认数量/10”的数量（至少为1）。\n入场时，随机吞噬商店中的1张卡牌，获得“该卡默认数量/5”的数量（至少为1）。\n—\n—",
+        "designOnlyInitialBaseDamage": 73
+    },
+    {
+        "id": "ger_infantry",
+        "name": "格尔步兵",
+        "star": 1,
+        "race": "甘格尔",
+        "faith": "克苏鲁",
+        "type": "range",
+        "typeLabel": "战士",
+        "hp": 24,
+        "attack": 7,
+        "defense": 7,
+        "power": 1,
+        "speed": 3,
+        "luck": 1,
+        "morale": 0,
+        "attackInterval": 0.8999999999999999,
+        "range": 1.0,
+        "sizeTier": 2,
+        "size": 1,
+        "tags": [],
+        "talentText": "入场时，获得1张鱼人奴仆卡牌。",
+        "goldTalentText": "入场时：获得2张鱼人奴仆卡牌。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_entry_add_unit_to_hand",
+                "unitId": "murloc_servant",
+                "count": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_entry_add_unit_to_hand",
+                "unitId": "murloc_servant",
+                "count": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "limit": 12,
+        "startCount": 23,
+        "defaultCount": 23,
+        "baseCount": 23,
+        "maxCount": 0,
+        "hpPerUnit": 24,
+        "damageMin": 3,
+        "damageMax": 5,
+        "initiative": 6,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 552,
+        "firstPurchaseAverageDamage": 92,
+        "skillText": "入场时，获得1张鱼人奴仆卡牌。\n入场时：获得2张鱼人奴仆卡牌。\n—\n—",
+        "designOnlyInitialBaseDamage": 92
+    },
+    {
+        "id": "murloc_servant",
+        "name": "鱼人奴仆",
+        "star": 1,
+        "race": "甘格尔",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 16,
+        "attack": 4,
+        "defense": 3,
+        "power": 2,
+        "speed": 7,
+        "luck": 0,
+        "morale": 4,
+        "attackInterval": 0.7999999999999999,
+        "range": 6.0,
+        "sizeTier": 1,
+        "size": 1,
+        "tags": [
+            "0"
+        ],
+        "hidden": true,
+        "talentText": "离场时，随机1支甘格尔部队触发1次入场效果；格尔步兵的入场效果除外。",
+        "goldTalentText": "离场时，随机2支甘格尔部队触发1次入场效果；格尔步兵的入场效果除外。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_leave_retrigger_random_race_entry_effects",
+                "race": "甘格尔",
+                "count": 1,
+                "excludeUnitIds": [
+                    "ger_infantry"
+                ]
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_leave_retrigger_random_race_entry_effects",
+                "race": "甘格尔",
+                "count": 2,
+                "excludeUnitIds": [
+                    "ger_infantry"
+                ]
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "limit": 12,
+        "startCount": 24,
+        "defaultCount": 24,
+        "baseCount": 24,
+        "maxCount": 0,
+        "hpPerUnit": 16,
+        "damageMin": 1,
+        "damageMax": 3,
+        "initiative": 8,
+        "attackRange": 6.0,
+        "firstPurchaseHp": 384,
+        "firstPurchaseAverageDamage": 48,
+        "skillText": "离场时，随机1支甘格尔部队触发1次入场效果；格尔步兵的入场效果除外。\n离场时，随机2支甘格尔部队触发1次入场效果；格尔步兵的入场效果除外。\n—\n—",
+        "designOnlyInitialBaseDamage": 48
+    },
+    {
+        "id": "laborer",
+        "name": "苦工",
+        "star": 1,
+        "race": "甘格尔",
+        "faith": "克苏鲁",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 23,
+        "attack": 5,
+        "defense": 5,
+        "power": 2,
+        "speed": 3,
+        "luck": 2,
+        "morale": 1,
+        "attackInterval": 0.8999999999999999,
+        "range": 1.0,
+        "sizeTier": 1,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合结束时，本部队获得+1数量；出售时，如果数量≥30，则售价变为2金币。",
+        "goldTalentText": "回合结束时，本部队获得+2数量；出售时，如果数量≥30，则售价变为3金币。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "round_end_self_gain_attack",
+                "value": 1
+            },
+            {
+                "kind": "on_sell_price_if_attack_threshold",
+                "threshold": 100,
+                "price": 2,
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_self_gain_attack",
+                "value": 2
+            },
+            {
+                "kind": "on_sell_price_if_attack_threshold",
+                "threshold": 100,
+                "price": 4,
+                "value": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "limit": 12,
+        "startCount": 23,
+        "defaultCount": 23,
+        "baseCount": 23,
+        "maxCount": 0,
+        "hpPerUnit": 23,
+        "damageMin": 1,
+        "damageMax": 4,
+        "initiative": 6,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 529,
+        "firstPurchaseAverageDamage": 57,
+        "skillText": "回合结束时，本部队获得+1数量；出售时，如果数量≥30，则售价变为2金币。\n回合结束时，本部队获得+2数量；出售时，如果数量≥30，则售价变为3金币。\n—\n—",
+        "designOnlyInitialBaseDamage": 57
+    },
+    {
+        "id": "caller",
+        "name": "叫唤者",
+        "star": 2,
+        "race": "甘格尔",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 25,
+        "attack": 9,
+        "defense": 6,
+        "power": 1,
+        "speed": 2,
+        "luck": 1,
+        "morale": 0,
+        "attackInterval": 0.8999999999999999,
+        "range": 6.0,
+        "sizeTier": 2,
+        "size": 1,
+        "tags": [],
+        "talentText": "入场时，使商店中当前及将来出现的所有卡牌默认数量永久+1。",
+        "goldTalentText": "入场时，使商店中当前及将来出现的所有卡牌默认数量永久+2。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_entry_shop_default_count_permanent",
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_entry_shop_default_count_permanent",
+                "value": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "limit": 12,
+        "startCount": 15,
+        "defaultCount": 15,
+        "baseCount": 15,
+        "maxCount": 0,
+        "hpPerUnit": 25,
+        "damageMin": 4,
+        "damageMax": 6,
+        "initiative": 6,
+        "attackRange": 6.0,
+        "firstPurchaseHp": 375,
+        "firstPurchaseAverageDamage": 75,
+        "skillText": "入场时，使商店中当前及将来出现的所有卡牌默认数量永久+1。\n入场时，使商店中当前及将来出现的所有卡牌默认数量永久+2。\n—\n—",
+        "designOnlyInitialBaseDamage": 75
+    },
+    {
+        "id": "thug",
+        "name": "打手",
+        "star": 2,
+        "race": "甘格尔",
+        "faith": "克苏鲁",
+        "type": "range",
+        "typeLabel": "战士",
+        "hp": 32,
+        "attack": 9,
+        "defense": 10,
+        "power": 2,
+        "speed": 3,
+        "luck": 2,
+        "morale": 1,
+        "attackInterval": 0.8999999999999999,
+        "range": 1.0,
+        "sizeTier": 2,
+        "size": 1,
+        "tags": [],
+        "talentText": "触发1次任意入场效果时，本部队获得+5数量。",
+        "goldTalentText": "触发1次任意入场效果时，本部队获得+10数量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_any_entry_effect_triggered_self_gain_attack",
+                "attack": 10,
+                "value": 5
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_any_entry_effect_triggered_self_gain_attack",
+                "attack": 20,
+                "value": 10
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "limit": 12,
+        "startCount": 17,
+        "defaultCount": 17,
+        "baseCount": 17,
+        "maxCount": 0,
+        "hpPerUnit": 32,
+        "damageMin": 4,
+        "damageMax": 6,
+        "initiative": 6,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 544,
+        "firstPurchaseAverageDamage": 85,
+        "skillText": "触发1次任意入场效果时，本部队获得+5数量。\n触发1次任意入场效果时，本部队获得+10数量。\n—\n—",
+        "designOnlyInitialBaseDamage": 85
+    },
+    {
+        "id": "mushroom_quaku",
+        "name": "蘑菇夸库",
+        "star": 2,
+        "race": "甘格尔",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "魔灵",
+        "hp": 24,
+        "attack": 7,
+        "defense": 6,
+        "power": 2,
+        "speed": 2,
+        "luck": 1,
+        "morale": 0,
+        "attackInterval": 0.95,
+        "range": 4.0,
+        "sizeTier": 1,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合结束时，临时获得左右两侧部队中当前数量较高一方的数量。",
+        "goldTalentText": "回合结束时，临时获得本排和前一排部队中当前数量较高一方的数量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "round_end_temp_gain_adjacent_attack",
+                "mode": "highest"
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_temp_gain_adjacent_attack",
+                "mode": "sum"
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "limit": 12,
+        "startCount": 14,
+        "defaultCount": 14,
+        "baseCount": 14,
+        "maxCount": 0,
+        "hpPerUnit": 24,
+        "damageMin": 2,
+        "damageMax": 5,
+        "initiative": 5,
+        "attackRange": 4.0,
+        "firstPurchaseHp": 336,
+        "firstPurchaseAverageDamage": 49,
+        "skillText": "回合结束时，临时获得左右两侧部队中当前数量较高一方的数量。\n回合结束时，临时获得本排和前一排部队中当前数量较高一方的数量。\n—\n—",
+        "designOnlyInitialBaseDamage": 49
+    },
+    {
+        "id": "snow_lion",
+        "name": "雪狮",
+        "star": 3,
+        "race": "甘格尔",
+        "faith": "无",
+        "type": "melee",
+        "typeLabel": "野兽",
+        "hp": 40,
+        "attack": 13,
+        "defense": 12,
+        "power": 2,
+        "speed": 7,
+        "luck": 0,
+        "morale": 1,
+        "attackInterval": 0.75,
+        "range": 1.0,
+        "sizeTier": 3,
+        "size": 1,
+        "tags": [],
+        "talentText": "入场时，使场上的野兽获得+1数量。",
+        "goldTalentText": "入场时，使场上的野兽获得+2数量。",
+        "battleText": "首次攻击改为瞬间猛扑到最近的敌人，并造成3倍的伤害",
+        "goldBattleText": "首次攻击改为瞬间猛扑到最近的敌人，并造成6倍的伤害",
+        "talents": [
+            {
+                "kind": "on_entry_board_tagged_units_gain_attack",
+                "targetTag": "野兽",
+                "attack": 15,
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_entry_board_tagged_units_gain_attack",
+                "targetTag": "野兽",
+                "attack": 25,
+                "value": 2
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_pounce_nearest_damage",
+                "attackMultiplier": 3
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_pounce_nearest_damage",
+                "attackMultiplier": 6
+            }
+        ],
+        "limit": 8,
+        "startCount": 10,
+        "defaultCount": 10,
+        "baseCount": 10,
+        "maxCount": 0,
+        "hpPerUnit": 40,
+        "damageMin": 6,
+        "damageMax": 9,
+        "initiative": 9,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 400,
+        "firstPurchaseAverageDamage": 75,
+        "skillText": "入场时，使场上的野兽获得+1数量。\n入场时，使场上的野兽获得+2数量。\n首次攻击改为瞬间猛扑到最近的敌人，并造成3倍的伤害\n首次攻击改为瞬间猛扑到最近的敌人，并造成6倍的伤害",
+        "designOnlyInitialBaseDamage": 75
+    },
+    {
+        "id": "beast_tamer",
+        "name": "驯兽师",
+        "star": 3,
+        "race": "甘格尔",
+        "faith": "克苏鲁",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 33,
+        "attack": 12,
+        "defense": 9,
+        "power": 3,
+        "speed": 3,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.8999999999999999,
+        "range": 1.0,
+        "sizeTier": 1,
+        "size": 1,
+        "tags": [],
+        "talentText": "场上累计触发10次任意入场效果，变为兽骑兵。",
+        "goldTalentText": "场上累计触发5次任意入场效果，变为兽骑兵。",
+        "battleText": "开战后，在最近的1个格子中召唤1支临时格尔兽部队（数量为格尔兽默认数量）参加战斗。",
+        "goldBattleText": "开战后，在最近的2个格子中分别召唤1支临时格尔兽部队（每支数量为格尔兽默认数量）参加战斗。",
+        "talents": [
+            {
+                "kind": "on_any_entry_effect_count_evolve",
+                "threshold": 10,
+                "targetUnitId": "beast_rider"
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_any_entry_effect_count_evolve",
+                "threshold": 5,
+                "targetUnitId": "beast_rider"
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_summon_units",
+                "summonUnitId": "ger_beast",
+                "count": 1
+            },
+            {
+                "kind": "battle_aura_sync_unit_id_attack_to_highest",
+                "targetUnitId": "ger_beast"
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_summon_units",
+                "summonUnitId": "ger_beast",
+                "count": 2
+            },
+            {
+                "kind": "battle_aura_sync_unit_id_attack_to_highest",
+                "targetUnitId": "ger_beast"
+            }
+        ],
+        "limit": 8,
+        "startCount": 10,
+        "defaultCount": 10,
+        "baseCount": 10,
+        "maxCount": 0,
+        "hpPerUnit": 33,
+        "damageMin": 5,
+        "damageMax": 8,
+        "initiative": 6,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 330,
+        "firstPurchaseAverageDamage": 65,
+        "skillText": "场上累计触发10次任意入场效果，变为兽骑兵。\n场上累计触发5次任意入场效果，变为兽骑兵。\n开战后，在最近的1个格子中召唤1支临时格尔兽部队（数量为格尔兽默认数量）参加战斗。\n开战后，在最近的2个格子中分别召唤1支临时格尔兽部队（每支数量为格尔兽默认数量）参加战斗。",
+        "designOnlyInitialBaseDamage": 65
+    },
+    {
+        "id": "scoundrel",
+        "name": "劣徒",
+        "star": 3,
+        "race": "甘格尔",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 42,
+        "attack": 12,
+        "defense": 13,
+        "power": 2,
+        "speed": 2,
+        "luck": 2,
+        "morale": 2,
+        "attackInterval": 0.95,
+        "range": 1.0,
+        "sizeTier": 2,
+        "size": 1,
+        "tags": [],
+        "talentText": "获得数量时，使相邻1支部队重新触发1次入场效果（每回合限1次）。",
+        "goldTalentText": "获得数量时，使相邻2支部队重新触发1次入场效果（每回合限1次）。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_gain_stat_retrigger_side_adjacent_entry_effects",
+                "allowEvents": [
+                    "on_gain_attack"
+                ]
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_gain_stat_retrigger_side_adjacent_entry_effects",
+                "allowEvents": [
+                    "on_gain_attack",
+                    "on_gain_defense"
+                ]
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "limit": 8,
+        "startCount": 12,
+        "defaultCount": 12,
+        "baseCount": 12,
+        "maxCount": 0,
+        "hpPerUnit": 42,
+        "damageMin": 5,
+        "damageMax": 8,
+        "initiative": 5,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 504,
+        "firstPurchaseAverageDamage": 78,
+        "skillText": "获得数量时，使相邻1支部队重新触发1次入场效果（每回合限1次）。\n获得数量时，使相邻2支部队重新触发1次入场效果（每回合限1次）。\n—\n—",
+        "designOnlyInitialBaseDamage": 78
+    },
+    {
+        "id": "beast_rider",
+        "name": "兽骑兵",
+        "star": 4,
+        "race": "甘格尔",
+        "faith": "克苏鲁",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 57,
+        "attack": 16,
+        "defense": 17,
+        "power": 2,
+        "speed": 6,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "sizeTier": 3,
+        "size": 1,
+        "tags": [
+            "0"
+        ],
+        "hidden": true,
+        "talentText": "触发1次任意入场效果，自身和后一排所有部队获得+1数量。",
+        "goldTalentText": "触发1次任意入场效果，自身和后一排所有部队获得+2数量。",
+        "battleText": "阵亡后，原地召唤1支临时格尔兽部队（数量为格尔兽默认数量）参加战斗。",
+        "goldBattleText": "阵亡后，在原地和最近的1个格子中分别召唤1支临时格尔兽部队（每支数量为格尔兽默认数量）参加战斗。",
+        "talents": [
+            {
+                "kind": "while_on_board_entry_effect_self_and_rear_gain_attack",
+                "attack": 20,
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "while_on_board_entry_effect_self_and_rear_gain_attack",
+                "attack": 30,
+                "value": 2
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_and_death_summon_units",
+                "summonUnitId": "ger_beast",
+                "count": 1
+            },
+            {
+                "kind": "battle_aura_sync_unit_id_attack_to_highest",
+                "targetUnitId": "ger_beast"
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_and_death_summon_units",
+                "summonUnitId": "ger_beast",
+                "count": 2
+            },
+            {
+                "kind": "battle_aura_sync_unit_id_attack_to_highest",
+                "targetUnitId": "ger_beast"
+            }
+        ],
+        "limit": 5,
+        "startCount": 8,
+        "defaultCount": 8,
+        "baseCount": 8,
+        "maxCount": 0,
+        "hpPerUnit": 57,
+        "damageMin": 8,
+        "damageMax": 13,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 456,
+        "firstPurchaseAverageDamage": 84,
+        "skillText": "触发1次任意入场效果，自身和后一排所有部队获得+1数量。\n触发1次任意入场效果，自身和后一排所有部队获得+2数量。\n阵亡后，原地召唤1支临时格尔兽部队（数量为格尔兽默认数量）参加战斗。\n阵亡后，在原地和最近的1个格子中分别召唤1支临时格尔兽部队（每支数量为格尔兽默认数量）参加战斗。",
+        "designOnlyInitialBaseDamage": 84
+    },
+    {
+        "id": "exorcist_mount",
+        "name": "驱魔师坐骑",
+        "star": 4,
+        "race": "甘格尔",
+        "faith": "克苏鲁",
+        "type": "range",
+        "typeLabel": "野兽",
+        "hp": 58,
+        "attack": 15,
+        "defense": 16,
+        "power": 2,
+        "speed": 6,
+        "luck": 0,
+        "morale": 0,
+        "attackInterval": 0.75,
+        "range": 1.0,
+        "sizeTier": 2,
+        "size": 1,
+        "tags": [],
+        "talentText": "回合结束时，吞噬商店中数量最高的部队，获得其数量。",
+        "goldTalentText": "回合结束时，吞噬商店中数量最高的部队，获得其2倍数量。",
+        "battleText": "每次攻击，选取攻击距离内最近敌人的位置召唤一阵范围半径为2的火雨，对其中的每个敌人造成1次伤害。",
+        "goldBattleText": "每次攻击，选取攻击距离内最近敌人的位置召唤一阵范围半径为3的火雨，对其中的每个敌人造成1次伤害。",
+        "talents": [
+            {
+                "kind": "round_end_devour_shop_highest_attack_gain_attack",
+                "multiplier": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_devour_shop_highest_attack_gain_attack",
+                "multiplier": 2
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "on_attack_count_fire_rain_area_dot",
+                "count": 3,
+                "radius": 3,
+                "duration": 2,
+                "tick": 0.5
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_attack_count_fire_rain_area_dot",
+                "count": 2,
+                "radius": 3,
+                "duration": 2,
+                "tick": 0.5
+            }
+        ],
+        "limit": 5,
+        "startCount": 8,
+        "defaultCount": 8,
+        "baseCount": 8,
+        "maxCount": 0,
+        "hpPerUnit": 58,
+        "damageMin": 7,
+        "damageMax": 12,
+        "initiative": 9,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 464,
+        "firstPurchaseAverageDamage": 76,
+        "skillText": "回合结束时，吞噬商店中数量最高的部队，获得其数量。\n回合结束时，吞噬商店中数量最高的部队，获得其2倍数量。\n每次攻击，选取攻击距离内最近敌人的位置召唤一阵范围半径为2的火雨，对其中的每个敌人造成1次伤害。\n每次攻击，选取攻击距离内最近敌人的位置召唤一阵范围半径为3的火雨，对其中的每个敌人造成1次伤害。",
+        "designOnlyInitialBaseDamage": 76
+    },
+    {
+        "id": "pain_flame",
+        "name": "痛苦火苗",
+        "star": 4,
+        "race": "甘格尔",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "元素",
+        "hp": 40,
+        "attack": 16,
+        "defense": 11,
+        "power": 1,
+        "speed": 6,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.7999999999999999,
+        "range": 4.0,
+        "sizeTier": 3,
+        "size": 1,
+        "tags": [],
+        "talentText": "—",
+        "goldTalentText": "—",
+        "battleText": "阵亡时产生半径3格爆炸；若波及至少3个敌人，则下回合开始全军获得+5数量。",
+        "goldBattleText": "阵亡时产生半径3格爆炸；若波及至少3个敌人，则下回合开始全军获得+10数量。",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "on_death_explode_if_hits_next_round_team_attack",
+                "radius": 3,
+                "attackMultiplier": 1,
+                "hitThreshold": 3,
+                "nextRoundAttack": 5,
+                "value": 5
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_death_explode_if_hits_next_round_team_attack",
+                "radius": 6,
+                "attackMultiplier": 1,
+                "hitThreshold": 3,
+                "nextRoundAttack": 10,
+                "value": 10
+            }
+        ],
+        "limit": 5,
+        "startCount": 6,
+        "defaultCount": 6,
+        "baseCount": 6,
+        "maxCount": 0,
+        "hpPerUnit": 40,
+        "damageMin": 8,
+        "damageMax": 12,
+        "initiative": 8,
+        "attackRange": 4.0,
+        "firstPurchaseHp": 240,
+        "firstPurchaseAverageDamage": 60,
+        "skillText": "—\n—\n阵亡时产生半径3格爆炸；若波及至少3个敌人，则下回合开始全军获得+5数量。\n阵亡时产生半径3格爆炸；若波及至少3个敌人，则下回合开始全军获得+10数量。",
+        "designOnlyInitialBaseDamage": 60
+    },
+    {
+        "id": "shadow_butcher",
+        "name": "阴暗屠夫",
+        "star": 5,
+        "race": "甘格尔",
+        "faith": "克苏鲁",
+        "type": "range",
+        "typeLabel": "战士",
+        "hp": 77,
+        "attack": 20,
+        "defense": 21,
+        "power": 3,
+        "speed": 4,
+        "luck": 1,
+        "morale": 2,
+        "attackInterval": 0.8499999999999999,
+        "range": 1.0,
+        "sizeTier": 2,
+        "size": 1,
+        "tags": [],
+        "talentText": "每入场1支甘格尔部队，本部队随机吞噬1张商店卡牌，获得其数量。",
+        "goldTalentText": "每入场1支甘格尔部队，本部队随机吞噬1张商店卡牌，获得其2倍的数量。",
+        "battleText": "攻击时，有15%概率给自己制造一个护盾，可完全抵挡下一次的伤害，护盾不能叠加。",
+        "goldBattleText": "攻击时，有25%概率给自己制造一个护盾，可完全抵挡下一次的伤害，护盾不能叠加。",
+        "talents": [
+            {
+                "kind": "while_on_board_on_entry_race_devour_shop_gain_attack",
+                "race": "甘格尔",
+                "multiplier": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "while_on_board_on_entry_race_devour_shop_gain_attack",
+                "race": "甘格尔",
+                "multiplier": 2
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "on_attack_chance_self_shield_no_stack",
+                "chance": 0.15,
+                "layers": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_attack_chance_self_shield_no_stack",
+                "chance": 0.25,
+                "layers": 1
+            }
+        ],
+        "limit": 3,
+        "startCount": 5,
+        "defaultCount": 5,
+        "baseCount": 5,
+        "maxCount": 0,
+        "hpPerUnit": 77,
+        "damageMin": 11,
+        "damageMax": 17,
+        "initiative": 7,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 385,
+        "firstPurchaseAverageDamage": 70,
+        "skillText": "每入场1支甘格尔部队，本部队随机吞噬1张商店卡牌，获得其数量。\n每入场1支甘格尔部队，本部队随机吞噬1张商店卡牌，获得其2倍的数量。\n攻击时，有15%概率给自己制造一个护盾，可完全抵挡下一次的伤害，护盾不能叠加。\n攻击时，有25%概率给自己制造一个护盾，可完全抵挡下一次的伤害，护盾不能叠加。",
+        "designOnlyInitialBaseDamage": 70
+    },
+    {
+        "id": "wailing_beast",
+        "name": "苦嚎叫兽",
+        "star": 5,
+        "race": "甘格尔",
+        "faith": "克苏鲁",
+        "type": "melee",
+        "typeLabel": "野兽",
+        "hp": 78,
+        "attack": 19,
+        "defense": 21,
+        "power": 2,
+        "speed": 6,
+        "luck": 0,
+        "morale": 1,
+        "attackInterval": 0.75,
+        "range": 1.0,
+        "sizeTier": 3,
+        "size": 1,
+        "tags": [],
+        "talentText": "入场时，场上所有甘格尔部队各吞噬1张商店卡牌，并获得+【被吞噬卡牌数量】数量；如商店无卡牌，则无法吞噬。",
+        "goldTalentText": "入场时，场上所有甘格尔部队各吞噬1张商店卡牌，并获得+【被吞噬卡牌数量×2】数量；如商店无卡牌，则无法吞噬。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_entry_race_units_devour_shop_gain_attack",
+                "race": "甘格尔",
+                "multiplier": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_entry_race_units_devour_shop_gain_attack",
+                "race": "甘格尔",
+                "multiplier": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "limit": 3,
+        "startCount": 5,
+        "defaultCount": 5,
+        "baseCount": 5,
+        "maxCount": 0,
+        "hpPerUnit": 78,
+        "damageMin": 11,
+        "damageMax": 17,
+        "initiative": 9,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 390,
+        "firstPurchaseAverageDamage": 70,
+        "skillText": "入场时，场上所有甘格尔部队各吞噬1张商店卡牌，并获得+【被吞噬卡牌数量】数量；如商店无卡牌，则无法吞噬。\n入场时，场上所有甘格尔部队各吞噬1张商店卡牌，并获得+【被吞噬卡牌数量×2】数量；如商店无卡牌，则无法吞噬。\n—\n—",
+        "hidden": true,
+        "designOnlyInitialBaseDamage": 70
+    },
+    {
+        "id": "drunkard",
+        "name": "酒鬼",
+        "star": 5,
+        "race": "甘格尔",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 61,
+        "attack": 18,
+        "defense": 16,
+        "power": 1,
+        "speed": 5,
+        "luck": 1,
+        "morale": 2,
+        "attackInterval": 0.7999999999999999,
+        "range": 1.0,
+        "sizeTier": 1,
+        "size": 1,
+        "tags": [],
+        "talentText": "—",
+        "goldTalentText": "—",
+        "battleText": "阵亡时，下回合开始所有商店里的卡牌默认数量+1。",
+        "goldBattleText": "阵亡时，下回合开始所有商店里的卡牌默认数量+2。",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "on_death_next_round_shop_cards_gain_attack",
+                "attack": 10,
+                "value": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_death_next_round_shop_cards_gain_attack",
+                "attack": 20,
+                "value": 2
+            }
+        ],
+        "limit": 3,
+        "startCount": 4,
+        "defaultCount": 4,
+        "baseCount": 4,
+        "maxCount": 0,
+        "hpPerUnit": 61,
+        "damageMin": 10,
+        "damageMax": 16,
+        "initiative": 8,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 244,
+        "firstPurchaseAverageDamage": 52,
+        "skillText": "—\n—\n阵亡时，下回合开始所有商店里的卡牌默认数量+1。\n阵亡时，下回合开始所有商店里的卡牌默认数量+2。",
+        "hidden": true,
+        "designOnlyInitialBaseDamage": 52
+    },
+    {
+        "id": "ger_officer",
+        "name": "格尔军官",
+        "star": 6,
+        "race": "甘格尔",
+        "faith": "克苏鲁",
+        "type": "range",
+        "typeLabel": "战士",
+        "hp": 79,
+        "attack": 20,
+        "defense": 20,
+        "power": 2,
+        "speed": 3,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.8999999999999999,
+        "range": 1.0,
+        "sizeTier": 3,
+        "size": 1,
+        "tags": [],
+        "talentText": "入场时，随机选择1支在场野兽部队，使其获得自身初始数量的数量。",
+        "goldTalentText": "入场时，随机选择2支在场野兽部队，使其获得自身初始数量的数量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
+            {
+                "kind": "on_entry_devour_board_tag_copy_gain_attack",
+                "targetTag": "野兽",
+                "count": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_entry_devour_board_tag_copy_gain_attack",
+                "targetTag": "野兽",
+                "count": 2
+            }
+        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "limit": 3,
+        "startCount": 2,
+        "defaultCount": 2,
+        "baseCount": 2,
+        "maxCount": 0,
+        "hpPerUnit": 79,
+        "damageMin": 9,
+        "damageMax": 17,
+        "initiative": 6,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 158,
+        "firstPurchaseAverageDamage": 26,
+        "skillText": "入场时，随机选择1支在场野兽部队，使其获得自身初始数量的数量。\n入场时，随机选择2支在场野兽部队，使其获得自身初始数量的数量。\n—\n—",
+        "hidden": true,
+        "designOnlyInitialBaseDamage": 26
+    },
+    {
+        "id": "ger_giant_beast",
+        "name": "格尔巨兽",
+        "star": 6,
+        "race": "甘格尔",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "野兽",
+        "hp": 91,
+        "attack": 22,
+        "defense": 23,
+        "power": 3,
+        "speed": 3,
+        "luck": 2,
+        "morale": 0,
+        "attackInterval": 1.0499999999999998,
+        "range": 1.0,
+        "sizeTier": 4,
+        "size": 1,
+        "tags": [],
+        "talentText": "场上发生吞噬事件时，自身获得+2数量。",
+        "goldTalentText": "场上发生吞噬事件时，自身获得+4数量。",
+        "battleText": "不会被反击。",
+        "goldBattleText": "不会被反击。",
+        "talents": [
+            {
+                "kind": "round_end_tagged_units_devour_shop_gain_attack",
+                "targetTag": "野兽",
+                "multiplier": 1,
+                "value": 2
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "round_end_tagged_units_devour_shop_gain_attack",
+                "targetTag": "野兽",
+                "multiplier": 2,
+                "value": 4
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_aura_sync_unit_id_attack_to_highest",
+                "targetUnitId": "ger_beast"
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_aura_sync_unit_id_attack_to_highest",
+                "targetUnitId": "ger_beast"
+            }
+        ],
+        "limit": 3,
+        "startCount": 2,
+        "defaultCount": 2,
+        "baseCount": 2,
+        "maxCount": 0,
+        "hpPerUnit": 91,
+        "damageMin": 12,
+        "damageMax": 19,
+        "initiative": 3,
+        "attackRange": 1.0,
+        "firstPurchaseHp": 182,
+        "firstPurchaseAverageDamage": 31,
+        "skillText": "场上发生吞噬事件时，自身获得+2数量。\n场上发生吞噬事件时，自身获得+4数量。\n不会被反击。\n不会被反击。",
+        "hidden": true,
+        "designOnlyInitialBaseDamage": 31
+    },
+    {
+        "id": "evil_witch",
+        "name": "邪恶女巫",
+        "star": 6,
+        "race": "甘格尔",
+        "faith": "克苏鲁",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 67,
+        "attack": 20,
+        "defense": 16,
+        "power": 2,
+        "speed": 2,
+        "luck": 0,
+        "morale": 0,
+        "attackInterval": 0.8999999999999999,
+        "range": 8.0,
+        "sizeTier": 2,
+        "size": 1,
+        "tags": [],
+        "talentText": "场上发生吞噬事件时，全体友军获得+1数量。",
+        "goldTalentText": "场上发生吞噬事件时，全体友军获得+2数量。",
+        "battleText": "开战后，如果场上有格尔兽部队，则临时骑上最近1支格尔兽部队，变成巫兽师，直到战斗结束；巫兽师继承邪恶女巫当前数量。",
+        "goldBattleText": "开战后，如果场上有格尔兽部队，则临时骑上最近1支格尔兽部队，变成巫兽师，直到战斗结束；巫兽师继承邪恶女巫当前数量。",
+        "talents": [
+            {
+                "kind": "on_devour_team_gain_attack",
+                "attack": 10,
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_devour_team_gain_attack",
+                "attack": 20,
+                "value": 2
+            }
+        ],
+        "battleSkills": [
+            {
+                "kind": "battle_start_mount_nearest_unit_transform_until_end",
+                "targetUnitId": "ger_beast",
+                "transformUnitId": "witch_beastmaster"
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_mount_nearest_unit_transform_until_end",
+                "targetUnitId": "ger_beast",
+                "transformUnitId": "witch_beastmaster"
+            }
+        ],
+        "limit": 3,
+        "startCount": 1,
+        "defaultCount": 1,
+        "baseCount": 1,
+        "maxCount": 0,
+        "hpPerUnit": 67,
+        "damageMin": 10,
+        "damageMax": 19,
+        "initiative": 6,
+        "attackRange": 8.0,
+        "firstPurchaseHp": 67,
+        "firstPurchaseAverageDamage": 14,
+        "skillText": "场上发生吞噬事件时，全体友军获得+1数量。\n场上发生吞噬事件时，全体友军获得+2数量。\n开战后，如果场上有格尔兽部队，则临时骑上最近1支格尔兽部队，变成巫兽师，直到战斗结束；巫兽师继承邪恶女巫当前数量。\n开战后，如果场上有格尔兽部队，则临时骑上最近1支格尔兽部队，变成巫兽师，直到战斗结束；巫兽师继承邪恶女巫当前数量。",
+        "hidden": true,
+        "designOnlyInitialBaseDamage": 14
+    },
+    {
+        "id": "witch_beastmaster",
+        "name": "巫兽师",
+        "star": 6,
+        "race": "甘格尔",
+        "faith": "克苏鲁",
+        "type": "range",
+        "typeLabel": "",
+        "hp": 82,
+        "attack": 21,
+        "defense": 19,
+        "power": 3,
+        "speed": 6,
+        "luck": 1,
+        "morale": 1,
+        "attackInterval": 0.7999999999999999,
+        "range": 8.0,
+        "sizeTier": 4,
+        "size": 1,
+        "tags": [],
+        "hidden": true,
+        "talentText": "—",
+        "goldTalentText": "—",
+        "battleText": "每次攻击都会对额外最近的3支敌方部队造成伤害，无论它们有多远。",
+        "goldBattleText": "每次攻击都会对额外最近的4支敌方部队造成伤害，无论它们有多远。",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "on_attack_multi_nearest_targets",
+                "targets": 4
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "battle_start_self_temp_morale",
+                "value": 5
+            },
+            {
+                "kind": "on_attack_multi_nearest_targets",
+                "targets": 4
+            }
+        ],
+        "limit": 3,
+        "startCount": 2,
+        "defaultCount": 2,
+        "baseCount": 2,
+        "maxCount": 0,
+        "hpPerUnit": 82,
+        "damageMin": 12,
+        "damageMax": 19,
+        "initiative": 8,
+        "attackRange": 8.0,
+        "firstPurchaseHp": 164,
+        "firstPurchaseAverageDamage": 31,
+        "skillText": "—\n—\n每次攻击都会对额外最近的3支敌方部队造成伤害，无论它们有多远。\n每次攻击都会对额外最近的4支敌方部队造成伤害，无论它们有多远。",
+        "designOnlyInitialBaseDamage": 31
+    },
+    {
+        "id": "elite_feather_guard",
+        "name": "精锐羽卫",
+        "star": 5,
+        "race": "甘席",
+        "faith": "无",
+        "type": "range",
+        "typeLabel": "射手",
+        "hp": 185,
+        "attack": 150,
+        "defense": 24,
+        "power": 2,
+        "speed": 12,
+        "luck": 3,
+        "morale": 2,
+        "attackInterval": 1.0,
+        "range": 8.0,
+        "size": 42,
+        "tags": [
+            "射手"
+        ],
+        "hidden": true,
+        "talentText": "",
+        "goldTalentText": "",
+        "battleText": "每次可以攻击最多2名单位\n被精锐羽林卫攻击过的单位如果死亡，下回合开始获得2颗【密林宝钻】",
+        "goldBattleText": "每次可以攻击最多4名单位\n被精锐羽林卫攻击过的单位如果死亡，下回合开始获得4颗【密林宝钻】",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [
+            {
+                "kind": "on_attack_multi_nearest_targets",
+                "targets": 2
+            },
+            {
+                "kind": "on_attack_mark_target_next_round_forest_gem_on_death",
+                "value": 2
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_attack_multi_nearest_targets",
+                "targets": 4
+            },
+            {
+                "kind": "on_attack_mark_target_next_round_forest_gem_on_death",
+                "value": 4
+            }
+        ],
+        "sizeTier": 2,
+        "startCount": 1,
+        "defaultCount": 1,
+        "baseCount": 1,
+        "maxCount": 0,
+        "hpPerUnit": 185,
+        "damageMin": 1,
+        "damageMax": 150,
+        "initiative": 12,
+        "attackRange": 8.0,
+        "skillText": "每次可以攻击最多2名单位\n被精锐羽林卫攻击过的单位如果死亡，下回合开始获得2颗【密林宝钻】\n每次可以攻击最多4名单位\n被精锐羽林卫攻击过的单位如果死亡，下回合开始获得4颗【密林宝钻】",
+        "designOnlyInitialBaseDamage": 0
+    },
+    {
+        "id": "light_illusion",
+        "name": "幻影",
+        "star": 0,
+        "race": "甘地",
+        "faith": "莱特",
+        "type": "range",
+        "typeLabel": "幻影",
+        "hp": 10,
+        "attack": 0,
+        "defense": 0,
+        "power": 0,
+        "speed": 0,
+        "luck": 0,
+        "morale": 0,
+        "attackInterval": 99.0,
+        "range": 0.1,
+        "size": 24,
+        "tags": [
+            "幻影"
+        ],
+        "hidden": true,
+        "canMove": false,
+        "canAttack": false,
+        "talentText": "",
+        "goldTalentText": "",
+        "battleText": "",
+        "goldBattleText": "",
+        "talents": [],
+        "goldTalents": [],
+        "battleSkills": [],
+        "goldBattleSkills": [],
+        "startCount": 1,
+        "defaultCount": 1,
+        "baseCount": 1,
+        "maxCount": 0,
+        "hpPerUnit": 10,
+        "damageMin": 1,
+        "damageMax": 1,
+        "initiative": 0,
+        "attackRange": 0.1,
+        "skillText": "",
+        "designOnlyInitialBaseDamage": 0
+    }
+]
