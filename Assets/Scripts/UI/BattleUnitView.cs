@@ -10,10 +10,11 @@ namespace ProphecyCentury.UI
         [SerializeField] private Text labelText;
         [SerializeField] private Image healthFillImage;
 
-        private static readonly Color32 CountBarBackColor = new Color32(16, 44, 45, 230);
-        private static readonly Color32 CountBarFillColor = new Color32(78, 214, 157, 255);
-        private static readonly Color32 CountBarBackEnemyColor = new Color32(50, 18, 24, 230);
-        private static readonly Color32 CountBarFillEnemyColor = new Color32(212, 38, 48, 255);
+        private static readonly Color32 HealthBarBackColor = new Color32(24, 28, 28, 230);
+        private static readonly Color32 HealthBarFillColor = new Color32(86, 218, 156, 255);
+        private static readonly Color32 CountBadgePlayerColor = new Color32(24, 140, 168, 245);
+        private static readonly Color32 CountBadgeEnemyColor = new Color32(168, 86, 34, 245);
+        private static readonly Color32 CountBadgeBorderColor = new Color32(24, 16, 12, 230);
 
         private bool _playerSide;
         private const int PlayerLabelFontSize = 32;
@@ -95,10 +96,13 @@ namespace ProphecyCentury.UI
             {
                 var fontSize = playerSide ? PlayerLabelFontSize : EnemyLabelFontSize;
                 labelText.fontSize = fontSize;
-                labelText.text = $"{new string('*', Mathf.Clamp(star, 0, 6))}\n{label}";
+                labelText.text = string.Empty;
                 labelText.color = playerSide ? Color.white : new Color32(255, 180, 180, 255);
                 labelText.alignment = TextAnchor.UpperCenter;
+                labelText.raycastTarget = false;
             }
+
+            ConfigureStatusUi();
         }
 
         public void SetHealth(int hp, int maxHp)
@@ -116,10 +120,10 @@ namespace ProphecyCentury.UI
             var amount = Mathf.Clamp01(Mathf.Max(0, hp) / (float)Mathf.Max(1, maxHp));
             SetBarFill(amount);
 
-            var healthLabel = GetOrCreateBarLabel(32);
+            var healthLabel = GetOrCreateBarLabel(12);
             if (healthLabel != null)
             {
-                healthLabel.text = healthText ?? $"{Mathf.Max(0, hp)}/{Mathf.Max(1, maxHp)}";
+                healthLabel.text = string.IsNullOrWhiteSpace(healthText) ? string.Empty : healthText;
             }
         }
 
@@ -130,25 +134,13 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            var state = BattleUnitBarPresenter.CalculateCount(count, maxCount);
-            var healthBar = transform.Find("HealthBar")?.GetComponent<Image>();
-            if (healthBar != null)
-            {
-                healthBar.color = _playerSide ? CountBarBackColor : CountBarBackEnemyColor;
-            }
+            ConfigureStatusUi();
 
-            if (healthFillImage != null)
+            var countLabel = GetOrCreateCountBadgeLabel();
+            if (countLabel != null)
             {
-                healthFillImage.color = _playerSide ? CountBarFillColor : CountBarFillEnemyColor;
-            }
-
-            SetBarFill(state.Amount);
-
-            var healthLabel = GetOrCreateBarLabel(16);
-            if (healthLabel != null)
-            {
-                healthLabel.text = state.Text;
-                healthLabel.color = _playerSide ? Color.white : new Color32(255, 210, 210, 255);
+                countLabel.text = Mathf.Max(0, count).ToString();
+                countLabel.color = Color.white;
             }
         }
 
@@ -192,7 +184,7 @@ namespace ProphecyCentury.UI
             labelRect.offsetMin = Vector2.zero;
             labelRect.offsetMax = Vector2.zero;
             healthLabel = labelObject.GetComponent<Text>();
-            healthLabel.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            healthLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             healthLabel.fontSize = fontSize;
             healthLabel.alignment = TextAnchor.MiddleCenter;
             healthLabel.color = Color.white;
@@ -208,6 +200,93 @@ namespace ProphecyCentury.UI
 
             labelObject.transform.SetAsLastSibling();
             return healthLabel;
+        }
+
+        private Text GetOrCreateCountBadgeLabel()
+        {
+            var badge = transform.Find("CountBadge");
+            if (badge == null)
+            {
+                var badgeObject = new GameObject("CountBadge", typeof(Image));
+                badgeObject.transform.SetParent(transform, false);
+                badge = badgeObject.transform;
+            }
+
+            var badgeRect = badge.GetComponent<RectTransform>();
+            badgeRect.anchorMin = new Vector2(0.5f, 0f);
+            badgeRect.anchorMax = new Vector2(0.5f, 0f);
+            badgeRect.pivot = new Vector2(0.5f, 0.5f);
+            badgeRect.anchoredPosition = new Vector2(0f, 54f);
+            badgeRect.sizeDelta = new Vector2(58f, 28f);
+
+            var badgeImage = badge.GetComponent<Image>() ?? badge.gameObject.AddComponent<Image>();
+            badgeImage.color = CountBadgeBorderColor;
+            badgeImage.raycastTarget = false;
+
+            var fill = badge.Find("Fill");
+            if (fill == null)
+            {
+                var fillObject = new GameObject("Fill", typeof(Image));
+                fillObject.transform.SetParent(badge, false);
+                fill = fillObject.transform;
+            }
+
+            var fillRect = fill.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = new Vector2(4f, 3f);
+            fillRect.offsetMax = new Vector2(-4f, -3f);
+            var fillImage = fill.GetComponent<Image>() ?? fill.gameObject.AddComponent<Image>();
+            fillImage.color = _playerSide ? CountBadgePlayerColor : CountBadgeEnemyColor;
+            fillImage.raycastTarget = false;
+
+            var label = badge.Find("Label")?.GetComponent<Text>();
+            if (label == null)
+            {
+                var labelObject = new GameObject("Label", typeof(Text));
+                labelObject.transform.SetParent(badge, false);
+                var labelRect = labelObject.GetComponent<RectTransform>();
+                labelRect.anchorMin = Vector2.zero;
+                labelRect.anchorMax = Vector2.one;
+                labelRect.offsetMin = Vector2.zero;
+                labelRect.offsetMax = Vector2.zero;
+                label = labelObject.GetComponent<Text>();
+                label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                label.alignment = TextAnchor.MiddleCenter;
+                label.raycastTarget = false;
+
+                var outline = labelObject.AddComponent<Outline>();
+                outline.effectColor = new Color32(0, 0, 0, 220);
+                outline.effectDistance = new Vector2(1.2f, -1.2f);
+                outline.useGraphicAlpha = true;
+            }
+
+            label.fontSize = 18;
+            label.fontStyle = FontStyle.Bold;
+            badge.SetAsLastSibling();
+            return label;
+        }
+
+        private void ConfigureStatusUi()
+        {
+            var healthBar = transform.Find("HealthBar")?.GetComponent<Image>();
+            if (healthBar != null)
+            {
+                var rect = healthBar.rectTransform;
+                rect.anchorMin = new Vector2(0.5f, 0f);
+                rect.anchorMax = new Vector2(0.5f, 0f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = new Vector2(0f, 74f);
+                rect.sizeDelta = new Vector2(108f, 10f);
+                healthBar.color = HealthBarBackColor;
+                healthBar.raycastTarget = false;
+            }
+
+            if (healthFillImage != null)
+            {
+                healthFillImage.color = HealthBarFillColor;
+                healthFillImage.raycastTarget = false;
+            }
         }
 
         private bool EnsureReferences()

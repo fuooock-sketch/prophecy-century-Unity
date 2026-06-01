@@ -22,6 +22,8 @@ namespace ProphecyCentury.Systems
             var random = new Random(ProphecyGameSession.Instance.CurrentRun.round * 104729 + (playerSnapshots?.Count ?? 0) * 379);
             var players = CreateUnits(playerSnapshots, true);
             var enemies = CreateUnits(enemySnapshots, false);
+            var initialPlayerUnits = (playerSnapshots ?? Array.Empty<BattleUnitSnapshot>()).ToList();
+            var initialEnemyUnits = (enemySnapshots ?? Array.Empty<BattleUnitSnapshot>()).ToList();
             var events = new List<BattleEvent>();
             var elapsed = 0f;
 
@@ -70,6 +72,8 @@ namespace ProphecyCentury.Systems
                 EnemyDamage = enemyDamage,
                 Summary = summary,
                 Events = events,
+                InitialPlayerUnits = initialPlayerUnits,
+                InitialEnemyUnits = initialEnemyUnits,
                 PlayerUnits = players.Select(CreateSnapshot).ToList(),
                 EnemyUnits = enemies.Select(CreateSnapshot).ToList()
             };
@@ -167,7 +171,12 @@ namespace ProphecyCentury.Systems
                             if (pounceTarget != null)
                             {
                                 unit.InvincibleRemaining = Math.Max(unit.InvincibleRemaining, skill.invincibleSeconds);
+                                var pounceEvent = AddEvent(events, elapsed, "skill", unit, pounceTarget, 0, $"{unit.Name} pounces {pounceTarget.Name}");
                                 MovePouncerNextToTarget(unit, pounceTarget);
+                                if (pounceEvent != null)
+                                {
+                                    pounceEvent.DestinationSlotId = unit.SlotId;
+                                }
                                 var multiplier = skill.attackMultiplier > 0f ? skill.attackMultiplier : 3f;
                                 var damage = Math.Max(1, (int)Math.Round(CalculateDamage(unit, pounceTarget, random) * multiplier));
                                 for (var hit = 0; hit < Math.Max(1, skill.times); hit += 1)
@@ -811,14 +820,14 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private static void AddEvent(List<BattleEvent> events, float time, string kind, RealtimeBattleUnit source, RealtimeBattleUnit target, int amount, string message)
+        private static BattleEvent AddEvent(List<BattleEvent> events, float time, string kind, RealtimeBattleUnit source, RealtimeBattleUnit target, int amount, string message)
         {
             if (events == null || events.Count >= MaxBattleEvents)
             {
-                return;
+                return null;
             }
 
-            events.Add(new BattleEvent
+            var battleEvent = new BattleEvent
             {
                 Time = Math.Max(0f, time),
                 Kind = kind,
@@ -836,7 +845,9 @@ namespace ProphecyCentury.Systems
                 TargetMaxHp = target?.MaxHp ?? 0,
                 Amount = amount,
                 Message = message
-            });
+            };
+            events.Add(battleEvent);
+            return battleEvent;
         }
 
         private static float Distance(RealtimeBattleUnit left, RealtimeBattleUnit right)
@@ -1227,6 +1238,8 @@ namespace ProphecyCentury.Systems
         public int EnemyDamage;
         public string Summary;
         public List<BattleEvent> Events = new List<BattleEvent>();
+        public List<BattleUnitSnapshot> InitialPlayerUnits = new List<BattleUnitSnapshot>();
+        public List<BattleUnitSnapshot> InitialEnemyUnits = new List<BattleUnitSnapshot>();
         public List<BattleUnitSnapshot> PlayerUnits = new List<BattleUnitSnapshot>();
         public List<BattleUnitSnapshot> EnemyUnits = new List<BattleUnitSnapshot>();
     }

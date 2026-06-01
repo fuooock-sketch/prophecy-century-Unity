@@ -110,7 +110,7 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            // Hover delay → start fade-in
+            // Hover delay before fade-in
             if (_hoverPending && Time.unscaledTime - _hoverStartTime >= HoverShowDelay)
             {
                 _hoverPending = false;
@@ -416,14 +416,14 @@ namespace ProphecyCentury.UI
             _mgmtBlock = CreateSkillBlock("MgmtSkill", _panel.transform,
                 MgmtBlockFill, MgmtBlockBorder, out _mgmtHeading, out _mgmtBody);
             _mgmtHeading.color = MgmtHeadingColor;
-            _mgmtHeading.text = "经营技能";
+            _mgmtHeading.text = "\u7ecf\u8425\u6280\u80fd";
             _mgmtBody.color = MgmtBodyColor;
 
             // --- Battle skill block ---
             _battleBlock = CreateSkillBlock("BattleSkill", _panel.transform,
                 BattleBlockFill, BattleBlockBorder, out _battleHeading, out _battleBody);
             _battleHeading.color = BattleHeadingColor;
-            _battleHeading.text = "战斗技能";
+            _battleHeading.text = "\u6218\u6597\u6280\u80fd";
             _battleBody.color = BattleBodyColor;
 
             _panel.SetActive(false);
@@ -438,7 +438,7 @@ namespace ProphecyCentury.UI
 
             if (data == null)
             {
-                SetText(_titleLabel, $"{(golden ? "<color=#FFD95B>金色  " : "")}{Escape(unit.name)}");
+                SetText(_titleLabel, $"{(golden ? "<color=#FFD95B>\u91d1\u8272  " : "")}{Escape(unit.name)}");
                 SetText(_starsLabel, BuildStars(unit.star));
                 ClearTagChips();
                 SetDividerActive(_dividerA, false);
@@ -451,7 +451,7 @@ namespace ProphecyCentury.UI
 
             // Title
             var titleText = golden
-                ? $"<color=#FFD95B>金色  {Escape(data.name)}</color>"
+                ? $"<color=#FFD95B>\u91d1\u8272  {Escape(data.name)}</color>"
                 : Escape(data.name);
             SetText(_titleLabel, titleText);
 
@@ -533,8 +533,8 @@ namespace ProphecyCentury.UI
             var borderColor = golden ? GoldenTagBorder : TagBorderColor;
 
             AddTagChip(data.race, borderColor);
-            AddTagChip(string.IsNullOrWhiteSpace(data.typeLabel) ? data.type : data.typeLabel, borderColor);
             AddTagChip(data.faith, borderColor);
+            AddTagChip(string.IsNullOrWhiteSpace(data.typeLabel) ? data.type : data.typeLabel, borderColor);
         }
 
         private static void AddTagChip(string text, Color32 borderColor)
@@ -601,7 +601,7 @@ namespace ProphecyCentury.UI
             gridFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
             gridFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            // Pre-create two rows
+            // Pre-create stat rows
             CreateStatRow("StatRow0", gridRoot.transform, 10f);
             CreateStatRow("StatRow1", gridRoot.transform, 10f);
 
@@ -635,7 +635,9 @@ namespace ProphecyCentury.UI
             Speed,    // chevrons
             Morale,   // flag on pole
             Luck,     // clover glyph
-            Range     // target rings
+            Range,    // target rings
+            Hp,       // shield
+            Initiative // spark
         }
 
         private static void ClearStatGrid()
@@ -663,24 +665,50 @@ namespace ProphecyCentury.UI
             var morale = data.morale + unit.shopBuffMorale + unit.roundTempMorale;
             var luck = data.luck + unit.shopBuffLuck;
 
-            // Row 0: 数量, 攻击, 防御, 伤害
-            var row0 = _statGrid.GetChild(0);
-            AddStatCard(row0, "数量", baseCount.ToString(), ResolveCountBonus(data, unit), StatIconType.Count, golden);
-            AddStatCard(row0, "攻击", (data.attack + unit.shopBuffAttack + unit.roundTempAttack + unit.boardAuraAttack).ToString(),
-                FormatBonus(unit.shopBuffAttack + unit.roundTempAttack + unit.boardAuraAttack), StatIconType.Attack, golden);
-            AddStatCard(row0, "防御", (data.defense + unit.shopBuffDefense).ToString(),
-                FormatBonus(unit.shopBuffDefense), StatIconType.Defense, golden);
-            AddStatCardWide(row0, "伤害", $"{Mathf.Max(1, data.damageMin)}-{Mathf.Max(Mathf.Max(1, data.damageMin), data.damageMax)}",
-                null, StatIconType.Damage, golden);
+            for (int i = 0; i < _statGrid.childCount; i += 1)
+            {
+                _statGrid.GetChild(i).gameObject.SetActive(i < 2);
+            }
 
-            // Row 1: 速度, 士气, 幸运, 射程
+            var row0 = _statGrid.GetChild(0);
+            SetStatRowSpacing(row0, 8f);
+            var hpPerUnit = Mathf.Max(1, data.hpPerUnit > 0 ? data.hpPerUnit : data.hp);
+            AddStatCard(row0, "\u6570\u91cf", FormatCountValue(baseCount, unit), ResolveCountBonus(data, unit), StatIconType.Count, golden, false, 92f);
+            AddStatCard(row0, "\u8840\u91cf", Mathf.Max(1, hpPerUnit + unit.shopBuffHp).ToString(),
+                FormatBonus(unit.shopBuffHp), StatIconType.Hp, golden, false, 104f);
+            AddStatCard(row0, "\u653b\u51fb", (data.attack + unit.shopBuffAttack + unit.roundTempAttack + unit.boardAuraAttack).ToString(),
+                FormatBonus(unit.shopBuffAttack + unit.roundTempAttack + unit.boardAuraAttack), StatIconType.Attack, golden, false, 88f);
+            AddStatCard(row0, "\u9632\u5fa1", (data.defense + unit.shopBuffDefense).ToString(),
+                FormatBonus(unit.shopBuffDefense), StatIconType.Defense, golden, false, 88f);
+            AddStatCard(row0, "\u4f24\u5bb3", $"{Mathf.Max(1, data.damageMin)}-{Mathf.Max(Mathf.Max(1, data.damageMin), data.damageMax)}",
+                null, StatIconType.Damage, golden, false, 102f);
+
             var row1 = _statGrid.GetChild(1);
-            AddStatCard(row1, "速度", (data.speed + unit.shopBuffSpeed).ToString(),
-                FormatBonus(unit.shopBuffSpeed), StatIconType.Speed, golden, true);
-            AddStatCard(row1, "士气", morale.ToString(), null, StatIconType.Morale, golden);
-            AddStatCard(row1, "幸运", luck.ToString(), null, StatIconType.Luck, golden);
-            AddStatCardWide(row1, "射程", FormatRange(data.attackRange > 0f ? data.attackRange : data.range),
-                null, StatIconType.Range, golden);
+            SetStatRowSpacing(row1, 8f);
+            AddStatCard(row1, "\u901f\u5ea6", (data.speed + unit.shopBuffSpeed).ToString(),
+                FormatBonus(unit.shopBuffSpeed), StatIconType.Speed, golden, true, 92f);
+            AddStatCard(row1, "\u5148\u673a", Mathf.Max(0, data.initiative).ToString(), null, StatIconType.Initiative, golden, false, 92f);
+            AddStatCard(row1, "\u58eb\u6c14", morale.ToString(), null, StatIconType.Morale, golden, false, 92f);
+            AddStatCard(row1, "\u5e78\u8fd0", luck.ToString(), null, StatIconType.Luck, golden, false, 92f);
+            AddStatCard(row1, "\u5c04\u7a0b", FormatRange(data.attackRange > 0f ? data.attackRange : data.range),
+                null, StatIconType.Range, golden, false, 104f);
+        }
+
+        private static void SetStatRowSpacing(Transform row, float spacing)
+        {
+            var layout = row != null ? row.GetComponent<HorizontalLayoutGroup>() : null;
+            if (layout != null)
+            {
+                layout.spacing = spacing;
+            }
+        }
+
+        private static string FormatCountValue(int currentCount, UnitCardState unit)
+        {
+            var maxCount = unit != null && unit.maxCount > 0 ? unit.maxCount : 0;
+            return maxCount > 0 && maxCount != currentCount
+                ? $"{Mathf.Max(0, currentCount)}/{maxCount}"
+                : Mathf.Max(0, currentCount).ToString();
         }
 
         private static string FormatBonus(int bonus)
@@ -707,9 +735,9 @@ namespace ProphecyCentury.UI
         /// <summary>
         /// Standard stat card with auto-sizing: label+value stack vertically, card grows to fit.
         /// </summary>
-        private static void AddStatCard(Transform row, string label, string value, string bonus, StatIconType iconType, bool golden, bool emphasizeSpeed = false)
+        private static void AddStatCard(Transform row, string label, string value, string bonus, StatIconType iconType, bool golden, bool emphasizeSpeed = false, float widthOverride = 0f)
         {
-            var width = emphasizeSpeed ? 118f : 112f;
+            var width = widthOverride > 0f ? widthOverride : emphasizeSpeed ? 118f : 112f;
             var card = CreateStatCardBase(row, width, label, value, bonus, iconType, golden);
 
             if (emphasizeSpeed)
@@ -855,6 +883,12 @@ namespace ProphecyCentury.UI
                 case StatIconType.Range:
                     BuildRangeIcon(iconRoot.transform, fgColor);
                     break;
+                case StatIconType.Hp:
+                    BuildShieldIcon(iconRoot.transform, fgColor);
+                    break;
+                case StatIconType.Initiative:
+                    BuildDiamondIcon(iconRoot.transform, fgColor, backplateColor);
+                    break;
             }
         }
 
@@ -939,7 +973,7 @@ namespace ProphecyCentury.UI
             gf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             gf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             label.rectTransform.anchoredPosition = new Vector2(5f, 0f);
-            SetText(label, "✻");
+            SetText(label, "\u273b");
         }
 
         private static void BuildRangeIcon(Transform parent, Color32 color)
@@ -1017,20 +1051,109 @@ namespace ProphecyCentury.UI
 
             if (visible && body != null)
             {
-                SetText(body, HighlightKeywords(Escape(text)));
+                SetText(body, FormatSkillBody(text));
             }
         }
 
+        private static string FormatSkillBody(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            var lines = text
+                .Split(new[] { '\n' }, System.StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => line.Trim())
+                .Where(line => !IsEmptySkillLine(line))
+                .Select(FormatSkillLine)
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .ToArray();
+
+            return lines.Length == 0 ? string.Empty : string.Join("\n", lines);
+        }
+
+        private static bool IsEmptySkillLine(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return true;
+            }
+
+            var trimmed = line.Trim();
+            return trimmed == "-"
+                || trimmed == "\u2014"
+                || (trimmed.Length <= 2 && !trimmed.Any(char.IsLetterOrDigit));
+        }
+
+        private static string FormatSkillLine(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return string.Empty;
+            }
+
+            var escaped = Escape(line);
+            var splitIndex = FindSkillTriggerSplitIndex(line);
+            if (splitIndex <= 0)
+            {
+                return $"- {HighlightKeywords(escaped)}";
+            }
+
+            var trigger = Escape(TrimSkillPunctuation(line.Substring(0, splitIndex)));
+            var effect = Escape(TrimSkillPunctuation(line.Substring(splitIndex)));
+            return $"- <color=#6CE0FF>{trigger}</color>: {HighlightKeywords(effect)}";
+        }
+
+        private static string TrimSkillPunctuation(string value)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? string.Empty
+                : value.Trim().Trim('\uFF0C', ',', '\uFF1A', ':');
+        }
+
+        private static int FindSkillTriggerSplitIndex(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return -1;
+            }
+
+            var comma = line.IndexOf('\uFF0C');
+            if (comma <= 0)
+            {
+                comma = line.IndexOf(',');
+            }
+
+            if (comma <= 0)
+            {
+                return -1;
+            }
+
+            var prefix = line.Substring(0, comma + 1);
+            return IsSkillTriggerPrefix(prefix) ? comma + 1 : -1;
+        }
+
+        private static bool IsSkillTriggerPrefix(string prefix)
+        {
+            return prefix.Contains("\u65f6")
+                || prefix.Contains("\u540e")
+                || prefix.Contains("\u6bcf\u6b21")
+                || prefix.Contains("\u6bcf\u5f53")
+                || prefix.Contains("\u6bcf\u83b7\u5f97")
+                || prefix.Contains("\u9020\u6210\u8ffd\u51fb");
+        }
+
         private static readonly string[] _gameplayKeywords = {
-            "数量", "攻击", "防御", "伤害", "速度", "士气", "幸运", "射程",
-            "密林宝钻", "入场", "离场", "金币", "手牌", "商店",
-            "甘德", "甘格尔", "甘地", "莱特", "圣临者", "征服者",
-            "进阶", "升级", "刷新", "锁定", "吞噬", "祝福",
-            "眩晕", "阵亡", "格挡", "免疫", "暴击",
-            "回合", "开始", "结束", "出售", "战场",
-            "士气高涨", "幸运", "追击", "召唤", "光环",
-            "临时", "永久", "全体", "相邻", "同排", "周围",
-            "种族", "信仰", "类型", "星级", "卡牌"
+            "\u6570\u91cf", "\u653b\u51fb", "\u9632\u5fa1", "\u4f24\u5bb3", "\u901f\u5ea6", "\u58eb\u6c14", "\u5e78\u8fd0", "\u5c04\u7a0b",
+            "\u5355\u4f53\u8840\u91cf", "\u5bc6\u6797\u5b9d\u94bb", "\u5165\u573a", "\u79bb\u573a", "\u91d1\u5e01", "\u624b\u724c", "\u5546\u5e97",
+            "\u7518\u5fb7", "\u7518\u683c\u5c14", "\u7518\u5730", "\u83b1\u7279", "\u5723\u4e34\u8005", "\u5f81\u670d\u8005",
+            "\u8fdb\u9636", "\u5347\u7ea7", "\u5237\u65b0", "\u9501\u5b9a", "\u541e\u566c", "\u795d\u798f",
+            "\u7729\u6655", "\u9635\u4ea1", "\u683c\u6321", "\u514d\u75ab", "\u66b4\u51fb",
+            "\u56de\u5408", "\u5f00\u59cb", "\u7ed3\u675f", "\u51fa\u552e", "\u6218\u573a",
+            "\u58eb\u6c14\u9ad8\u6da8", "\u8ffd\u51fb", "\u53ec\u5524", "\u5149\u73af",
+            "\u4e34\u65f6", "\u6c38\u4e45", "\u5168\u4f53", "\u76f8\u90bb", "\u540c\u6392", "\u5468\u56f4",
+            "\u6700\u8fd1\u654c\u4eba", "\u79cd\u65cf", "\u4fe1\u4ef0", "\u804c\u4e1a", "\u661f\u7ea7", "\u5361\u724c"
         };
 
         private static string HighlightKeywords(string text)
@@ -1062,57 +1185,59 @@ namespace ProphecyCentury.UI
         {
             switch (keyword)
             {
-                case "数量":
-                case "密林宝钻":
+                case "\u6570\u91cf":
+                case "\u5355\u4f53\u8840\u91cf":
+                case "\u5bc6\u6797\u5b9d\u94bb":
                     return "74EE9A"; // bright green
-                case "攻击":
-                case "伤害":
-                case "暴击":
+                case "\u653b\u51fb":
+                case "\u4f24\u5bb3":
+                case "\u66b4\u51fb":
                     return "FF6E6E"; // damage red
-                case "防御":
-                case "格挡":
-                case "免疫":
+                case "\u9632\u5fa1":
+                case "\u683c\u6321":
+                case "\u514d\u75ab":
                     return "60C8FF"; // shield blue
-                case "速度":
+                case "\u901f\u5ea6":
                     return "6CE0FF"; // speed cyan
-                case "士气":
-                case "士气高涨":
-                case "幸运":
-                case "追击":
+                case "\u58eb\u6c14":
+                case "\u58eb\u6c14\u9ad8\u6da8":
+                case "\u5e78\u8fd0":
+                case "\u8ffd\u51fb":
                     return "FFD960"; // morale gold
-                case "入场":
-                case "离场":
-                case "召唤":
-                case "阵亡":
+                case "\u5165\u573a":
+                case "\u79bb\u573a":
+                case "\u53ec\u5524":
+                case "\u9635\u4ea1":
                     return "FFA64D"; // event orange
-                case "金币":
+                case "\u91d1\u5e01":
                     return "FFDC6B"; // gold coin
-                case "手牌":
-                case "商店":
+                case "\u624b\u724c":
+                case "\u5546\u5e97":
                     return "C8A2FF"; // shop purple
-                case "甘德":
-                case "甘格尔":
-                case "甘地":
-                case "莱特":
-                case "圣临者":
-                case "征服者":
+                case "\u7518\u5fb7":
+                case "\u7518\u683c\u5c14":
+                case "\u7518\u5730":
+                case "\u83b1\u7279":
+                case "\u5723\u4e34\u8005":
+                case "\u5f81\u670d\u8005":
                     return "FFB8E0"; // race pink
-                case "进阶":
-                case "升级":
-                case "吞噬":
-                case "祝福":
+                case "\u8fdb\u9636":
+                case "\u5347\u7ea7":
+                case "\u541e\u566c":
+                case "\u795d\u798f":
                     return "FFD95B"; // upgrade gold
-                case "眩晕":
-                case "锁定":
+                case "\u7729\u6655":
+                case "\u9501\u5b9a":
                     return "96D8FF"; // control blue
-                case "光环":
-                case "全体":
-                case "相邻":
-                case "同排":
-                case "周围":
+                case "\u5149\u73af":
+                case "\u5168\u4f53":
+                case "\u76f8\u90bb":
+                case "\u540c\u6392":
+                case "\u5468\u56f4":
+                case "\u6700\u8fd1\u654c\u4eba":
                     return "A0E8D0"; // aura teal
-                case "临时":
-                case "永久":
+                case "\u4e34\u65f6":
+                case "\u6c38\u4e45":
                     return "E8E0A0"; // duration cream
                 default:
                     return "FFB870"; // fallback warm
@@ -1159,7 +1284,7 @@ namespace ProphecyCentury.UI
 
         private static string BuildStars(int star)
         {
-            return new string('★', Mathf.Clamp(star, 0, 8));
+            return new string('\u2605', Mathf.Clamp(star, 0, 8));
         }
 
         private static string FormatRange(float range)
@@ -1215,7 +1340,7 @@ namespace ProphecyCentury.UI
             var obj = new GameObject(name, typeof(Text), typeof(ContentSizeFitter));
             obj.transform.SetParent(parent, false);
             var text = obj.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = fontSize;
             text.alignment = alignment;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -1251,7 +1376,7 @@ namespace ProphecyCentury.UI
         {
             return string.IsNullOrEmpty(value)
                 ? string.Empty
-                : value.Replace("<", "＜").Replace(">", "＞");
+                : value.Replace("<", "\uff1c").Replace(">", "\uff1e");
         }
     }
 }

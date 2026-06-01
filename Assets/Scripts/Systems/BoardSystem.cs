@@ -140,6 +140,7 @@ namespace ProphecyCentury.Systems
                 forestGemsAttached = card.forestGemsAttached,
                 forestGemsReceived = card.forestGemsReceived,
                 manageEntryEffectTriggerCount = card.manageEntryEffectTriggerCount,
+                manageRoundEntryEffectTriggerCount = card.manageRoundEntryEffectTriggerCount,
                 manageGiftActionBucket = card.manageGiftActionBucket,
                 manageAttackGainBucket = card.manageAttackGainBucket,
                 manageReceiveGiftPowerBucket = card.manageReceiveGiftPowerBucket,
