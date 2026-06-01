@@ -59,6 +59,7 @@ namespace ProphecyCentury.Model
         public int forestGemsAttached;
         public int forestGemsReceived;
         public int manageEntryEffectTriggerCount;
+        public int manageRoundEntryEffectTriggerCount;
         public int manageGiftActionBucket;
         public int manageAttackGainBucket;
         public int manageReceiveGiftPowerBucket;

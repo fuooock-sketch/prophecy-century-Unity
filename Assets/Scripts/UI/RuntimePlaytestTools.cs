@@ -471,7 +471,7 @@ namespace ProphecyCentury.UI
             textRect.offsetMax = Vector2.zero;
 
             var text = textObject.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = 15;
             text.alignment = TextAnchor.MiddleCenter;
             text.color = Color.white;

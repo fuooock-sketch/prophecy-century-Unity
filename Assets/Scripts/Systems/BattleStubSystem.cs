@@ -26,6 +26,8 @@ namespace ProphecyCentury.Systems
             var battleTime = MaxBattleSeconds;
             var players = BuildPlayerUnits(runState);
             var enemies = BuildEnemyUnits(runState, random);
+            var initialPlayerUnits = players.Select(CreateSnapshot).ToList();
+            var initialEnemyUnits = enemies.Select(CreateSnapshot).ToList();
             var events = new List<BattleEvent>();
             AddEvent(events, 0f, "start", null, null, 0, "Battle start");
             ResolveBattleStart(players, enemies, random, events, 0f);
@@ -37,7 +39,7 @@ namespace ProphecyCentury.Systems
 
             if (players.Count == 0)
             {
-                return Finish(runState, false, playerScore, enemyScore, 15, 0, players, enemies, events);
+                return Finish(runState, false, playerScore, enemyScore, 15, 0, players, enemies, events, initialPlayerUnits, initialEnemyUnits);
             }
 
             var attacks = 0;
@@ -98,7 +100,7 @@ namespace ProphecyCentury.Systems
             }
 
             var damage = victory ? 0 : CalculateHpLoss(runState, enemies);
-            return Finish(runState, victory, playerScore, enemyScore, damage, attacks, players, enemies, events);
+            return Finish(runState, victory, playerScore, enemyScore, damage, attacks, players, enemies, events, initialPlayerUnits, initialEnemyUnits);
         }
 
         public BattlePreviewResult CreatePreview(RunState runState)
@@ -106,6 +108,8 @@ namespace ProphecyCentury.Systems
             var random = new Random(runState.round * 7919 + runState.boardUnits.Count * 131);
             var players = BuildPlayerUnits(runState);
             var enemies = BuildEnemyUnits(runState, random);
+            var initialPlayerUnits = players.Select(CreateSnapshot).ToList();
+            var initialEnemyUnits = enemies.Select(CreateSnapshot).ToList();
             ResolveBattleStart(players, enemies, random);
             ResolveBattleStart(enemies, players, random);
             ApplyContinuousAuras(players);
@@ -115,6 +119,8 @@ namespace ProphecyCentury.Systems
             {
                 PlayerScore = EstimateScore(players),
                 EnemyScore = EstimateScore(enemies),
+                InitialPlayerUnits = initialPlayerUnits,
+                InitialEnemyUnits = initialEnemyUnits,
                 PlayerUnits = players.Select(CreateSnapshot).ToList(),
                 EnemyUnits = enemies.Select(CreateSnapshot).ToList()
             };
@@ -568,7 +574,18 @@ namespace ProphecyCentury.Systems
             return actualDamage;
         }
 
-        private static BattleStubResult Finish(RunState runState, bool victory, int playerScore, int enemyScore, int hpLoss, int attacks, IReadOnlyList<BattleRuntimeUnit> players, IReadOnlyList<BattleRuntimeUnit> enemies, List<BattleEvent> events)
+        private static BattleStubResult Finish(
+            RunState runState,
+            bool victory,
+            int playerScore,
+            int enemyScore,
+            int hpLoss,
+            int attacks,
+            IReadOnlyList<BattleRuntimeUnit> players,
+            IReadOnlyList<BattleRuntimeUnit> enemies,
+            List<BattleEvent> events,
+            List<BattleUnitSnapshot> initialPlayerUnits = null,
+            List<BattleUnitSnapshot> initialEnemyUnits = null)
         {
             if (hpLoss > 0)
             {
@@ -595,19 +612,21 @@ namespace ProphecyCentury.Systems
                 EnemyDamage = enemyDamage,
                 Summary = summary,
                 Events = events ?? new List<BattleEvent>(),
+                InitialPlayerUnits = initialPlayerUnits ?? players.Select(CreateSnapshot).ToList(),
+                InitialEnemyUnits = initialEnemyUnits ?? enemies.Select(CreateSnapshot).ToList(),
                 PlayerUnits = players.Select(CreateSnapshot).ToList(),
                 EnemyUnits = enemies.Select(CreateSnapshot).ToList()
             };
         }
 
-        private static void AddEvent(List<BattleEvent> events, float time, string kind, BattleRuntimeUnit source, BattleRuntimeUnit target, int amount, string message, string destinationSlotId = null, string routeSlotIds = null)
+        private static BattleEvent AddEvent(List<BattleEvent> events, float time, string kind, BattleRuntimeUnit source, BattleRuntimeUnit target, int amount, string message, string destinationSlotId = null, string routeSlotIds = null)
         {
             if (events == null || events.Count >= MaxBattleEvents)
             {
-                return;
+                return null;
             }
 
-            events.Add(new BattleEvent
+            var battleEvent = new BattleEvent
             {
                 Time = Math.Max(0f, time),
                 Kind = kind,
@@ -629,7 +648,9 @@ namespace ProphecyCentury.Systems
                 RouteSlotIds = routeSlotIds,
                 Amount = amount,
                 Message = message
-            });
+            };
+            events.Add(battleEvent);
+            return battleEvent;
         }
 
         private static BattleUnitSnapshot CreateSnapshot(BattleRuntimeUnit unit)
@@ -1077,8 +1098,12 @@ namespace ProphecyCentury.Systems
                                     damage = (int)Math.Ceiling(damage * (ProphecyGameSession.Instance.Data.Config?.critDamageMultiple ?? 1.5f));
                                 }
 
+                                var pounceEvent = AddEvent(events, elapsed, "skill", unit, pounceTarget, 0, $"{unit.Name} pounces {pounceTarget.Name}");
                                 MovePouncerNextToTarget(unit, pounceTarget);
-                                AddEvent(events, elapsed, "skill", unit, pounceTarget, 0, $"{unit.Name} pounces {pounceTarget.Name}");
+                                if (pounceEvent != null)
+                                {
+                                    pounceEvent.DestinationSlotId = unit.SlotId;
+                                }
                                 for (var hit = 0; hit < Math.Max(1, skill.times); hit += 1)
                                 {
                                     if (!pounceTarget.IsAlive)
@@ -2408,6 +2433,8 @@ namespace ProphecyCentury.Systems
         public int EnemyDamage;
         public string Summary;
         public List<BattleEvent> Events = new List<BattleEvent>();
+        public List<BattleUnitSnapshot> InitialPlayerUnits = new List<BattleUnitSnapshot>();
+        public List<BattleUnitSnapshot> InitialEnemyUnits = new List<BattleUnitSnapshot>();
         public List<BattleUnitSnapshot> PlayerUnits = new List<BattleUnitSnapshot>();
         public List<BattleUnitSnapshot> EnemyUnits = new List<BattleUnitSnapshot>();
     }
@@ -2416,6 +2443,8 @@ namespace ProphecyCentury.Systems
     {
         public int PlayerScore;
         public int EnemyScore;
+        public List<BattleUnitSnapshot> InitialPlayerUnits = new List<BattleUnitSnapshot>();
+        public List<BattleUnitSnapshot> InitialEnemyUnits = new List<BattleUnitSnapshot>();
         public List<BattleUnitSnapshot> PlayerUnits = new List<BattleUnitSnapshot>();
         public List<BattleUnitSnapshot> EnemyUnits = new List<BattleUnitSnapshot>();
     }

@@ -786,7 +786,7 @@ namespace ProphecyCentury.UI
             obj.transform.SetParent(parent, false);
             SetTopLeft(obj.GetComponent<RectTransform>(), left, top, width, height);
             var text = obj.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = fontSize;
             text.color = Color.white;
             text.alignment = alignment;

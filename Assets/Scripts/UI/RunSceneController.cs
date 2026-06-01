@@ -163,6 +163,7 @@ namespace ProphecyCentury.UI
             public string UnitId;
             public string SlotId;
             public int Star;
+            public bool IsGolden;
             public int Speed;
             public float Range;
             public int Size;
@@ -177,6 +178,8 @@ namespace ProphecyCentury.UI
             public int Attack;
             public int Defense;
             public int Power;
+            public int Luck;
+            public int Morale;
             public float AttackInterval;
             public float AttackTimer;
             public float AttackAnim;
@@ -966,7 +969,7 @@ namespace ProphecyCentury.UI
             _dragArrowHead.pivot = new Vector2(0.5f, 0.5f);
             _dragArrowHead.sizeDelta = new Vector2(42f, 42f);
             var headText = headObject.GetComponent<Text>();
-            headText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            headText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             headText.text = ">";
             headText.fontSize = 38;
             headText.alignment = TextAnchor.MiddleCenter;
@@ -1463,7 +1466,7 @@ namespace ProphecyCentury.UI
             rect.offsetMax = Vector2.zero;
 
             var text = textObject.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = fontSize;
             text.color = Color.white;
             text.alignment = alignment;
@@ -1492,7 +1495,7 @@ namespace ProphecyCentury.UI
             rect.sizeDelta = new Vector2(520f, 72f);
 
             var text = textObject.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = 36;
             text.fontStyle = FontStyle.Bold;
             text.alignment = TextAnchor.MiddleCenter;
@@ -1521,8 +1524,9 @@ namespace ProphecyCentury.UI
             {
                 elapsed += Time.deltaTime;
                 var t = Mathf.Clamp01(elapsed / duration);
-                rect.anchoredPosition = start + new Vector2(0f, Mathf.Lerp(0f, 74f, t));
-                color.a = Mathf.Lerp(1f, 0f, t);
+                var easeOut = 1f - Mathf.Pow(1f - t, 3f);
+                rect.anchoredPosition = start + new Vector2(0f, Mathf.Lerp(0f, 74f, easeOut));
+                color.a = t < 0.25f ? 1f : Mathf.Lerp(1f, 0f, (t - 0.25f) / 0.75f);
                 text.color = color;
                 yield return null;
             }
@@ -1726,6 +1730,16 @@ namespace ProphecyCentury.UI
             return Mathf.Max(1, (card.baseCount > 0 ? card.baseCount : startCount) + card.roundTempCount);
         }
 
+        private static int ResolveDefinitionStartCount(UnitDefinition definition)
+        {
+            if (definition == null)
+            {
+                return 1;
+            }
+
+            return Mathf.Max(1, definition.defaultCount > 0 ? definition.defaultCount : definition.startCount > 0 ? definition.startCount : definition.baseCount > 0 ? definition.baseCount : 1);
+        }
+
         private static void AddNumberChangePart(List<string> parts, string label, int delta, ref int positiveTotal)
         {
             if (delta == 0)
@@ -1756,7 +1770,7 @@ namespace ProphecyCentury.UI
             rect.sizeDelta = new Vector2(220f, 52f);
 
             var text = textObject.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = 32;
             text.fontStyle = FontStyle.Bold;
             text.alignment = TextAnchor.MiddleCenter;
@@ -2896,6 +2910,10 @@ namespace ProphecyCentury.UI
                 .Where(item => item.Kind == "control")
                 .OrderBy(item => item.Time)
                 .ToList();
+            var pounceEvents = (result?.Events ?? new List<BattleEvent>())
+                .Where(IsPounceSkillEvent)
+                .OrderBy(item => item.Time)
+                .ToList();
             var pendingMoraleExtraEvents = (result?.Events ?? new List<BattleEvent>())
                 .Where(item => item.Kind == "morale_extra")
                 .OrderBy(item => item.Time)
@@ -2910,6 +2928,7 @@ namespace ProphecyCentury.UI
                 .ToList();
             var summonIndex = 0;
             var controlIndex = 0;
+            var pounceIndex = 0;
             var luckyCritIndex = 0;
             var criticalIndex = 0;
             var projectiles = new List<BattleProjectileView>();
@@ -2931,6 +2950,24 @@ namespace ProphecyCentury.UI
                     }
 
                     summonIndex += 1;
+                }
+
+                while (pounceIndex < pounceEvents.Count && pounceEvents[pounceIndex].Time <= elapsed)
+                {
+                    var pounceEvent = pounceEvents[pounceIndex];
+                    var source = FindBattleStageView(views, pounceEvent.SourcePlayerSide, pounceEvent.SourceSlotId, pounceEvent.SourceName);
+                    var target = FindBattleStageView(views, pounceEvent.TargetPlayerSide, pounceEvent.TargetSlotId, pounceEvent.TargetName);
+                    yield return PlayBattlePounceEffect(views, source, target, pounceEvent, floatingTexts, bursts);
+                    if (!string.IsNullOrWhiteSpace(pounceEvent.Message))
+                    {
+                        rollingLines.Insert(0, pounceEvent.Message);
+                        while (rollingLines.Count > 7)
+                        {
+                            rollingLines.RemoveAt(rollingLines.Count - 1);
+                        }
+                    }
+
+                    pounceIndex += 1;
                 }
 
                 while (controlIndex < controlEvents.Count && controlEvents[controlIndex].Time <= elapsed)
@@ -3240,13 +3277,18 @@ namespace ProphecyCentury.UI
 
             if (source?.Rect != null && target?.Rect != null)
             {
-                RuntimeSfxPlayer.PlayAttack(source.Range);
-                if (source.Range > 1.05f || battleEvent.Kind == "skill")
+                if (IsPounceSkillEvent(battleEvent))
                 {
+                    yield return PlayBattlePounceEffect(views, source, target, battleEvent, floatingTexts, bursts);
+                }
+                else if (source.Range > 1.05f || battleEvent.Kind == "skill")
+                {
+                    RuntimeSfxPlayer.PlayAttack(source.Range);
                     yield return PlayProjectileAttackEffect(source, target, floatingTexts, bursts, battleEvent.Kind == "skill");
                 }
                 else
                 {
+                    RuntimeSfxPlayer.PlayAttack(source.Range);
                     yield return PlayMeleeAttackEffect(source, target, floatingTexts, bursts);
                 }
 
@@ -3256,6 +3298,100 @@ namespace ProphecyCentury.UI
             var origin = target?.Rect != null ? target.Rect.anchoredPosition : source.Rect.anchoredPosition;
             SpawnEffectBurst(origin, new Color32(255, 205, 92, 150), bursts);
             yield return WaitAndUpdateBattleEffects(0.22f, floatingTexts, bursts);
+        }
+
+        private static bool IsPounceSkillEvent(BattleEvent battleEvent)
+        {
+            return battleEvent != null
+                && battleEvent.Kind == "skill"
+                && !string.IsNullOrWhiteSpace(battleEvent.Message)
+                && battleEvent.Message.IndexOf("pounces", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private IEnumerator PlayBattlePounceEffect(
+            Dictionary<string, BattleStageUnitView> views,
+            BattleStageUnitView source,
+            BattleStageUnitView target,
+            BattleEvent battleEvent,
+            List<BattleFloatingTextView> floatingTexts,
+            List<BattleEffectBurstView> bursts)
+        {
+            if (source?.Rect == null || target?.Rect == null)
+            {
+                yield break;
+            }
+
+            RuntimeSfxPlayer.PlayMove();
+            RuntimeSfxPlayer.PlayAttack(1f);
+
+            var origin = source.Rect.anchoredPosition;
+            var targetPosition = target.Rect.anchoredPosition;
+            var direction = targetPosition - origin;
+            var distance = Mathf.Max(1f, direction.magnitude);
+            var spacing = Mathf.Max(42f, source.Size + target.Size + 24f);
+            var landing = targetPosition - direction / distance * Mathf.Min(spacing, Mathf.Max(12f, distance - 8f));
+            var hasDestinationSlot = TryGetBattleEventDestination(source, battleEvent, out var destinationCenter);
+            if (hasDestinationSlot)
+            {
+                landing = destinationCenter;
+            }
+            var apex = Vector2.up * Mathf.Clamp(distance * 0.14f, 28f, 84f);
+            var originScale = source.Rect.localScale;
+            source.Rect.SetAsLastSibling();
+
+            var duration = ScaledBattlePlaybackDuration(0.34f);
+            var elapsed = 0f;
+            while (elapsed < duration && source.Rect != null && target.Rect != null)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                targetPosition = target.Rect.anchoredPosition;
+                direction = targetPosition - origin;
+                distance = Mathf.Max(1f, direction.magnitude);
+                landing = hasDestinationSlot
+                    ? destinationCenter
+                    : targetPosition - direction / distance * Mathf.Min(spacing, Mathf.Max(12f, distance - 8f));
+                var curved = Vector2.Lerp(origin, landing, Mathf.SmoothStep(0f, 1f, t)) + apex * Mathf.Sin(t * Mathf.PI);
+                source.Rect.anchoredPosition = curved;
+                source.Rect.localScale = originScale * Mathf.Lerp(1f, 1.12f, Mathf.Sin(t * Mathf.PI));
+                UpdateBattleFloatingTexts(floatingTexts, Time.deltaTime);
+                UpdateBattleEffectBursts(bursts, Time.deltaTime);
+                yield return null;
+            }
+
+            if (source.Rect != null)
+            {
+                source.Rect.anchoredPosition = landing;
+                source.Rect.localScale = originScale;
+                source.HasAttackAnchor = false;
+                var destinationSlotId = !string.IsNullOrWhiteSpace(battleEvent?.DestinationSlotId)
+                    ? battleEvent.DestinationSlotId
+                    : battleEvent?.SourceSlotId;
+                if (!string.IsNullOrWhiteSpace(destinationSlotId))
+                {
+                    source.SlotId = destinationSlotId;
+                    AddBattleStageView(views, source.PlayerSide, destinationSlotId, source.Name, source);
+                }
+            }
+
+            SpawnMeleeSlash(source, target, bursts);
+            SpawnEffectBurst(target.Rect.anchoredPosition, new Color32(255, 196, 78, 150), bursts);
+            yield return WaitAndUpdateBattleEffects(0.08f, floatingTexts, bursts);
+        }
+
+        private static bool TryGetBattleEventDestination(BattleStageUnitView source, BattleEvent battleEvent, out Vector2 destination)
+        {
+            destination = Vector2.zero;
+            if (source?.Rect == null || string.IsNullOrWhiteSpace(battleEvent?.DestinationSlotId))
+            {
+                return false;
+            }
+
+            var parentRect = source.Rect.parent as RectTransform;
+            var rootSize = parentRect != null && parentRect.rect.size.sqrMagnitude > 1f
+                ? parentRect.rect.size
+                : new Vector2(1420f, 720f);
+            return TryGetBattleHexSlotCenter(rootSize, battleEvent.DestinationSlotId, source.PlayerSide, out destination);
         }
 
         private IEnumerator PlayProjectileAttackEffect(BattleStageUnitView source, BattleStageUnitView target, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts, bool skill)
@@ -3398,11 +3534,16 @@ namespace ProphecyCentury.UI
             UpdateBattleStageLabel(target, battleEvent.TargetName, target.Hp, target.MaxHp);
             if (target.Rect != null)
             {
+                var damageAmount = Mathf.Max(1, battleEvent.Amount);
+                if (critical && damageAmount >= 15)
+                {
+                    StartCoroutine(HitStopRoutine(0.06f));
+                }
                 StartCoroutine(ShakeHitTarget(target, critical));
                 SpawnEffectBurst(target.Rect.anchoredPosition, critical ? new Color32(255, 196, 78, 165) : new Color32(255, 92, 92, 130), bursts);
                 AddFloatingText(
-                    $"-{Mathf.Max(1, battleEvent.Amount)}❤️",
-                    target.Rect.anchoredPosition + new Vector2(0f, 54f),
+                    $"-{damageAmount}❤️",
+                    target.Rect.anchoredPosition + new Vector2(Random.Range(-8f, 8f), 54f),
                     critical ? new Color32(255, 226, 112, 255) : Color.white,
                     critical ? 28 : 20,
                     floatingTexts,
@@ -3411,7 +3552,7 @@ namespace ProphecyCentury.UI
                 {
                     AddDelayedFloatingText(
                         $"-{countLoss}兵",
-                        target.Rect.anchoredPosition + new Vector2(0f, 54f),
+                        target.Rect.anchoredPosition + new Vector2(Random.Range(-8f, 8f), 54f),
                         new Color32(255, 150, 110, 255),
                         22,
                         floatingTexts,
@@ -3597,14 +3738,21 @@ namespace ProphecyCentury.UI
                 return views;
             }
 
-            foreach (var unit in result.PlayerUnits.Where(unit => !unit.Summoned).OrderBy(unit => unit.SlotId))
+            var playerUnits = result.InitialPlayerUnits != null && result.InitialPlayerUnits.Count > 0
+                ? result.InitialPlayerUnits
+                : result.PlayerUnits;
+            var enemyUnits = result.InitialEnemyUnits != null && result.InitialEnemyUnits.Count > 0
+                ? result.InitialEnemyUnits
+                : result.EnemyUnits;
+
+            foreach (var unit in playerUnits.Where(unit => !unit.Summoned).OrderBy(unit => unit.SlotId))
             {
                 var view = CreateBattleStagePositionedUnit(fieldRoot, unit, true);
                 ApplyBattleSetupPositionOverride(view);
                 AddBattleStageView(views, true, unit.SlotId, unit.Name, view);
             }
 
-            foreach (var unit in result.EnemyUnits.Where(unit => !unit.Summoned).OrderBy(unit => unit.SlotId))
+            foreach (var unit in enemyUnits.Where(unit => !unit.Summoned).OrderBy(unit => unit.SlotId))
             {
                 var view = CreateBattleStagePositionedUnit(fieldRoot, unit, false);
                 AddBattleStageView(views, false, unit.SlotId, unit.Name, view);
@@ -3619,6 +3767,8 @@ namespace ProphecyCentury.UI
             {
                 PlayerScore = preview?.PlayerScore ?? 0,
                 EnemyScore = preview?.EnemyScore ?? 0,
+                InitialPlayerUnits = preview?.InitialPlayerUnits?.ToList() ?? preview?.PlayerUnits?.ToList() ?? new List<BattleUnitSnapshot>(),
+                InitialEnemyUnits = preview?.InitialEnemyUnits?.ToList() ?? preview?.EnemyUnits?.ToList() ?? new List<BattleUnitSnapshot>(),
                 PlayerUnits = preview?.PlayerUnits?.ToList() ?? new List<BattleUnitSnapshot>(),
                 EnemyUnits = preview?.EnemyUnits?.ToList() ?? new List<BattleUnitSnapshot>(),
                 Summary = "Battle setup"
@@ -3802,7 +3952,7 @@ namespace ProphecyCentury.UI
             textRect.sizeDelta = new Vector2(760f, 220f);
 
             var text = textObject.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = 150;
             text.fontStyle = FontStyle.Bold;
             text.alignment = TextAnchor.MiddleCenter;
@@ -4540,6 +4690,10 @@ namespace ProphecyCentury.UI
             UpdateBattleStageLabel(target, target.Name, target.Hp, target.MaxHp);
             if (target.Rect != null)
             {
+                if (critical && damage >= 15)
+                {
+                    StartCoroutine(HitStopRoutine(0.06f));
+                }
                 StartCoroutine(ShakeHitTarget(target, critical));
             }
 
@@ -4551,7 +4705,7 @@ namespace ProphecyCentury.UI
 
             AddFloatingText(
                 $"-{damage}❤️",
-                target.Rect.anchoredPosition + new Vector2(0f, 54f),
+                target.Rect.anchoredPosition + new Vector2(Random.Range(-8f, 8f), 54f),
                 critical ? new Color32(255, 226, 112, 255) : Color.white,
                 critical ? 28 : 20,
                 floatingTexts,
@@ -4560,7 +4714,7 @@ namespace ProphecyCentury.UI
             {
                 AddDelayedFloatingText(
                     $"-{countLoss}兵",
-                    target.Rect.anchoredPosition + new Vector2(0f, 54f),
+                    target.Rect.anchoredPosition + new Vector2(Random.Range(-8f, 8f), 54f),
                     new Color32(255, 150, 110, 255),
                     22,
                     floatingTexts,
@@ -4573,7 +4727,7 @@ namespace ProphecyCentury.UI
                 var deathPosition = target.Rect != null ? target.Rect.anchoredPosition : Vector2.zero;
                 MarkBattleStageDead(target);
                 RuntimeSfxPlayer.PlayDeath();
-                AddFloatingText("阵亡", deathPosition + new Vector2(0f, 78f), new Color32(255, 120, 120, 255), 20, floatingTexts);
+                AddFloatingText("阵亡", deathPosition + new Vector2(Random.Range(-10f, 10f), 78f), new Color32(255, 120, 120, 255), 20, floatingTexts);
                 SpawnEffectBurst(deathPosition, new Color32(220, 72, 72, 150), bursts);
             }
         }
@@ -4618,6 +4772,42 @@ namespace ProphecyCentury.UI
             }
 
             target.IsHitShaking = false;
+        }
+
+        private static IEnumerator HitStopRoutine(float duration)
+        {
+            var originalScale = Time.timeScale;
+            Time.timeScale = 0.05f;
+            yield return new WaitForSecondsRealtime(duration);
+            Time.timeScale = originalScale;
+        }
+
+        private IEnumerator ShakeBattleFieldRoutine(float amplitude, float duration)
+        {
+            if (_battleFieldRoot == null)
+            {
+                yield break;
+            }
+
+            var rect = _battleFieldRoot as RectTransform;
+            if (rect == null)
+            {
+                yield break;
+            }
+
+            var origin = rect.anchoredPosition;
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var damp = 1f - Mathf.Clamp01(elapsed / duration);
+                var x = Mathf.Sin(elapsed * 42f) * amplitude * damp;
+                var y = Mathf.Cos(elapsed * 37f) * amplitude * 0.4f * damp;
+                rect.anchoredPosition = origin + new Vector2(x, y);
+                yield return null;
+            }
+
+            rect.anchoredPosition = origin;
         }
 
         private void SpawnProjectile(BattleStageUnitView attacker, BattleStageUnitView target, int damage, List<BattleProjectileView> projectiles)
@@ -4689,6 +4879,9 @@ namespace ProphecyCentury.UI
             }
         }
 
+        private static readonly Queue<GameObject> __floatingTextPool = new Queue<GameObject>(FloatingTextPoolCapacity);
+        private const int FloatingTextPoolCapacity = 24;
+
         private void AddFloatingText(string text, Vector2 position, Color color, int fontSize, List<BattleFloatingTextView> floatingTexts, bool useScaleAnimation = false, [CallerMemberName] string source = null)
         {
             if (_battleFieldRoot == null || string.IsNullOrWhiteSpace(text))
@@ -4697,21 +4890,47 @@ namespace ProphecyCentury.UI
             }
 
             LogFloatingTextSource("BattleFloatText", text, source);
-            var textObject = new GameObject("BattleFloatText", typeof(Text));
-            textObject.transform.SetParent(_battleFieldRoot, false);
+
+            GameObject textObject = null;
+            while (__floatingTextPool.Count > 0)
+            {
+                var pooled = __floatingTextPool.Dequeue();
+                if (pooled != null)
+                {
+                    pooled.transform.SetParent(_battleFieldRoot, false);
+                    pooled.SetActive(true);
+                    textObject = pooled;
+                    break;
+                }
+            }
+
+            if (textObject == null)
+            {
+                textObject = new GameObject("BattleFloatText", typeof(Text), typeof(Outline));
+                var cacheText = textObject.GetComponent<Text>();
+                cacheText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                cacheText.alignment = TextAnchor.MiddleCenter;
+                var cacheOutline = textObject.GetComponent<Outline>();
+                cacheOutline.effectColor = new Color32(0, 0, 0, 230);
+                cacheOutline.effectDistance = new Vector2(2f, -2f);
+                cacheOutline.useGraphicAlpha = true;
+            }
+
             var rect = textObject.GetComponent<RectTransform>();
+            if (rect == null)
+            {
+                rect = textObject.AddComponent<RectTransform>();
+            }
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.sizeDelta = new Vector2(240f, 78f);
             rect.anchoredPosition = position;
             rect.localScale = useScaleAnimation ? Vector3.one * 2f : Vector3.one;
+            rect.SetAsLastSibling();
             var label = textObject.GetComponent<Text>();
-            label.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            label.fontSize = 60;
-            label.alignment = TextAnchor.MiddleCenter;
+            label.fontSize = Mathf.Max(36, fontSize);
             label.color = color;
             label.text = text;
-            AddFloatingTextOutline(textObject);
 
             floatingTexts?.Add(new BattleFloatingTextView
             {
@@ -4737,28 +4956,43 @@ namespace ProphecyCentury.UI
                     continue;
                 }
 
+                item.Rect.SetAsLastSibling();
                 item.Life += deltaTime;
                 var t = Mathf.Clamp01(item.Life / Mathf.Max(0.01f, item.Duration));
                 if (item.UseScaleAnimation)
                 {
                     var scaleT = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((item.Life - scaleHoldDuration) / scaleShrinkDuration));
-                    item.Rect.localScale = Vector3.one * Mathf.Lerp(2f, 1f, scaleT);
+                    var overshoot = scaleT < 0.7f
+                        ? Mathf.Lerp(2f, 1.15f, scaleT / 0.7f)
+                        : Mathf.Lerp(1.15f, 1f, (scaleT - 0.7f) / 0.3f);
+                    item.Rect.localScale = Vector3.one * overshoot;
                 }
                 else
                 {
-                    item.Rect.localScale = Vector3.one;
+                    var popT = Mathf.Clamp01(item.Life / 0.15f);
+                    var popScale = Mathf.Lerp(0.85f, 1f, Mathf.SmoothStep(0f, 1f, popT));
+                    item.Rect.localScale = Vector3.one * popScale;
                 }
-                item.Rect.anchoredPosition = item.Start + new Vector2(0f, t * 42f);
+                var easeOutT = 1f - Mathf.Pow(1f - t, 2.5f);
+                item.Rect.anchoredPosition = item.Start + new Vector2(0f, easeOutT * 42f);
                 if (item.Text != null)
                 {
                     var color = item.Text.color;
-                    color.a = 1f - t;
+                    color.a = t < 0.2f ? 1f : Mathf.Lerp(1f, 0f, (t - 0.2f) / 0.8f);
                     item.Text.color = color;
                 }
 
                 if (t >= 1f)
                 {
-                    Destroy(item.Rect.gameObject);
+                    if (__floatingTextPool != null && __floatingTextPool.Count < FloatingTextPoolCapacity && item.Rect != null && item.Rect.gameObject != null)
+                    {
+                        item.Rect.gameObject.SetActive(false);
+                        __floatingTextPool.Enqueue(item.Rect.gameObject);
+                    }
+                    else if (item.Rect != null && item.Rect.gameObject != null)
+                    {
+                        Destroy(item.Rect.gameObject);
+                    }
                     floatingTexts.RemoveAt(i);
                 }
             }
@@ -5035,11 +5269,10 @@ namespace ProphecyCentury.UI
             view.Hp = Mathf.Clamp(hp, 0, Mathf.Max(1, maxHp));
             view.MaxHp = Mathf.Max(1, maxHp);
             view.CurrentCount = ResolveCurrentCount(view.Hp, view.HpPerUnit);
-            var unitHpMax = Mathf.Max(1, view.HpPerUnit);
-            var currentUnitHp = ResolveCurrentUnitHp(view.Hp, unitHpMax);
             if (view.UnitView != null)
             {
-                view.UnitView.SetHealth(currentUnitHp, unitHpMax, $"{currentUnitHp}/{unitHpMax}");
+                view.UnitView.SetHealth(ResolveCurrentUnitHp(view.Hp, view.HpPerUnit), view.HpPerUnit);
+                view.UnitView.SetCount(view.CurrentCount, view.MaxCount);
             }
 
             if (view.Label == null)
@@ -5047,8 +5280,9 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            var name = string.IsNullOrWhiteSpace(view.Name) ? fallbackName : view.Name;
-            view.Label.text = $"{new string('*', Mathf.Clamp(view.Star, 0, 6))}\n{name}\n数量 {Mathf.Max(0, view.CurrentCount)}";
+            view.Label.text = string.Empty;
+            view.Label.raycastTarget = false;
+            RefreshBattleStageTooltip(view);
         }
 
         private static int ResolveCurrentCount(int totalHp, int hpPerUnit)
@@ -5063,9 +5297,73 @@ namespace ProphecyCentury.UI
                 return 0;
             }
 
-            var max = Mathf.Max(1, hpPerUnit);
-            var remainder = totalHp % max;
-            return remainder == 0 ? max : remainder;
+            var safeHpPerUnit = Mathf.Max(1, hpPerUnit);
+            var remainder = totalHp % safeHpPerUnit;
+            return remainder == 0 ? safeHpPerUnit : remainder;
+        }
+
+        private static void RefreshBattleStageTooltip(BattleStageUnitView view)
+        {
+            if (view?.UnitView == null || view.UnitView.gameObject == null)
+            {
+                return;
+            }
+
+            var definition = ProphecyGameSession.Instance.Data.FindUnit(view.UnitId);
+            if (definition == null)
+            {
+                return;
+            }
+
+            BindBattleStageTooltip(view, CreateBattleTooltipCard(view, definition));
+        }
+
+        private static UnitCardState CreateBattleTooltipCard(BattleStageUnitView view, UnitDefinition definition)
+        {
+            return new UnitCardState
+            {
+                unitId = definition.id,
+                name = definition.name,
+                star = definition.star,
+                isGolden = view.IsGolden,
+                baseCount = Mathf.Max(0, view.CurrentCount),
+                maxCount = Mathf.Max(1, view.MaxCount),
+                shopBuffHp = view.HpPerUnit - Mathf.Max(1, definition.hpPerUnit > 0 ? definition.hpPerUnit : definition.hp),
+                shopBuffAttack = view.Attack - definition.attack,
+                shopBuffDefense = view.Defense - definition.defense,
+                shopBuffPower = view.Power - definition.power,
+                shopBuffSpeed = view.Speed - definition.speed,
+                shopBuffLuck = view.Luck - definition.luck,
+                shopBuffMorale = view.Morale - definition.morale
+            };
+        }
+
+        private static void BindBattleStageTooltip(BattleStageUnitView view, UnitCardState unit)
+        {
+            if (view?.Rect == null || unit == null)
+            {
+                return;
+            }
+
+            var hoverTarget = view.Rect.Find("TooltipHoverTarget") as RectTransform;
+            if (hoverTarget == null)
+            {
+                var hoverObject = new GameObject("TooltipHoverTarget", typeof(Image));
+                hoverObject.transform.SetParent(view.Rect, false);
+                hoverTarget = hoverObject.GetComponent<RectTransform>();
+                hoverTarget.anchorMin = Vector2.zero;
+                hoverTarget.anchorMax = Vector2.one;
+                hoverTarget.offsetMin = Vector2.zero;
+                hoverTarget.offsetMax = Vector2.zero;
+
+                var image = hoverObject.GetComponent<Image>();
+                image.color = new Color(1f, 1f, 1f, 0f);
+                image.raycastTarget = true;
+            }
+
+            hoverTarget.SetAsLastSibling();
+            var tooltip = hoverTarget.GetComponent<RuntimeUnitTooltip>() ?? hoverTarget.gameObject.AddComponent<RuntimeUnitTooltip>();
+            tooltip.Unit = unit;
         }
 
         private static void MarkBattleStageDead(BattleStageUnitView view)
@@ -5643,6 +5941,11 @@ namespace ProphecyCentury.UI
             outline.effectColor = new Color32(0, 0, 0, 230);
             outline.effectDistance = new Vector2(2f, -2f);
             outline.useGraphicAlpha = true;
+
+            var shadow = textObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color32(0, 0, 0, 170);
+            shadow.effectDistance = new Vector2(1f, -1f);
+            shadow.useGraphicAlpha = true;
         }
 
         private IEnumerator AddDelayedFloatingTextRoutine(string text, Vector2 position, Color color, int fontSize, List<BattleFloatingTextView> floatingTexts, float delay)
@@ -5768,7 +6071,7 @@ namespace ProphecyCentury.UI
                     rect.anchoredPosition = start + new Vector2((i - (count - 1) * 0.5f) * 22f, 0f);
 
                     var text = starObject.GetComponent<Text>();
-                    text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                    text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                     text.fontSize = 30;
                     text.fontStyle = FontStyle.Bold;
                     text.alignment = TextAnchor.MiddleCenter;
@@ -5877,7 +6180,9 @@ namespace ProphecyCentury.UI
             {
                 foreach (var unit in Run.boardUnits.OrderBy(unit => unit.boardSlotId))
                 {
-                    CreateBattleStageUnit(battlePlayerRoot, unit.name, unit.star, unit.unitId, unit.name, true);
+                    var definition = ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
+                    var count = ResolveCardCount(definition, unit);
+                    CreateBattleStageUnit(battlePlayerRoot, unit.name, unit.star, unit.unitId, unit.name, true, count, count);
                 }
             }
 
@@ -5885,7 +6190,8 @@ namespace ProphecyCentury.UI
             {
                 foreach (var unit in BuildBattleStageEnemyPreview())
                 {
-                    CreateBattleStageUnit(battleEnemyRoot, unit.name, unit.star, unit.id, unit.name, false);
+                    var count = ResolveDefinitionStartCount(unit);
+                    CreateBattleStageUnit(battleEnemyRoot, unit.name, unit.star, unit.id, unit.name, false, count, count);
                 }
             }
         }
@@ -5912,6 +6218,8 @@ namespace ProphecyCentury.UI
                 EnemyDamage = realtime.EnemyDamage,
                 Summary = $"{realtime.Summary}{comparison}",
                 Events = realtime.Events ?? new List<BattleEvent>(),
+                InitialPlayerUnits = realtime.InitialPlayerUnits ?? preview?.InitialPlayerUnits?.ToList() ?? preview?.PlayerUnits?.ToList() ?? new List<BattleUnitSnapshot>(),
+                InitialEnemyUnits = realtime.InitialEnemyUnits ?? preview?.InitialEnemyUnits?.ToList() ?? preview?.EnemyUnits?.ToList() ?? new List<BattleUnitSnapshot>(),
                 PlayerUnits = realtime.PlayerUnits ?? new List<BattleUnitSnapshot>(),
                 EnemyUnits = realtime.EnemyUnits ?? new List<BattleUnitSnapshot>()
             };
@@ -6021,7 +6329,7 @@ namespace ProphecyCentury.UI
             }
         }
 
-        private static void CreateBattleStageUnit(Transform root, string label, int star, string unitId, string iconName, bool playerSide, int hp = 1, int maxHp = 1)
+        private static void CreateBattleStageUnit(Transform root, string label, int star, string unitId, string iconName, bool playerSide, int count = 1, int maxCount = 1)
         {
             var unitObject = new GameObject(playerSide ? "PlayerBattleUnit" : "EnemyBattleUnit", typeof(Image), typeof(LayoutElement));
             unitObject.transform.SetParent(root, false);
@@ -6041,7 +6349,9 @@ namespace ProphecyCentury.UI
             RuntimeUnitIconCache.ApplyTo(iconObject.GetComponent<Image>(), iconName);
 
             var text = CreateChildText(unitObject.transform, $"{new string('*', Mathf.Clamp(star, 0, 6))}\n{label}", 32, TextAnchor.LowerCenter, new Vector2(8f, 8f), new Vector2(-8f, -136f));
+            text.text = string.Empty;
             text.color = Color.white;
+            text.raycastTarget = false;
 
             var healthBackObject = new GameObject("HealthBar", typeof(Image));
             healthBackObject.transform.SetParent(unitObject.transform, false);
@@ -6049,21 +6359,56 @@ namespace ProphecyCentury.UI
             healthBackRect.anchorMin = new Vector2(0.5f, 0f);
             healthBackRect.anchorMax = new Vector2(0.5f, 0f);
             healthBackRect.pivot = new Vector2(0.5f, 0.5f);
-            healthBackRect.anchoredPosition = new Vector2(0f, 58f);
-            healthBackRect.sizeDelta = new Vector2(136f, 12f);
-            healthBackObject.GetComponent<Image>().color = new Color32(50, 18, 24, 230);
+            healthBackRect.anchoredPosition = new Vector2(0f, 64f);
+            healthBackRect.sizeDelta = new Vector2(108f, 10f);
+            healthBackObject.GetComponent<Image>().color = new Color32(24, 28, 28, 230);
 
             var healthFillObject = new GameObject("Fill", typeof(Image));
             healthFillObject.transform.SetParent(healthBackObject.transform, false);
             var healthFillRect = healthFillObject.GetComponent<RectTransform>();
-            var healthAmount = Mathf.Clamp01(Mathf.Max(0, hp) / (float)Mathf.Max(1, maxHp));
             healthFillRect.anchorMin = Vector2.zero;
-            healthFillRect.anchorMax = new Vector2(healthAmount, 1f);
+            healthFillRect.anchorMax = Vector2.one;
             healthFillRect.offsetMin = Vector2.zero;
             healthFillRect.offsetMax = Vector2.zero;
             var healthFill = healthFillObject.GetComponent<Image>();
-            healthFill.color = new Color32(212, 38, 48, 255);
-            healthFill.fillAmount = healthAmount;
+            healthFill.color = new Color32(86, 218, 156, 255);
+            healthFill.fillAmount = 1f;
+
+            var countBadgeObject = new GameObject("CountBadge", typeof(Image));
+            countBadgeObject.transform.SetParent(unitObject.transform, false);
+            var countBadgeRect = countBadgeObject.GetComponent<RectTransform>();
+            countBadgeRect.anchorMin = new Vector2(0.5f, 0f);
+            countBadgeRect.anchorMax = new Vector2(0.5f, 0f);
+            countBadgeRect.pivot = new Vector2(0.5f, 0.5f);
+            countBadgeRect.anchoredPosition = new Vector2(0f, 44f);
+            countBadgeRect.sizeDelta = new Vector2(58f, 28f);
+            countBadgeObject.GetComponent<Image>().color = new Color32(24, 16, 12, 230);
+
+            var countBadgeFillObject = new GameObject("Fill", typeof(Image));
+            countBadgeFillObject.transform.SetParent(countBadgeObject.transform, false);
+            var countBadgeFillRect = countBadgeFillObject.GetComponent<RectTransform>();
+            countBadgeFillRect.anchorMin = Vector2.zero;
+            countBadgeFillRect.anchorMax = Vector2.one;
+            countBadgeFillRect.offsetMin = new Vector2(4f, 3f);
+            countBadgeFillRect.offsetMax = new Vector2(-4f, -3f);
+            countBadgeFillObject.GetComponent<Image>().color = playerSide ? new Color32(24, 140, 168, 245) : new Color32(168, 86, 34, 245);
+
+            var countText = CreateChildText(countBadgeObject.transform, Mathf.Max(0, count).ToString(), 18, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
+            countText.color = Color.white;
+            countText.fontStyle = FontStyle.Bold;
+
+            var definition = ProphecyGameSession.Instance.Data.FindUnit(unitId);
+            if (definition != null)
+            {
+                var tooltip = unitObject.AddComponent<RuntimeUnitTooltip>();
+                tooltip.Unit = new UnitCardState
+                {
+                    unitId = definition.id,
+                    name = definition.name,
+                    star = definition.star,
+                    baseCount = Mathf.Max(0, count)
+                };
+            }
         }
 
         private BattleStageUnitView CreateBattleStagePositionedUnit(Transform root, string label, int star, string unitId, string iconName, string slotId, bool playerSide)
@@ -6101,6 +6446,7 @@ namespace ProphecyCentury.UI
                 UnitId = unitId,
                 SlotId = slotId,
                 Star = star,
+                IsGolden = false,
                 Speed = Mathf.Max(1, definition?.speed ?? 3),
                 Range = range,
                 Size = Mathf.Max(20, definition?.size ?? 35),
@@ -6114,6 +6460,8 @@ namespace ProphecyCentury.UI
                 Attack = Mathf.Max(1, definition?.attack ?? 10),
                 Defense = Mathf.Max(0, definition?.defense ?? 0),
                 Power = Mathf.Max(1, definition?.power ?? 1),
+                Luck = Mathf.Max(0, definition?.luck ?? 0),
+                Morale = Mathf.Max(0, definition?.morale ?? 0),
                 AttackInterval = Mathf.Max(0.2f, definition?.attackInterval ?? 1f),
                 PlayerSide = playerSide
             };
@@ -6128,6 +6476,7 @@ namespace ProphecyCentury.UI
             }
 
             view.Hp = Mathf.Max(0, unit.CurrentHp > 0 ? unit.CurrentHp : unit.MaxHp);
+            view.IsGolden = unit.IsGolden;
             view.MaxHp = Mathf.Max(1, unit.MaxHp);
             view.CurrentCount = Mathf.Max(0, unit.CurrentCount);
             view.MaxCount = Mathf.Max(1, unit.MaxCount > 0 ? unit.MaxCount : view.CurrentCount);
@@ -6137,6 +6486,8 @@ namespace ProphecyCentury.UI
             view.Attack = Mathf.Max(1, unit.Attack);
             view.Defense = Mathf.Max(0, unit.Defense);
             view.Power = Mathf.Max(1, unit.Power);
+            view.Luck = Mathf.Max(0, unit.Luck);
+            view.Morale = Mathf.Max(0, unit.Morale);
             view.Speed = Mathf.Max(1, unit.Speed);
             view.Range = Mathf.Max(1f, unit.Range);
             view.Size = Mathf.Max(20, unit.Size);
@@ -6216,7 +6567,9 @@ namespace ProphecyCentury.UI
 
             var text = CreateChildText(unitObject.transform, $"{new string('*', Mathf.Clamp(star, 0, 6))}\n{label}", 32, TextAnchor.LowerCenter, new Vector2(8f, 8f), new Vector2(-8f, -144f));
             text.name = "Label";
+            text.text = string.Empty;
             text.color = Color.white;
+            text.raycastTarget = false;
 
             var healthBackObject = new GameObject("HealthBar", typeof(Image));
             healthBackObject.transform.SetParent(unitObject.transform, false);
@@ -6224,9 +6577,9 @@ namespace ProphecyCentury.UI
             healthBackRect.anchorMin = new Vector2(0.5f, 0f);
             healthBackRect.anchorMax = new Vector2(0.5f, 0f);
             healthBackRect.pivot = new Vector2(0.5f, 0.5f);
-            healthBackRect.anchoredPosition = new Vector2(0f, 68f);
-            healthBackRect.sizeDelta = new Vector2(150f, 14f);
-            healthBackObject.GetComponent<Image>().color = new Color32(50, 18, 24, 230);
+            healthBackRect.anchoredPosition = new Vector2(0f, 74f);
+            healthBackRect.sizeDelta = new Vector2(108f, 10f);
+            healthBackObject.GetComponent<Image>().color = new Color32(24, 28, 28, 230);
 
             var healthFillObject = new GameObject("Fill", typeof(Image));
             healthFillObject.transform.SetParent(healthBackObject.transform, false);
@@ -6236,11 +6589,12 @@ namespace ProphecyCentury.UI
             healthFillRect.offsetMin = Vector2.zero;
             healthFillRect.offsetMax = Vector2.zero;
             var healthFill = healthFillObject.GetComponent<Image>();
-            healthFill.color = new Color32(212, 38, 48, 255);
+            healthFill.color = new Color32(86, 218, 156, 255);
             healthFill.fillAmount = 1f;
 
             var scriptedView = unitObject.GetComponent<BattleUnitView>();
-            scriptedView.SetHealth(1, 1);
+            scriptedView.Bind(iconName, label, star, playerSide);
+            scriptedView.SetCount(1, 1);
 
             return new BattleStagePrefabParts
             {
@@ -6424,7 +6778,7 @@ namespace ProphecyCentury.UI
         private static void CreateBattleStageUnit(Transform root, BattleUnitSnapshot unit, bool playerSide)
         {
             var label = $"{unit.Name}\n伤害 {unit.DamageDone}  击杀 {unit.Kills}";
-            CreateBattleStageUnit(root, label, unit.Star, unit.UnitId, unit.Name, playerSide, unit.CurrentHp, unit.MaxHp);
+            CreateBattleStageUnit(root, label, unit.Star, unit.UnitId, unit.Name, playerSide, unit.CurrentCount, unit.MaxCount);
         }
 
         public void StartNewRun()
@@ -6645,7 +6999,7 @@ namespace ProphecyCentury.UI
             contentRect.offsetMax = new Vector2(-18f, -16f);
 
             _battleLogContentLabel = content.GetComponent<Text>();
-            _battleLogContentLabel.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            _battleLogContentLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             _battleLogContentLabel.fontSize = 50;
             _battleLogContentLabel.alignment = TextAnchor.UpperLeft;
             _battleLogContentLabel.color = new Color32(230, 236, 248, 255);
@@ -7622,7 +7976,7 @@ namespace ProphecyCentury.UI
             rect.offsetMax = offsetMax;
 
             var text = textObject.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = fontSize;
             text.color = Color.white;
             text.alignment = alignment;
@@ -7659,7 +8013,7 @@ namespace ProphecyCentury.UI
             labelRect.offsetMax = Vector2.zero;
 
             var text = labelObject.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = bottomAnchored ? 12 : 14;
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;

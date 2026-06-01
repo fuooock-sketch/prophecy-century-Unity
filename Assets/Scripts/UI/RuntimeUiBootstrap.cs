@@ -243,17 +243,32 @@ namespace ProphecyCentury.UI
             var controller = controllerObject.AddComponent<RunSceneController>();
             var encyclopedia = canvasObject.AddComponent<RuntimeEncyclopediaPanel>();
 
-            var titlePanel = CreatePanel("TitlePanel", canvasObject.transform, new Color32(16, 22, 30, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            ApplySpriteFromProjectPath(titlePanel.GetComponent<Image>(), "Art/bg/loading_image.png");
-            CreateText("TitleText", titlePanel.transform, "预言世纪", 48, TextAnchor.MiddleCenter, new Vector2(0.2f, 0.72f), new Vector2(0.8f, 0.88f), Vector2.zero, Vector2.zero);
-            CreateText("CampaignSelectLabel", titlePanel.transform, "战役", 22, TextAnchor.MiddleLeft, new Vector2(0.32f, 0.57f), new Vector2(0.46f, 0.63f), Vector2.zero, Vector2.zero);
-            var campaignDropdown = CreateDropdown("CampaignDropdown", titlePanel.transform, new Vector2(0.58f, 0.6f), new Vector2(480f, 54f));
-            CreateText("HeroSelectLabel", titlePanel.transform, "英雄", 22, TextAnchor.MiddleLeft, new Vector2(0.32f, 0.46f), new Vector2(0.46f, 0.52f), Vector2.zero, Vector2.zero);
-            var heroDropdown = CreateDropdown("HeroDropdown", titlePanel.transform, new Vector2(0.58f, 0.49f), new Vector2(480f, 54f));
-            var campaignDescription = CreateText("CampaignDescription", titlePanel.transform, string.Empty, 21, TextAnchor.UpperLeft, new Vector2(0.22f, 0.30f), new Vector2(0.48f, 0.42f), Vector2.zero, Vector2.zero);
-            var heroDescription = CreateText("HeroDescription", titlePanel.transform, string.Empty, 20, TextAnchor.UpperLeft, new Vector2(0.52f, 0.26f), new Vector2(0.78f, 0.42f), Vector2.zero, Vector2.zero);
-            CreateButton("StartSelectedRunButton", titlePanel.transform, "开始游戏", new Vector2(900f, 300f), new Vector2(260f, 64f), controller.StartSelectedRun);
+            var titlePanel = CreatePanel("TitlePanel", canvasObject.transform, new Color32(5, 9, 18, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            CreateTitleAstrolabe(titlePanel.transform);
+            CreateTitleText(titlePanel.transform);
+
+            var campaignPanel = CreateTitleSelectionPanel("CampaignSelectionPanel", titlePanel.transform, "战役", "选择这次预言指向的大陆与试炼", 222f, 438f);
+            var campaignDropdown = CreateDropdown("CampaignDropdown", campaignPanel.transform, new Vector2(0.5f, 0.5f), new Vector2(520f, 58f));
+            SetPixelRectTopLeft(campaignDropdown.GetComponent<RectTransform>(), 42f, 106f, 520f, 58f);
+            StyleTitleDropdown(campaignDropdown);
+            var campaignDescription = CreateText("CampaignDescription", campaignPanel.transform, string.Empty, 21, TextAnchor.UpperLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(campaignDescription.GetComponent<RectTransform>(), 42f, 188f, 520f, 238f);
+            StyleTitleBodyText(campaignDescription);
+
+            var heroPanel = CreateTitleSelectionPanel("HeroSelectionPanel", titlePanel.transform, "英雄", "选择将要解读预言的人", 1738f, 438f);
+            var heroDropdown = CreateDropdown("HeroDropdown", heroPanel.transform, new Vector2(0.5f, 0.5f), new Vector2(520f, 58f));
+            SetPixelRectTopLeft(heroDropdown.GetComponent<RectTransform>(), 42f, 106f, 520f, 58f);
+            StyleTitleDropdown(heroDropdown);
+            var heroDescription = CreateText("HeroDescription", heroPanel.transform, string.Empty, 20, TextAnchor.UpperLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(heroDescription.GetComponent<RectTransform>(), 42f, 188f, 520f, 238f);
+            StyleTitleBodyText(heroDescription);
+
+            CreateButton("StartSelectedRunButton", titlePanel.transform, "开始游戏", new Vector2(1150f, -438f), new Vector2(260f, 64f), controller.StartSelectedRun);
+            SetPixelRectTopLeft(titlePanel.transform.Find("StartSelectedRunButton")?.GetComponent<RectTransform>(), 1090f, 846f, 380f, 86f);
+            StyleTitleButton(titlePanel.transform.Find("StartSelectedRunButton"), true);
             CreateButton("ChaseTestButton", titlePanel.transform, "追击测试", new Vector2(900f, 220f), new Vector2(260f, 56f), controller.StartSmallMerchantChaseTest);
+            SetPixelRectTopLeft(titlePanel.transform.Find("ChaseTestButton")?.GetComponent<RectTransform>(), 1170f, 954f, 220f, 46f);
+            StyleTitleButton(titlePanel.transform.Find("ChaseTestButton"), false);
 
             var runPanel = CreatePanel("RunPanel", canvasObject.transform, new Color32(18, 24, 31, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var topBar = CreatePanel("TopBar", runPanel.transform, new Color32(25, 34, 44, 255), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -72f), Vector2.zero);
@@ -528,7 +543,7 @@ namespace ProphecyCentury.UI
             rect.offsetMax = offsetMax;
 
             var text = textObject.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = fontSize;
             text.resizeTextForBestFit = false;
             text.color = Color.white;
@@ -658,6 +673,212 @@ namespace ProphecyCentury.UI
             layout.childForceExpandHeight = false;
             layout.childAlignment = TextAnchor.MiddleCenter;
             return root.transform;
+        }
+
+        private static void CreateTitleAstrolabe(Transform parent)
+        {
+            var root = new GameObject("AstrolabeRoot", typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+            var rect = root.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            CreateTitleGlow(root.transform, "OuterVignette", new Vector2(1280f, -650f), new Vector2(2100f, 2100f), new Color32(12, 27, 48, 78));
+            CreateTitleGlow(root.transform, "InnerOracleGlow", new Vector2(1280f, -606f), new Vector2(760f, 760f), new Color32(50, 162, 178, 34));
+            CreateAstrolabeRing(root.transform, "RingOuter", new Vector2(1280f, -610f), 780f, 4f, new Color32(218, 178, 97, 118));
+            CreateAstrolabeRing(root.transform, "RingMiddle", new Vector2(1280f, -610f), 608f, 3f, new Color32(111, 206, 218, 96));
+            CreateAstrolabeRing(root.transform, "RingInner", new Vector2(1280f, -610f), 390f, 3f, new Color32(218, 178, 97, 94));
+            CreateAstrolabeRing(root.transform, "RingCore", new Vector2(1280f, -610f), 172f, 2f, new Color32(226, 235, 214, 92));
+
+            for (var i = 0; i < 24; i += 1)
+            {
+                var angle = i * 15f;
+                var radians = angle * Mathf.Deg2Rad;
+                var radius = i % 2 == 0 ? 390f : 304f;
+                var length = i % 2 == 0 ? 98f : 56f;
+                var center = new Vector2(1280f + Mathf.Cos(radians) * radius, -610f + Mathf.Sin(radians) * radius);
+                CreateTitleLine(root.transform, "AstrolabeTick", center, new Vector2(3f, length), angle + 90f, new Color32(222, 189, 111, i % 2 == 0 ? (byte)138 : (byte)84));
+            }
+
+            for (var i = 0; i < 18; i += 1)
+            {
+                var angle = (i * 47f + 12f) * Mathf.Deg2Rad;
+                var radius = 118f + (i % 5) * 88f;
+                var position = new Vector2(1280f + Mathf.Cos(angle) * radius, -610f + Mathf.Sin(angle) * radius);
+                var size = i % 4 == 0 ? 14f : 8f;
+                CreateTitleGlow(root.transform, "StarPoint", position, new Vector2(size, size), new Color32(221, 244, 238, i % 4 == 0 ? (byte)190 : (byte)128));
+            }
+
+            CreateTitleLine(root.transform, "FateLineA", new Vector2(1280f, -610f), new Vector2(2f, 1120f), 62f, new Color32(118, 210, 217, 54));
+            CreateTitleLine(root.transform, "FateLineB", new Vector2(1280f, -610f), new Vector2(2f, 960f), -48f, new Color32(218, 178, 97, 58));
+            CreateTitleLine(root.transform, "FateLineC", new Vector2(1280f, -610f), new Vector2(2f, 860f), 0f, new Color32(226, 235, 214, 38));
+
+            var leftRune = CreateText("RuneLeft", root.transform, "I  II  V  VIII  XIII", 20, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetTitleCenteredRect(leftRune.GetComponent<RectTransform>(), new Vector2(490f, -250f), new Vector2(360f, 34f));
+            leftRune.color = new Color32(213, 184, 116, 120);
+
+            var rightRune = CreateText("RuneRight", root.transform, "ORACLE  VEIL  OATH", 18, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetTitleCenteredRect(rightRune.GetComponent<RectTransform>(), new Vector2(2060f, -1030f), new Vector2(420f, 34f));
+            rightRune.color = new Color32(116, 209, 220, 110);
+        }
+
+        private static void CreateTitleText(Transform parent)
+        {
+            var shadow = CreateText("TitleTextGlow", parent, "预言世纪", 86, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetTitleCenteredRect(shadow.GetComponent<RectTransform>(), new Vector2(1280f, -210f), new Vector2(760f, 126f));
+            shadow.color = new Color32(72, 176, 188, 92);
+
+            var title = CreateText("TitleText", parent, "预言世纪", 78, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetTitleCenteredRect(title.GetComponent<RectTransform>(), new Vector2(1280f, -204f), new Vector2(720f, 118f));
+            title.color = new Color32(239, 204, 126, 255);
+            title.resizeTextForBestFit = true;
+            title.resizeTextMinSize = 54;
+            title.resizeTextMaxSize = 78;
+
+            var subtitle = CreateText("TitleSubtitle", parent, "在星盘中选择命运的入口", 24, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetTitleCenteredRect(subtitle.GetComponent<RectTransform>(), new Vector2(1280f, -302f), new Vector2(560f, 44f));
+            subtitle.color = new Color32(195, 223, 220, 188);
+        }
+
+        private static GameObject CreateTitleSelectionPanel(string name, Transform parent, string title, string subtitle, float left, float top)
+        {
+            var panel = CreatePanel(name, parent, new Color32(8, 15, 29, 218), Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(panel.GetComponent<RectTransform>(), left, top, 604f, 464f);
+            panel.GetComponent<Image>().raycastTarget = false;
+
+            var rim = CreatePanel("RitualRim", panel.transform, new Color32(204, 169, 94, 72), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            rim.GetComponent<Image>().raycastTarget = false;
+            var inner = CreatePanel("RitualInner", panel.transform, new Color32(12, 28, 45, 210), Vector2.zero, Vector2.one, new Vector2(3f, 3f), new Vector2(-3f, -3f));
+            inner.GetComponent<Image>().raycastTarget = false;
+            CreateTitleLine(panel.transform, "TopRule", new Vector2(302f, -86f), new Vector2(520f, 2f), 0f, new Color32(214, 184, 104, 130));
+            CreateTitleLine(panel.transform, "BottomRule", new Vector2(302f, -438f), new Vector2(520f, 2f), 0f, new Color32(92, 188, 200, 86));
+
+            var titleText = CreateText("PanelTitle", panel.transform, title, 34, TextAnchor.MiddleLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(titleText.GetComponent<RectTransform>(), 42f, 26f, 230f, 46f);
+            titleText.color = new Color32(238, 205, 129, 255);
+
+            var subtitleText = CreateText("PanelSubtitle", panel.transform, subtitle, 18, TextAnchor.MiddleRight, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(subtitleText.GetComponent<RectTransform>(), 278f, 32f, 284f, 34f);
+            subtitleText.color = new Color32(166, 207, 205, 150);
+            return panel;
+        }
+
+        private static void StyleTitleBodyText(Text text)
+        {
+            if (text == null)
+            {
+                return;
+            }
+
+            text.color = new Color32(214, 225, 215, 224);
+            text.fontSize = Mathf.Max(18, text.fontSize);
+            text.lineSpacing = 1.08f;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+        }
+
+        private static void StyleTitleDropdown(Dropdown dropdown)
+        {
+            if (dropdown == null)
+            {
+                return;
+            }
+
+            var image = dropdown.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = new Color32(16, 31, 48, 245);
+            }
+
+            if (dropdown.captionText != null)
+            {
+                dropdown.captionText.color = new Color32(239, 235, 205, 255);
+                dropdown.captionText.fontSize = 22;
+            }
+
+            if (dropdown.template != null)
+            {
+                var templateImage = dropdown.template.GetComponent<Image>();
+                if (templateImage != null)
+                {
+                    templateImage.color = new Color32(12, 24, 38, 248);
+                }
+            }
+        }
+
+        private static void StyleTitleButton(Transform buttonTransform, bool primary)
+        {
+            if (buttonTransform == null)
+            {
+                return;
+            }
+
+            var image = buttonTransform.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = primary ? new Color32(187, 129, 42, 255) : new Color32(27, 51, 67, 214);
+            }
+
+            var label = buttonTransform.Find("Label")?.GetComponent<Text>();
+            if (label != null)
+            {
+                label.color = primary ? new Color32(255, 243, 200, 255) : new Color32(183, 220, 217, 205);
+                label.fontSize = primary ? 26 : 18;
+                label.resizeTextForBestFit = true;
+                label.resizeTextMinSize = primary ? 18 : 14;
+                label.resizeTextMaxSize = primary ? 26 : 18;
+            }
+
+            if (primary)
+            {
+                CreateTitleLine(buttonTransform, "ButtonTopGleam", new Vector2(190f, -12f), new Vector2(300f, 2f), 0f, new Color32(255, 229, 154, 150));
+                CreateTitleLine(buttonTransform, "ButtonBottomGleam", new Vector2(190f, -74f), new Vector2(300f, 2f), 0f, new Color32(90, 40, 16, 100));
+            }
+        }
+
+        private static void CreateAstrolabeRing(Transform parent, string name, Vector2 center, float size, float thickness, Color color)
+        {
+            const int segments = 40;
+            var radius = size * 0.5f;
+            var segmentLength = Mathf.Max(12f, (2f * Mathf.PI * radius) / segments * 0.72f);
+            for (var i = 0; i < segments; i += 1)
+            {
+                var angle = i * (360f / segments);
+                var radians = angle * Mathf.Deg2Rad;
+                var position = center + new Vector2(Mathf.Cos(radians) * radius, Mathf.Sin(radians) * radius);
+                CreateTitleLine(parent, name + "Segment", position, new Vector2(segmentLength, thickness), angle + 90f, color);
+            }
+        }
+
+        private static void CreateTitleGlow(Transform parent, string name, Vector2 center, Vector2 size, Color color)
+        {
+            var glow = CreatePanel(name, parent, color, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            glow.GetComponent<Image>().raycastTarget = false;
+            SetTitleCenteredRect(glow.GetComponent<RectTransform>(), center, size);
+        }
+
+        private static void CreateTitleLine(Transform parent, string name, Vector2 center, Vector2 size, float rotation, Color color)
+        {
+            var line = CreatePanel(name, parent, color, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            line.GetComponent<Image>().raycastTarget = false;
+            var rect = line.GetComponent<RectTransform>();
+            SetTitleCenteredRect(rect, center, size);
+            rect.localRotation = Quaternion.Euler(0f, 0f, rotation);
+        }
+
+        private static void SetTitleCenteredRect(RectTransform rect, Vector2 center, Vector2 size)
+        {
+            if (rect == null)
+            {
+                return;
+            }
+
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = center;
+            rect.sizeDelta = size;
         }
 
         private static void CreateButton(string name, Transform parent, string label, Vector2 anchoredPosition, Vector2 size, UnityEngine.Events.UnityAction callback, string iconName = null)

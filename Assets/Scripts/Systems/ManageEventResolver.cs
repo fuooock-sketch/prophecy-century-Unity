@@ -39,6 +39,7 @@ namespace ProphecyCentury.Systems
                 unit.roundTempPower = 0;
                 unit.roundTempMorale = 0;
                 unit.roundTempCount = 0;
+                unit.manageRoundEntryEffectTriggerCount = 0;
                 unit.manageAttackGainBucket = 0;
                 unit.manageRoundAttackRewardTriggered = false;
             }
@@ -212,6 +213,16 @@ namespace ProphecyCentury.Systems
                 case "while_on_board_on_entry_race_self_gain_attack":
                     if (eventType == "on_entry" && target != owner && CountsAsRace(runState, target, talent.race))
                     {
+                        if (talent.count > 0 && owner.manageRoundEntryEffectTriggerCount >= talent.count)
+                        {
+                            break;
+                        }
+
+                        if (talent.count > 0)
+                        {
+                            owner.manageRoundEntryEffectTriggerCount += 1;
+                        }
+
                         GainCount(runState, owner, Value(talent, owner), target, processed, depth);
                     }
                     break;
@@ -883,7 +894,8 @@ namespace ProphecyCentury.Systems
                 roundTempPower = card.roundTempPower,
                 roundTempMorale = card.roundTempMorale,
                 forestGemsAttached = card.forestGemsAttached,
-                forestGemsReceived = card.forestGemsReceived
+                forestGemsReceived = card.forestGemsReceived,
+                manageRoundEntryEffectTriggerCount = card.manageRoundEntryEffectTriggerCount
             };
         }
 

@@ -259,8 +259,8 @@ namespace ProphecyCentury.UI
                 ApplyStyle(style, false, selected, true, mode);
                 SetText(starsLabel, string.Empty);
                 SetText(nameLabel, string.IsNullOrWhiteSpace(prefix) ? ManageEventResolver.ForestGemCardName : $"{prefix}  {ManageEventResolver.ForestGemCardName}");
-                SetText(statsLabel, $"使用：获得数量 +{ManageEventResolver.ForestGemReinforceCount}");
-                SetText(tagsLabel, "密林  消耗品");
+                SetText(statsLabel, $"\u4f7f\u7528\uff1a\u83b7\u5f97\u6570\u91cf +{ManageEventResolver.ForestGemReinforceCount}");
+                SetText(tagsLabel, "\u5bc6\u6797  \u6d88\u8017\u54c1");
                 SetText(gemLabel, string.Empty);
                 SetIcon(iconImage, null);
                 return;
@@ -287,20 +287,46 @@ namespace ProphecyCentury.UI
             }
 
             var star = Mathf.Clamp(definition?.star ?? card?.star ?? 0, 0, 6);
-            var attack = (definition?.attack ?? 0) + (card?.shopBuffAttack ?? 0) + (card?.roundTempAttack ?? 0) + (card?.boardAuraAttack ?? 0);
-            var defense = (definition?.defense ?? 0) + (card?.shopBuffDefense ?? 0);
             var count = ResolveBaseCount(definition, card);
             var damageMin = Mathf.Max(1, definition?.damageMin ?? 1);
             var damageMax = Mathf.Max(damageMin, definition?.damageMax ?? damageMin);
 
-            SetText(starsLabel, new string('★', star));
-            SetText(nameLabel, displayName);
-            SetText(statsLabel, mode == UnitCardPresentationMode.Board
-                ? $"数{count} 攻{attack} 防{defense}"
-                : $"数 {count}  伤 {damageMin}-{damageMax}");
-            SetText(tagsLabel, definition == null ? string.Empty : $"{definition.race}  {definition.typeLabel}  {definition.faith}");
+            SetText(starsLabel, new string('\u2605', star));
+            if (mode == UnitCardPresentationMode.Board)
+            {
+                SetText(nameLabel, Mathf.Max(0, count).ToString());
+                SetText(statsLabel, FormatBoardIdentity(definition));
+                SetText(tagsLabel, string.Empty);
+            }
+            else
+            {
+                SetText(nameLabel, displayName);
+                SetText(statsLabel, $"\u6570 {count}  \u4f24 {damageMin}-{damageMax}");
+                SetText(tagsLabel, definition == null ? string.Empty : $"{definition.race}  {definition.typeLabel}  {definition.faith}");
+            }
             SetText(gemLabel, FormatBoardGemText(definition, card, mode));
             SetIcon(iconImage, card?.name ?? definition?.name);
+        }
+
+        private static string FormatBoardIdentity(UnitDefinition definition)
+        {
+            if (definition == null)
+            {
+                return string.Empty;
+            }
+
+            var type = string.IsNullOrWhiteSpace(definition.typeLabel) ? definition.type : definition.typeLabel;
+            if (string.IsNullOrWhiteSpace(type))
+            {
+                return definition.faith ?? string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.faith))
+            {
+                return type;
+            }
+
+            return $"{type} \u00b7 {definition.faith}";
         }
 
         private void ApplyStyle(UnitCardRaceStyle style, bool golden, bool selected, bool hasUnit, UnitCardPresentationMode mode)
@@ -502,9 +528,9 @@ namespace ProphecyCentury.UI
 
             if (usePrefabBoardLayout)
             {
-                ConfigureBestFit(nameLabel, 9, 13);
+                ConfigureBestFit(nameLabel, 16, 24);
                 ConfigureBestFit(gemLabel, 8, 11);
-                ConfigureBestFit(statsLabel, 8, 11);
+                ConfigureBestFit(statsLabel, 8, 12);
                 return;
             }
 
@@ -622,7 +648,7 @@ namespace ProphecyCentury.UI
             var obj = new GameObject(name, typeof(Text));
             obj.transform.SetParent(parent, false);
             var text = obj.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = fontSize;
             text.color = Color.white;
             text.alignment = alignment;
@@ -676,7 +702,7 @@ namespace ProphecyCentury.UI
             }
 
             var text = child.GetComponent<Text>() ?? child.gameObject.AddComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = fontSize;
             text.alignment = alignment;
             text.color = Color.white;
@@ -708,7 +734,7 @@ namespace ProphecyCentury.UI
 
             var threshold = GetEvolveGemThreshold(definition, card);
             return threshold > 0
-                ? $"◆ {Mathf.Max(0, card.forestGemsAttached)}/{threshold}"
+                ? $"\u25c6 {Mathf.Max(0, card.forestGemsAttached)}/{threshold}"
                 : string.Empty;
         }
 
