@@ -40,6 +40,7 @@ namespace ProphecyCentury.Systems
                 unit.roundTempMorale = 0;
                 unit.roundTempCount = 0;
                 unit.manageRoundEntryEffectTriggerCount = 0;
+                unit.manageRoundForestGemGiftBonusCount = 0;
                 unit.manageAttackGainBucket = 0;
                 unit.manageRoundAttackRewardTriggered = false;
             }
@@ -298,6 +299,18 @@ namespace ProphecyCentury.Systems
                     if (eventType == "on_gain_count" && target == owner)
                     {
                         GainCount(runState, owner, Value(talent, owner), owner, processed, depth);
+                    }
+                    break;
+                case "on_faith_gain_count_threshold_self_gain_count":
+                    if (eventType == "on_gain_count" && target is BoardUnitState && UnitDef(target)?.faith == talent.faith && eventValue > 0)
+                    {
+                        owner.manageFaithCountGainBucket += 1;
+                        var threshold = Math.Max(1, talent.threshold);
+                        while (owner.manageFaithCountGainBucket >= threshold)
+                        {
+                            owner.manageFaithCountGainBucket -= threshold;
+                            GainCount(runState, owner, Value(talent, owner), owner, processed, depth);
+                        }
                     }
                     break;
                 case "on_gain_defense_team_gain_attack":
@@ -895,7 +908,9 @@ namespace ProphecyCentury.Systems
                 roundTempMorale = card.roundTempMorale,
                 forestGemsAttached = card.forestGemsAttached,
                 forestGemsReceived = card.forestGemsReceived,
-                manageRoundEntryEffectTriggerCount = card.manageRoundEntryEffectTriggerCount
+                manageRoundEntryEffectTriggerCount = card.manageRoundEntryEffectTriggerCount,
+                manageFaithCountGainBucket = card.manageFaithCountGainBucket,
+                manageRoundForestGemGiftBonusCount = card.manageRoundForestGemGiftBonusCount
             };
         }
 
@@ -920,10 +935,11 @@ namespace ProphecyCentury.Systems
                 return;
             }
 
+            var bonusCount = ResolveForestGemGiftCountBonus(runState, target, source, processed, depth);
             target.forestGemsAttached += amount;
             target.forestGemsReceived += amount;
             target.forestGemCount += amount;
-            ReinforceUnit(target, amount * ForestGemReinforceCount);
+            GainCount(runState, target, amount * (ForestGemReinforceCount + bonusCount), source, processed, depth, true);
             runState.manageResources.forestGiftActions += 1;
             runState.manageResources.forestGiftTotal += amount;
             runState.manageResources.forestGiftRoundActions += 1;
@@ -938,6 +954,54 @@ namespace ProphecyCentury.Systems
             });
             Dispatch(runState, "on_gift_action", target, "gift_forest_gem", source, amount, processed, depth + 1);
             Dispatch(runState, "on_receive_gift", target, "receive_gift", source, amount, processed, depth + 1);
+        }
+
+        private int ResolveForestGemGiftCountBonus(RunState runState, UnitCardState target, UnitCardState source, HashSet<string> processed, int depth)
+        {
+            if (runState?.boardUnits == null)
+            {
+                return 0;
+            }
+
+            var bonus = 0;
+            foreach (var owner in runState.boardUnits.Where(unit => unit != null))
+            {
+                foreach (var talent in GetTalents(owner).Where(talent => talent.kind == "forest_gem_gift_count_bonus_aura"))
+                {
+                    if (owner.manageRoundForestGemGiftBonusCount >= Math.Max(1, talent.count > 0 ? talent.count : 5))
+                    {
+                        continue;
+                    }
+
+                    owner.manageRoundForestGemGiftBonusCount += 1;
+                    bonus += Math.Max(1, Value(talent, owner));
+                    _abilityTriggered = true;
+                }
+            }
+
+            return bonus;
+        }
+
+        public void ResolveHeroBoardLeave(RunState runState, BoardUnitState leavingUnit)
+        {
+            if (runState == null || leavingUnit == null || runState.heroId != "magic")
+            {
+                return;
+            }
+
+            var targets = PickRandom(runState.boardUnits.Where(unit => unit != null).ToList(), 3);
+            if (targets.Count == 0)
+            {
+                return;
+            }
+
+            var processed = new HashSet<string>();
+            foreach (var target in targets)
+            {
+                GainCount(runState, target, 1, leavingUnit, processed, 0);
+            }
+
+            _abilityTriggered = true;
         }
 
         public bool UseForestGemCardOnBoardUnit(RunState runState, int handIndex, string boardSlotId)
@@ -1089,18 +1153,69 @@ namespace ProphecyCentury.Systems
             ReinforceUnit(target, amount);
             if (!suppressFeedback && target is BoardUnitState boardTarget)
             {
-                var boardSource = source as BoardUnitState;
-                _feedbackEvents.countGainEvents.Add(new CountGainEventState
-                {
-                    sourceSlotId = boardSource != null ? boardSource.boardSlotId : string.Empty,
-                    sourceName = source?.name,
-                    targetSlotId = boardTarget.boardSlotId,
-                    targetName = boardTarget.name,
-                    amount = amount
-                });
+                AddCountGainFeedback(source, boardTarget, amount);
             }
 
-            Dispatch(runState, "on_gain_count", target, "gain_count", source, amount, processed, depth + 1);
+            var totalGain = ApplyHeroCountGainBonuses(runState, target, amount, source, suppressFeedback);
+            Dispatch(runState, "on_gain_count", target, "gain_count", source, totalGain, processed, depth + 1);
+        }
+
+        private int ApplyHeroCountGainBonuses(RunState runState, UnitCardState target, int amount, UnitCardState source, bool suppressFeedback)
+        {
+            if (runState == null || target == null || amount <= 0 || !(target is BoardUnitState boardTarget) || !runState.boardUnits.Contains(boardTarget))
+            {
+                return amount;
+            }
+
+            var totalGain = amount;
+            if (runState.heroId == "james")
+            {
+                ReinforceUnit(target, 1);
+                AddCountGainFeedback(source, boardTarget, 1, "詹姆士+1");
+                totalGain += 1;
+                _abilityTriggered = true;
+            }
+
+            if (runState.heroId == "shalame")
+            {
+                if (runState.heroState == null)
+                {
+                    runState.heroState = new HeroRuntimeState();
+                }
+
+                runState.heroState.countGainProgress += totalGain;
+                var goldGain = runState.heroState.countGainProgress / 20;
+                if (goldGain > 0)
+                {
+                    runState.heroState.countGainProgress %= 20;
+                    runState.gold += goldGain;
+                    runState.heroState.secondaryResource += goldGain;
+                    _abilityTriggered = true;
+                }
+
+                runState.heroState.primaryResource = runState.heroState.countGainProgress;
+            }
+
+            return totalGain;
+        }
+
+        private void AddCountGainFeedback(UnitCardState source, BoardUnitState target, int amount, string label = null)
+        {
+            if (target == null || amount <= 0)
+            {
+                return;
+            }
+
+            var boardSource = source as BoardUnitState;
+            _feedbackEvents.countGainEvents.Add(new CountGainEventState
+            {
+                sourceSlotId = boardSource != null ? boardSource.boardSlotId : string.Empty,
+                sourceName = source?.name,
+                targetSlotId = target.boardSlotId,
+                targetName = target.name,
+                amount = amount,
+                label = label
+            });
         }
 
         private void RecomputeBoardAuras(RunState runState)
@@ -1339,6 +1454,7 @@ namespace ProphecyCentury.Systems
                 case "while_on_board_any_ally_gain_stat_extra_defense":
                 case "while_on_board_attack_gain_threshold_add_random_unit_to_hand":
                 case "while_on_board_attack_gain_threshold_evolve":
+                case "on_faith_gain_count_threshold_self_gain_count":
                     return eventType == "on_gain_count";
                 case "while_on_board_self_gain_stat_team_gain_power":
                     return eventType == "on_gain_count";

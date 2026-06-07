@@ -1,0 +1,57 @@
+﻿enemy_preset_id,slot_id,unit_id,count,star,role_in_encounter,notes
+garrison_line,enemy_1,garrison_guard,16,6,前排核心/增益,卫戍协兵全军联动
+garrison_line,enemy_2,priest,20,5,后排治疗,牧师护盾
+garrison_line,enemy_3,light_envoy,14,6,后排支援,莱特使者信仰协同
+garrison_line,enemy_4,wanderer,24,4,副输出,流浪者中距输出
+abyss_vanguard,enemy_1,martial_master,22,6,前排AOE,武学大师范围伤害
+abyss_vanguard,enemy_2,light_mentor,20,6,后排召唤,光明导师召唤幻影
+abyss_vanguard,enemy_3,assassin,28,5,前排爆发,刺客暴击
+abyss_vanguard,enemy_4,garrison_guard,18,6,前排核心/增益,卫戍协兵全军联动
+ruin_defender,enemy_1,garrison_guard,28,6,前排核心/增益,卫戍协兵全军联动
+ruin_defender,enemy_2,royal_swordsman,8,6,核心输出,皇家剑士战士增益
+ruin_defender,enemy_3,light_envoy,20,6,后排支援,莱特使者信仰协同
+ruin_defender,enemy_4,priest,25,6,后排治疗,牧师护盾
+shadow_elite,enemy_1,assassin,40,6,前排爆发,刺客暴击
+shadow_elite,enemy_2,martial_master,30,6,前排AOE,武学大师范围伤害
+shadow_elite,enemy_3,wanderer,40,6,副输出,流浪者中距输出
+shadow_elite,enemy_4,garrison_guard,25,6,前排核心/增益,卫戍协兵全军联动
+doom_herald,enemy_1,royal_swordsman,45,6,核心输出,皇家剑士战士增益
+doom_herald,enemy_2,echo_of_light,25,6,Boss核心/爆发,莱特回响开战全军增益
+doom_herald,enemy_3,martial_master,40,6,前排AOE,武学大师范围伤害
+doom_herald,enemy_4,garrison_guard,40,6,前排核心/增益,卫戍协兵全军联动
+abyss_elite,enemy_1,echo_of_light,40,6,Boss核心/爆发,莱特回响开战全军增益
+abyss_elite,enemy_2,royal_swordsman,55,6,核心输出,皇家剑士战士增益
+abyss_elite,enemy_3,martial_master,50,6,前排AOE,武学大师范围伤害
+abyss_elite,enemy_4,garrison_guard,55,6,前排核心/增益,卫戍协兵全军联动
+doom_commander,enemy_1,royal_swordsman,65,6,核心输出,皇家剑士战士增益
+doom_commander,enemy_2,echo_of_light,50,6,Boss核心/爆发,莱特回响开战全军增益
+doom_commander,enemy_3,martial_master,60,6,前排AOE,武学大师范围伤害
+doom_commander,enemy_4,garrison_guard,65,6,前排核心/增益,卫戍协兵全军联动
+doom_overlord,enemy_1,royal_swordsman,75,6,核心输出,皇家剑士战士增益
+doom_overlord,enemy_2,echo_of_light,60,6,Boss核心/爆发,莱特回响开战全军增益
+doom_overlord,enemy_3,martial_master,70,6,前排AOE,武学大师范围伤害
+doom_overlord,enemy_4,garrison_guard,75,6,前排核心/增益,卫戍协兵全军联动
+abyss_lord,enemy_1,echo_of_light,75,6,Boss核心,莱特回响终局全军爆发
+abyss_lord,enemy_2,royal_swordsman,85,6,Boss副输出,皇家剑士战士标签增益
+abyss_lord,enemy_3,martial_master,70,6,Boss AOE,武学大师范围压场
+abyss_lord,enemy_4,garrison_guard,80,6,Boss增益,卫戍协兵全军协同
+abyss_lord,enemy_5,light_envoy,70,6,Boss支援,莱特使者信仰加持
+abyss_lord,enemy_6,assassin,85,6,Boss暗刺,刺客潜行暴击暗杀
+fallen_sanctum,enemy_1,light_envoy,30,6,后排支援,莱特使者信仰协同
+fallen_sanctum,enemy_2,garrison_guard,32,6,前排核心/增益,卫戍协兵全军联动
+fallen_sanctum,enemy_3,light_mentor,30,6,后排召唤,光明导师召唤幻影
+fallen_sanctum,enemy_4,royal_swordsman,24,6,核心输出,皇家剑士战士增益
+garrison_fortress,enemy_1,garrison_guard,34,6,前排核心/增益,卫戍协兵全军联动
+garrison_fortress,enemy_2,royal_swordsman,20,6,核心输出,皇家剑士战士增益
+garrison_fortress,enemy_3,echo_of_light,14,6,核心/爆发,莱特回响开战全军增益
+garrison_fortress,enemy_4,light_envoy,28,6,后排支援,莱特使者信仰协同
+shadow_raiders,enemy_1,assassin,8,5,前排爆发,刺客暴击
+shadow_raiders,enemy_2,wanderer,8,4,副输出,流浪者中距输出
+shadow_raiders,enemy_3,blacksmith,8,3,副输出,铁匠多面手
+shadow_raiders,enemy_4,light_mentor,5,5,后排召唤,光明导师召唤幻影
+wild_bandits,enemy_1,bright_warrior,4,1,前排,★1教学级 单挑胜利
+ruin_sentry,enemy_1,knight,4,2,前排,★2 骑士入队
+ruin_sentry,enemy_2,monk,4,2,后排,★2 僧侣治疗
+shadow_scout,enemy_1,assassin,4,4,前排,★4 刺客登场
+shadow_scout,enemy_2,wanderer,4,3,副输出,★3 流浪者
+shadow_scout,enemy_3,priest,4,3,后排,★3 牧师护盾

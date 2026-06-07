@@ -4,7 +4,7 @@ namespace ProphecyCentury.Core
 {
     public sealed class BootstrapInstaller : MonoBehaviour
     {
-        [SerializeField] private bool createRunOnStart = true;
+        [SerializeField] private bool createRunOnStart;
 
         private void Awake()
         {

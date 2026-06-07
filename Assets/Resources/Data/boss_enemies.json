@@ -1,0 +1,443 @@
+[
+  {
+    "id": "wild_bandits",
+    "name": "荒野劫匪",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "bright_warrior",
+        "count": 4,
+        "star": 1
+      }
+    ]
+  },
+  {
+    "id": "ruin_sentry",
+    "name": "废墟哨卫",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "knight",
+        "count": 4,
+        "star": 2
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "monk",
+        "count": 4,
+        "star": 2
+      }
+    ]
+  },
+  {
+    "id": "shadow_scout",
+    "name": "暗影斥候",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "assassin",
+        "count": 4,
+        "star": 4
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "wanderer",
+        "count": 4,
+        "star": 3
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "priest",
+        "count": 4,
+        "star": 3
+      }
+    ]
+  },
+  {
+    "id": "shadow_raiders",
+    "name": "暗影掠袭者",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "assassin",
+        "count": 8,
+        "star": 5
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "wanderer",
+        "count": 8,
+        "star": 4
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "blacksmith",
+        "count": 8,
+        "star": 3
+      },
+      {
+        "slotId": "enemy_4",
+        "unitId": "light_mentor",
+        "count": 5,
+        "star": 5
+      }
+    ]
+  },
+  {
+    "id": "garrison_line",
+    "name": "卫戍防线",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "garrison_guard",
+        "count": 16,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "priest",
+        "count": 20,
+        "star": 5
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "light_envoy",
+        "count": 14,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_4",
+        "unitId": "wanderer",
+        "count": 24,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "abyss_vanguard",
+    "name": "深渊先锋",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "martial_master",
+        "count": 22,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "light_mentor",
+        "count": 20,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "assassin",
+        "count": 28,
+        "star": 5
+      },
+      {
+        "slotId": "enemy_4",
+        "unitId": "garrison_guard",
+        "count": 18,
+        "star": 6
+      }
+    ]
+  },
+  {
+    "id": "ruin_defender",
+    "name": "废墟守卫",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "garrison_guard",
+        "count": 28,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "royal_swordsman",
+        "count": 8,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "light_envoy",
+        "count": 20,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_4",
+        "unitId": "priest",
+        "count": 25,
+        "star": 6
+      }
+    ]
+  },
+  {
+    "id": "fallen_sanctum",
+    "name": "堕落圣殿",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "light_envoy",
+        "count": 30,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "garrison_guard",
+        "count": 32,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "light_mentor",
+        "count": 30,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_4",
+        "unitId": "royal_swordsman",
+        "count": 24,
+        "star": 6
+      }
+    ]
+  },
+  {
+    "id": "shadow_elite",
+    "name": "暗影精锐",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "assassin",
+        "count": 40,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "martial_master",
+        "count": 30,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "wanderer",
+        "count": 40,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_4",
+        "unitId": "garrison_guard",
+        "count": 25,
+        "star": 6
+      }
+    ]
+  },
+  {
+    "id": "garrison_fortress",
+    "name": "卫戍要塞",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "garrison_guard",
+        "count": 34,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "royal_swordsman",
+        "count": 20,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "echo_of_light",
+        "count": 14,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_4",
+        "unitId": "light_envoy",
+        "count": 28,
+        "star": 6
+      }
+    ]
+  },
+  {
+    "id": "doom_herald",
+    "name": "末日先驱",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "royal_swordsman",
+        "count": 45,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "echo_of_light",
+        "count": 25,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "martial_master",
+        "count": 40,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_4",
+        "unitId": "garrison_guard",
+        "count": 40,
+        "star": 6
+      }
+    ]
+  },
+  {
+    "id": "abyss_elite",
+    "name": "深渊精锐",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "echo_of_light",
+        "count": 40,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "royal_swordsman",
+        "count": 55,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "martial_master",
+        "count": 50,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_4",
+        "unitId": "garrison_guard",
+        "count": 55,
+        "star": 6
+      }
+    ]
+  },
+  {
+    "id": "doom_commander",
+    "name": "末日统领",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "royal_swordsman",
+        "count": 65,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "echo_of_light",
+        "count": 50,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "martial_master",
+        "count": 60,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_4",
+        "unitId": "garrison_guard",
+        "count": 65,
+        "star": 6
+      }
+    ]
+  },
+  {
+    "id": "doom_overlord",
+    "name": "末日霸主",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "royal_swordsman",
+        "count": 75,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "echo_of_light",
+        "count": 60,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "martial_master",
+        "count": 70,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_4",
+        "unitId": "garrison_guard",
+        "count": 75,
+        "star": 6
+      }
+    ]
+  },
+  {
+    "id": "abyss_lord",
+    "name": "深渊领主",
+    "type": "boss",
+    "units": [
+      {
+        "slotId": "enemy_1",
+        "unitId": "echo_of_light",
+        "count": 75,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_2",
+        "unitId": "royal_swordsman",
+        "count": 85,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_3",
+        "unitId": "martial_master",
+        "count": 70,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_4",
+        "unitId": "garrison_guard",
+        "count": 80,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_5",
+        "unitId": "light_envoy",
+        "count": 70,
+        "star": 6
+      },
+      {
+        "slotId": "enemy_6",
+        "unitId": "assassin",
+        "count": 85,
+        "star": 6
+      }
+    ]
+  }
+]

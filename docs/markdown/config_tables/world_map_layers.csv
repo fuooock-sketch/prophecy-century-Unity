@@ -1,0 +1,17 @@
+﻿map_id,layer_index,layer_name,design_role,expected_node_count,notes
+abyss_wilds,0,营地篝火,起点层,1,玩家从营地出发
+abyss_wilds,1,荒野边缘,狭窄开局,2,1战斗+1资源 引导熟悉
+abyss_wilds,2,失路小径,狭窄开局,2,1战斗+1宝物 引入宝物概念
+abyss_wilds,3,影棘丛林,逐渐展开,3,2战斗+1资源 增加选择
+abyss_wilds,4,废墟岔口,逐渐展开,3,1战斗+1资源+1宝物 三种类型齐全
+abyss_wilds,5,腐化原野,分支展开,4,2战斗+1资源+1宝物 路线开始分化
+abyss_wilds,6,低语谷,分支展开,4,2战斗+1资源+1宝物 阵容分化检验
+abyss_wilds,7,灰烬高地,最宽分支,5,2战斗+2资源+1宝物 5个选择空间
+abyss_wilds,8,暮光盆地,最宽分支,5,2战斗+2资源+1宝物 最大决策点
+abyss_wilds,9,赤脊山,开始收束,4,2战斗+1资源+1宝物 精英级敌人出现
+abyss_wilds,10,破碎隘口,开始收束,4,2战斗+1资源+1宝物 路线压缩
+abyss_wilds,11,遗忘堡垒,深度检验,3,2战斗+1宝物 强制战斗比例提高
+abyss_wilds,12,哀嚎深渊,深度检验,3,2战斗+1宝物 终局阵容检验
+abyss_wilds,13,黑曜石门,逼近Boss,2,1战斗+1宝物 最后补给机会
+abyss_wilds,14,深渊近途,逼近Boss,2,1战斗+1宝物 Boss前最后调整
+abyss_wilds,15,绝望王座,最终Boss,1,终局Boss战

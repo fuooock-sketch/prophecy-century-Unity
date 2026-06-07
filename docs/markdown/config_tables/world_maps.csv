@@ -1,0 +1,3 @@
+﻿map_id,name,start_node_id,design_goal,current_status,owner_notes
+abyss_wilds,恶兆荒野,abyss_start,15层漏斗型分支地图/14次经营回合/8种敌人预设/仿杀戮尖塔节奏,implemented,主关卡地图 替代旧MVP
+mvp_3_layer_map,MVP Three Layer Map,start,验证三层地图/昼夜切换/普通战斗/Boss 通关闭环,deprecated,旧MVP地图 已被恶兆荒野替代

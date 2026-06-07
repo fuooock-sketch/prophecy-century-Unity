@@ -344,6 +344,7 @@ namespace ProphecyCentury.Systems
             if (didCrit)
             {
                 damage = (int)Math.Ceiling(damage * Math.Max(critMultiplier, LUCK_CRIT_DAMAGE_MULTIPLIER));
+                ResolveAllyCritTemporaryCount(attacker, allies, events, elapsed);
             }
 
             if (luckyCrit)
@@ -353,6 +354,24 @@ namespace ProphecyCentury.Systems
 
             AddEvent(events, elapsed, "attack", attacker, target, 0, attackMessage);
             return DealDamage(attacker, target, damage, allies, enemies, random, events, elapsed, didCrit);
+        }
+
+        private static void ResolveAllyCritTemporaryCount(RealtimeBattleUnit attacker, List<RealtimeBattleUnit> allies, List<BattleEvent> events, float elapsed)
+        {
+            if (attacker == null || allies == null)
+            {
+                return;
+            }
+
+            foreach (var ally in allies.Where(unit => unit != null && unit.IsAlive && unit != attacker))
+            {
+                foreach (var skill in GetBattleSkills(ally).Where(skill => skill.kind == "on_ally_crit_self_temp_power"))
+                {
+                    var gain = Math.Max(1, skill.value);
+                    AddTemporaryCount(ally, gain);
+                    AddEvent(events, elapsed, "count_gain", attacker, ally, gain, $"{ally.Name} 因友军暴击，临时数量 +{gain}");
+                }
+            }
         }
 
         private static void ResolveOnAttack(RealtimeBattleUnit attacker, RealtimeBattleUnit target, List<RealtimeBattleUnit> allies, List<RealtimeBattleUnit> enemies, Random random, List<RealtimeAreaEffect> areaEffects, int damage, float elapsed, List<BattleEvent> events)
@@ -441,6 +460,27 @@ namespace ProphecyCentury.Systems
                     if (skill.kind == "battle_periodic_temp_power")
                     {
                         continue;
+                    }
+                    else if (skill.kind == "battle_round_self_hp_loss_team_temp_attack")
+                    {
+                        if (unit.CurrentCount <= 1 || !units.Any(ally => ally.IsAlive && ally != unit) || !TickSkillTimer(unit, skill.kind, SkillIntervalSeconds(skill, 1f)))
+                        {
+                            continue;
+                        }
+
+                        var lossCount = CalculateSelfCountLoss(unit, skill);
+                        AddEvent(events, elapsed, "skill", unit, unit, lossCount, $"{unit.Name} loses troops and rallies allies");
+                        var hpLoss = ApplySelfCountLoss(unit, lossCount);
+                        AddEvent(events, elapsed, "damage", unit, unit, hpLoss, $"{unit.Name} loses troops");
+                        foreach (var ally in units.Where(ally => ally.IsAlive && ally != unit))
+                        {
+                            var attackGain = Math.Max(0, skill.attack);
+                            ally.Attack += attackGain;
+                            if (attackGain > 0)
+                            {
+                                AddEvent(events, elapsed, "buff_attack", unit, ally, attackGain, $"{ally.Name} 攻击提升");
+                            }
+                        }
                     }
                     else if (skill.kind == "battle_periodic_nearby_enemies_attack_and_death_explode" && TickSkillTimer(unit, skill.kind, Math.Max(0.1f, skill.interval <= 0f ? 1f : skill.interval)))
                     {
@@ -1029,6 +1069,21 @@ namespace ProphecyCentury.Systems
 
             unit.SkillTimers[key] = timer;
             return false;
+        }
+
+        private static int CalculateSelfCountLoss(RealtimeBattleUnit unit, SkillDefinition skill)
+        {
+            var percent = skill.selfHpLoss > 0 ? skill.selfHpLoss : skill.damage > 0 ? skill.damage : skill.hp > 0 ? skill.hp : 25;
+            return Math.Max(1, Math.Min(unit.CurrentCount - 1, (int)Math.Ceiling(unit.CurrentCount * (percent / 100f))));
+        }
+
+        private static int ApplySelfCountLoss(RealtimeBattleUnit unit, int lossCount)
+        {
+            var beforeHp = unit.Hp;
+            unit.CurrentCount = Math.Max(0, unit.CurrentCount - Math.Max(1, lossCount));
+            unit.CurrentTotalHp = Math.Max(0, Math.Min(unit.CurrentTotalHp, unit.CurrentCount * Math.Max(1, unit.HpPerUnit)));
+            unit.Hp = unit.CurrentTotalHp;
+            return Math.Max(1, beforeHp - unit.Hp);
         }
 
         private static void AddAreaEffect(List<RealtimeAreaEffect> areaEffects, RealtimeBattleUnit source, RealtimeBattleUnit target, SkillDefinition skill, List<BattleEvent> events, float elapsed)

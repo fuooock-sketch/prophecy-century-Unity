@@ -3,14 +3,30 @@ using System.Collections.Generic;
 
 namespace ProphecyCentury.Model
 {
+    public enum GamePhase
+    {
+        DayExplore,
+        NightManage,
+        Battle,
+        Settle,
+        Victory,
+        GameOver
+    }
+
     [Serializable]
     public sealed class RunState
     {
+        public int saveVersion;
         public string campaignId;
         public string heroId;
         public string state;
+        public GamePhase phase;
         public int gold;
         public int round;
+        public int dayCount;
+        public int remainingMovePoints;
+        public int maxMovePoints;
+        public string currentNodeId;
         public int playerHp;
         public int shopLevel;
         public int shopUpgradeAnchorRound;
@@ -20,14 +36,21 @@ namespace ProphecyCentury.Model
         public bool campaignCompleted;
         public bool isShopLocked;
         public string lastBattleSummary;
+        public bool isExplorationBattle;
+        public string explorationBattleNodeId;
+        public string explorationBattleEnemyPresetId;
+        public string explorationBattleNodeType;
         public List<BattleHistoryEntryState> battleHistory = new List<BattleHistoryEntryState>();
         public List<BoardUnitState> boardUnits = new List<BoardUnitState>();
         public List<UnitCardState> handCards = new List<UnitCardState>();
         public List<UnitCardState> shopCards = new List<UnitCardState>();
         public List<ShopPoolEntryState> shopPool = new List<ShopPoolEntryState>();
+        public List<WorldMapNodeState> worldMapNodes = new List<WorldMapNodeState>();
+        public List<InventoryItemState> inventoryItems = new List<InventoryItemState>();
         public HeroRuntimeState heroState = new HeroRuntimeState();
         public ManageResourceState manageResources = new ManageResourceState();
         public BattleRewardState pendingBattleRewards = new BattleRewardState();
+        public BattleUnitPickState pendingBattleUnitPick;
     }
 
     [Serializable]
@@ -60,6 +83,8 @@ namespace ProphecyCentury.Model
         public int forestGemsReceived;
         public int manageEntryEffectTriggerCount;
         public int manageRoundEntryEffectTriggerCount;
+        public int manageFaithCountGainBucket;
+        public int manageRoundForestGemGiftBonusCount;
         public int manageGiftActionBucket;
         public int manageAttackGainBucket;
         public int manageReceiveGiftPowerBucket;
@@ -118,6 +143,7 @@ namespace ProphecyCentury.Model
         public string targetSlotId;
         public string targetName;
         public int amount;
+        public string label;
     }
 
     [Serializable]
@@ -180,6 +206,7 @@ namespace ProphecyCentury.Model
     {
         public int primaryResource;
         public int secondaryResource;
+        public int countGainProgress;
     }
 
     [Serializable]
@@ -222,6 +249,24 @@ namespace ProphecyCentury.Model
         public int playerDamage;
         public int enemyDamage;
         public string summary;
+    }
+
+    [Serializable]
+    public sealed class BattleUnitPickState
+    {
+        public List<BattleUnitPickChoice> choices = new List<BattleUnitPickChoice>();
+        public int remainingPicks;
+        public int remainingRerolls;
+        public int choiceStar;
+    }
+
+    [Serializable]
+    public sealed class BattleUnitPickChoice
+    {
+        public string unitId;
+        public string name;
+        public int star;
+        public bool selected;
     }
 
     [Serializable]

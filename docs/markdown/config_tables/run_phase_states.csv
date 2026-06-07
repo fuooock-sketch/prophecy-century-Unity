@@ -1,0 +1,7 @@
+phase,state,display_name,player_action,enter_condition,exit_condition,engineering_entry,notes
+NightManage,manage,夜晚经营,购买/部署/调整阵容/点击探索,新局开始或节点完成后进入下一回合,点击探索且无未完成选择,RunFlowController.NextRound / StartNextNightManageAfterDayNode,开局默认阶段
+DayExplore,day,白天探索,选择一个可达地图节点,探索按钮完成夜晚回合结束结算,节点完成或进入战斗,RunFlowController.StartNewDay,MVP 每天 1 个节点
+Battle,battle,战斗,确认开始行动并观看战斗,战斗节点或旧经营战斗入口,战斗播放结束,RunFlowController.SetBattlePhase,地图战斗不重复结算经营回合结束
+Settle,settle,战斗结算,无直接操作,战斗结果产生,进入下一状态,RunFlowController.FinishBattlePhase,中间态
+Victory,victory,胜利,查看结算/重新开始,Boss 胜利,重新选择英雄,WorldMapSystem.CheckVictoryCondition,Boss 胜利直达
+GameOver,gameover,失败,查看结算/重新开始,任意战斗失败,重新选择英雄,RunFlowController.ResolveBattleOutcome,失败立即结束本局

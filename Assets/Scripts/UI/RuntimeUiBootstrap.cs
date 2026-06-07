@@ -92,43 +92,46 @@ namespace ProphecyCentury.UI
             }
 
             TryInstallBattleStagePanelPrefab(root.transform, controller);
-            EnsureTitleChaseTestButton(root.transform, controller);
+            HideTitleSelectionControls(root.transform);
 
-            WireButton(root.transform, "StartSelectedRunButton", controller.StartSelectedRun);
-            WireButton(root.transform, "ChaseTestButton", controller.StartSmallMerchantChaseTest);
+            WireButton(root.transform, "StartSelectedRunButton", controller.OpenHeroSelection);
             WireButton(root.transform, "RefreshShopButton", controller.RefreshShop);
             WireButton(root.transform, "UpgradeShopButton", controller.UpgradeShop);
             WireButton(root.transform, "LockShopButton", controller.ToggleShopLock);
-            WireButton(root.transform, "BattleButton", controller.StartBattle);
+            WireButton(root.transform, "BattleButton", controller.StartDayExploreFromManage);
             WireButton(root.transform, "SaveGameButton", controller.SaveGame);
             WireButton(root.transform, "LoadGameButton", controller.LoadGame);
             WireButton(root.transform, "RefreshShopButtonV2", controller.RefreshShop);
             WireButton(root.transform, "UpgradeShopButtonV2", controller.UpgradeShop);
             WireButton(root.transform, "LockShopButtonV2", controller.ToggleShopLock);
             WireButton(root.transform, "RealtimeBattleToggleButtonV2", controller.ToggleRealtimeBattlePreview);
-            WireButton(root.transform, "BattleButtonV2", controller.StartBattle);
+            WireButton(root.transform, "BattleButtonV2", controller.StartDayExploreFromManage);
             WireButton(root.transform, "SaveGameButtonV2", controller.SaveGame);
             WireButton(root.transform, "LoadGameButtonV2", controller.LoadGame);
+            SetButtonText(root.transform, "BattleButton", "探索");
+            SetButtonText(root.transform, "BattleButtonV2", "探索");
             if (encyclopedia != null)
             {
                 WireButton(root.transform, "EncyclopediaButtonV2", encyclopedia.Open);
             }
         }
 
-        private static void EnsureTitleChaseTestButton(Transform root, RunSceneController controller)
+        private static void HideTitleSelectionControls(Transform root)
         {
-            if (root == null || controller == null || FindDeepChild(root, "ChaseTestButton") != null)
+            if (root == null)
             {
                 return;
             }
 
-            var titlePanel = FindDeepChild(root, "TitlePanel");
-            if (titlePanel == null)
+            var names = new[] { "CampaignSelectionPanel", "HeroSelectionPanel", "ChaseTestButton" };
+            foreach (var name in names)
             {
-                return;
+                var item = FindDeepChild(root, name);
+                if (item != null)
+                {
+                    item.gameObject.SetActive(false);
+                }
             }
-
-            CreateButton("ChaseTestButton", titlePanel, "追击测试", new Vector2(900f, 220f), new Vector2(260f, 56f), controller.StartSmallMerchantChaseTest);
         }
 
         private static bool TryInstallBattleStagePanelPrefab(Transform root, RunSceneController controller)
@@ -197,6 +200,16 @@ namespace ProphecyCentury.UI
             button.onClick.AddListener(callback);
         }
 
+        private static void SetButtonText(Transform root, string name, string text)
+        {
+            var target = FindDeepChild(root, name);
+            var label = target != null ? target.GetComponentInChildren<Text>(true) : null;
+            if (label != null)
+            {
+                label.text = text;
+            }
+        }
+
         private static Transform FindDeepChild(Transform root, string name)
         {
             if (root.name == name)
@@ -248,6 +261,7 @@ namespace ProphecyCentury.UI
             CreateTitleText(titlePanel.transform);
 
             var campaignPanel = CreateTitleSelectionPanel("CampaignSelectionPanel", titlePanel.transform, "战役", "选择这次预言指向的大陆与试炼", 222f, 438f);
+            campaignPanel.gameObject.SetActive(false);
             var campaignDropdown = CreateDropdown("CampaignDropdown", campaignPanel.transform, new Vector2(0.5f, 0.5f), new Vector2(520f, 58f));
             SetPixelRectTopLeft(campaignDropdown.GetComponent<RectTransform>(), 42f, 106f, 520f, 58f);
             StyleTitleDropdown(campaignDropdown);
@@ -256,6 +270,7 @@ namespace ProphecyCentury.UI
             StyleTitleBodyText(campaignDescription);
 
             var heroPanel = CreateTitleSelectionPanel("HeroSelectionPanel", titlePanel.transform, "英雄", "选择将要解读预言的人", 1738f, 438f);
+            heroPanel.gameObject.SetActive(false);
             var heroDropdown = CreateDropdown("HeroDropdown", heroPanel.transform, new Vector2(0.5f, 0.5f), new Vector2(520f, 58f));
             SetPixelRectTopLeft(heroDropdown.GetComponent<RectTransform>(), 42f, 106f, 520f, 58f);
             StyleTitleDropdown(heroDropdown);
@@ -263,12 +278,13 @@ namespace ProphecyCentury.UI
             SetPixelRectTopLeft(heroDescription.GetComponent<RectTransform>(), 42f, 188f, 520f, 238f);
             StyleTitleBodyText(heroDescription);
 
-            CreateButton("StartSelectedRunButton", titlePanel.transform, "开始游戏", new Vector2(1150f, -438f), new Vector2(260f, 64f), controller.StartSelectedRun);
+            CreateButton("StartSelectedRunButton", titlePanel.transform, "开始游戏", new Vector2(1150f, -438f), new Vector2(260f, 64f), controller.OpenHeroSelection);
             SetPixelRectTopLeft(titlePanel.transform.Find("StartSelectedRunButton")?.GetComponent<RectTransform>(), 1090f, 846f, 380f, 86f);
             StyleTitleButton(titlePanel.transform.Find("StartSelectedRunButton"), true);
             CreateButton("ChaseTestButton", titlePanel.transform, "追击测试", new Vector2(900f, 220f), new Vector2(260f, 56f), controller.StartSmallMerchantChaseTest);
             SetPixelRectTopLeft(titlePanel.transform.Find("ChaseTestButton")?.GetComponent<RectTransform>(), 1170f, 954f, 220f, 46f);
             StyleTitleButton(titlePanel.transform.Find("ChaseTestButton"), false);
+            titlePanel.transform.Find("ChaseTestButton")?.gameObject.SetActive(false);
 
             var runPanel = CreatePanel("RunPanel", canvasObject.transform, new Color32(18, 24, 31, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var topBar = CreatePanel("TopBar", runPanel.transform, new Color32(25, 34, 44, 255), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -72f), Vector2.zero);
@@ -280,7 +296,7 @@ namespace ProphecyCentury.UI
             CreateButton("RefreshShopButton", topBar.transform, "刷新", new Vector2(910f, 0f), new Vector2(110f, 42f), controller.RefreshShop, "\u5546\u5e97");
             CreateButton("UpgradeShopButton", topBar.transform, "升级", new Vector2(1030f, 0f), new Vector2(110f, 42f), controller.UpgradeShop, "\u94bb\u77f3");
             CreateButton("LockShopButton", topBar.transform, "锁定", new Vector2(1150f, 0f), new Vector2(110f, 42f), controller.ToggleShopLock, "\u94c1\u9501");
-            CreateButton("BattleButton", topBar.transform, "战斗", new Vector2(1288f, 0f), new Vector2(138f, 48f), controller.StartBattle, "\u957f\u5251");
+            CreateButton("BattleButton", topBar.transform, "探索", new Vector2(1288f, 0f), new Vector2(138f, 48f), controller.StartDayExploreFromManage, "\u957f\u5251");
             CreateButton("SaveGameButton", topBar.transform, "保存", new Vector2(1430f, 0f), new Vector2(98f, 38f), controller.SaveGame, "\u7fbd\u6bdb");
             CreateButton("LoadGameButton", topBar.transform, "读取", new Vector2(1538f, 0f), new Vector2(98f, 38f), controller.LoadGame, "\u5377\u8f74");
 
@@ -411,7 +427,7 @@ namespace ProphecyCentury.UI
             handGrid.constraintCount = 1;
 
             CreateButton("RealtimeBattleToggleButtonV2", battlePanelV2.transform, "实时", new Vector2(0f, -42f), new Vector2(98f, 36f), controller.ToggleRealtimeBattlePreview);
-            CreateButton("BattleButtonV2", battlePanelV2.transform, "开战", new Vector2(106f, 0f), new Vector2(212f, 188f), controller.StartBattle);
+            CreateButton("BattleButtonV2", battlePanelV2.transform, "探索", new Vector2(106f, 0f), new Vector2(212f, 188f), controller.StartDayExploreFromManage);
             SetPixelRectTopLeft(battlePanelV2.GetComponent<RectTransform>(), 2198f, 947f, 335f, 261f);
             CreateButton("SaveGameButtonV2", playerPanelV2.transform, "保存", new Vector2(28f, -284f), new Vector2(92f, 34f), controller.SaveGame);
             CreateButton("LoadGameButtonV2", playerPanelV2.transform, "读取", new Vector2(130f, -284f), new Vector2(92f, 34f), controller.LoadGame);
@@ -481,10 +497,7 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            if (ProphecyGameSession.Instance != null)
-            {
-                ProphecyGameSession.Instance.StartNewRun();
-            }
+            ProphecyGameSession.EnsureInstance();
         }
 
         private static GameObject CreatePanel(string name, Transform parent, Color color, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)

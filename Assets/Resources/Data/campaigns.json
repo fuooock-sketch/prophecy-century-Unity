@@ -2,16 +2,19 @@
   {
     "id": "south_town_adventure",
     "name": "South Town Adventure",
-    "desc": "The current Web version routes all campaigns into the same core run flow."
+    "desc": "The current Web version routes all campaigns into the same core run flow.",
+    "mapId": "abyss_wilds"
   },
   {
     "id": "snow_peak_defense",
     "name": "Snow Peak Defense",
-    "desc": "Reserved campaign branch for future Godot parity work."
+    "desc": "Reserved campaign branch for future Godot parity work.",
+    "mapId": "abyss_wilds"
   },
   {
     "id": "song_of_sang_city",
     "name": "Song of Sang City",
-    "desc": "Reserved campaign branch for future Godot parity work."
+    "desc": "Reserved campaign branch for future Godot parity work.",
+    "mapId": "abyss_wilds"
   }
 ]

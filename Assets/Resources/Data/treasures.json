@@ -1,0 +1,51 @@
+[
+  {
+    "id": "old_talisman",
+    "name": "古符咒",
+    "desc": "古老的符文护符，据说能在战场上为持有者带来微弱的幸运。",
+    "icon": "符咒",
+    "effectKey": "placeholder"
+  },
+  {
+    "id": "shadow_cloak",
+    "name": "暗影斗篷",
+    "desc": "暗影圣所中发现的斗篷，首次受到致命伤害时抵消该次伤害（每场战斗1次）。",
+    "icon": "斗篷",
+    "effectKey": "placeholder"
+  },
+  {
+    "id": "saint_censer",
+    "name": "圣香炉",
+    "desc": "圣香炉散发着温和的光芒，入夜时恢复3点生命值。",
+    "icon": "香炉",
+    "effectKey": "placeholder"
+  },
+  {
+    "id": "ruin_crown",
+    "name": "废墟王冠",
+    "desc": "古代废墟中发掘的王冠，全体友军攻击+1。",
+    "icon": "王冠",
+    "effectKey": "placeholder"
+  },
+  {
+    "id": "abyss_heart",
+    "name": "恶兆之心",
+    "desc": "深渊力量凝聚而成的核心，开战时友军获得1层护盾。",
+    "icon": "心脏",
+    "effectKey": "placeholder"
+  },
+  {
+    "id": "mvp_old_relic",
+    "name": "Old Relic",
+    "desc": "Placeholder treasure for the world map MVP.",
+    "icon": "宝石",
+    "effectKey": "placeholder"
+  },
+  {
+    "id": "mvp_boss_trophy",
+    "name": "Boss Trophy",
+    "desc": "Placeholder boss reward for the world map MVP.",
+    "icon": "奖杯",
+    "effectKey": "placeholder"
+  }
+]

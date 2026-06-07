@@ -1,0 +1,16 @@
+﻿enemy_preset_id,name,type,used_by_node_id,difficulty_role,defeat_result,victory_result,notes
+wild_bandits,荒野劫匪,normal,wild_bandits,L1 教学级 ★1基础阵容,GameOver,清除节点并进入下一经营回合,L1 教学级 ★1基础阵容
+ruin_sentry,废墟哨卫,normal,ruin_sentry_a;ruin_sentry_b,L2 引入★2治疗和后排压力,GameOver,清除节点并进入下一经营回合,L2 引入★2治疗和后排压力
+shadow_scout,暗影斥候,normal,shadow_scout,L3 ★3刺客首次亮相 检验暴击承伤,,,L3 ★3刺客首次亮相 检验暴击承伤
+shadow_raiders,暗影掠袭者,normal,shadow_raiders_a;shadow_raiders_b,L4 ★4精英刺客 暴击压力升级,GameOver,清除节点并进入下一经营回合,L4 ★4精英刺客 暴击压力升级
+garrison_line,卫戍防线,normal,garrison_line_a;garrison_line_b,L5 ★5卫戍协兵 协同增益入门,GameOver,清除节点并进入下一经营回合,L5 ★5卫戍协兵 协同增益入门
+abyss_vanguard,深渊先锋,normal,abyss_vanguard_a;abyss_vanguard_b,L6 ★4武学大师 AOE范围压力,GameOver,清除节点并进入下一经营回合,L6 ★4武学大师 AOE范围压力
+ruin_defender,废墟守卫,normal,ruin_defender,L7 ★5重装防线 高防联动检验,,,L7 ★5重装防线 高防联动检验
+fallen_sanctum,堕落圣殿,normal,fallen_sanctum_a;fallen_sanctum_b,L8 ★6满星高协同 阵容成型检验,GameOver,清除节点并进入下一经营回合,L8 ★6满星高协同 阵容成型检验
+shadow_elite,暗影精锐,normal,shadow_elite,L9 ★6暗影精英 商店Lv4后检验,,,L9 ★6暗影精英 商店Lv4后检验
+garrison_fortress,卫戍要塞,normal,garrison_fortress,L10 ★6卫戍要塞 全员★6压制,,,L10 ★6卫戍要塞 全员★6压制
+doom_herald,末日先驱,normal,doom_herald_a;doom_herald_b,L11 终局入门 ★6四核检验,GameOver,清除节点并进入下一经营回合,L11 终局入门 ★6四核检验
+abyss_elite,深渊精锐,normal,abyss_elite,L12 深渊精锐 ★6全明星阵容,,,L12 深渊精锐 ★6全明星阵容
+doom_commander,末日统领,normal,doom_commander,L13 Boss前卫战 ★6极限count,,,L13 Boss前卫战 ★6极限count
+doom_overlord,末日霸主,normal,doom_overlord,L14 Boss序章 ★6超限count,,,L14 Boss序章 ★6超限count
+abyss_lord,深渊领主,boss,abyss_throne,终局Boss 6槽满编 ★6极限强度,GameOver,Victory,终局Boss 6槽满编 ★6极限强度

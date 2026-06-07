@@ -38,29 +38,36 @@ namespace ProphecyCentury.Core
             Data = new GameDataRepository();
             Data.LoadAll();
 
-            if (CurrentRun == null)
-            {
-                StartNewRun();
-            }
+            CurrentRun = null;
         }
 
         public void StartNewRun(string campaignId = null, string heroId = null)
         {
             var campaign = campaignId ?? Data.Campaigns.FirstOrDefault()?.id ?? "south_town_adventure";
             var hero = heroId ?? Data.Heroes.FirstOrDefault()?.id ?? "james";
+            var map = ResolveCampaignMap(campaign);
+            var startNodeId = map?.startNodeId ?? "start";
 
             CurrentRun = new RunState
             {
+                saveVersion = 1,
                 campaignId = campaign,
                 heroId = hero,
                 state = "manage",
+                phase = GamePhase.NightManage,
                 gold = Data.Config?.startGold ?? 3,
                 round = 1,
+                dayCount = 0,
+                maxMovePoints = 1,
+                remainingMovePoints = 0,
+                currentNodeId = startNodeId,
                 playerHp = Data.Config?.playerStartHp ?? 100,
                 shopLevel = 1,
                 shopUpgradeAnchorRound = 1,
                 campaignRoundLimit = ResolveCampaignRoundLimit(campaign)
             };
+
+            InitializeWorldMapNodeStates(CurrentRun, map);
         }
 
         public void RestoreRun(RunState runState)
@@ -68,8 +75,14 @@ namespace ProphecyCentury.Core
             CurrentRun = runState;
         }
 
-        private static int ResolveCampaignRoundLimit(string campaignId)
+        private int ResolveCampaignRoundLimit(string campaignId)
         {
+            var configuredVictoryRound = Data?.Config?.victoryRound ?? 0;
+            if (configuredVictoryRound > 0)
+            {
+                return configuredVictoryRound;
+            }
+
             switch (campaignId)
             {
                 case "snow_peak_defense":
@@ -78,6 +91,49 @@ namespace ProphecyCentury.Core
                     return 24;
                 default:
                     return 20;
+            }
+        }
+
+        private WorldMapDefinition ResolveCampaignMap(string campaignId)
+        {
+            var campaign = Data?.FindCampaign(campaignId);
+            var mapId = campaign?.mapId;
+            if (!string.IsNullOrWhiteSpace(mapId))
+            {
+                var configuredMap = Data.FindWorldMap(mapId);
+                if (configuredMap != null)
+                {
+                    return configuredMap;
+                }
+            }
+
+            return Data?.WorldMaps?.FirstOrDefault();
+        }
+
+        private static void InitializeWorldMapNodeStates(RunState run, WorldMapDefinition map)
+        {
+            run.worldMapNodes.Clear();
+            if (map?.nodes == null)
+            {
+                return;
+            }
+
+            var startNodeId = string.IsNullOrWhiteSpace(map.startNodeId) ? run.currentNodeId : map.startNodeId;
+            foreach (var node in map.nodes)
+            {
+                if (string.IsNullOrWhiteSpace(node.id))
+                {
+                    continue;
+                }
+
+                var isStartNode = node.id == startNodeId;
+                run.worldMapNodes.Add(new WorldMapNodeState
+                {
+                    nodeId = node.id,
+                    isVisible = isStartNode || node.layer <= 1,
+                    isVisited = isStartNode,
+                    isCleared = node.type == "start"
+                });
             }
         }
     }

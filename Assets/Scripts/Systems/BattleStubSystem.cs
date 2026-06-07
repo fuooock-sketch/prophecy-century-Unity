@@ -335,16 +335,15 @@ namespace ProphecyCentury.Systems
                                 break;
                             }
 
-                            var loss = Math.Max(1, skill.selfHpLoss > 0 ? skill.selfHpLoss : skill.damage > 0 ? skill.damage : skill.hp > 0 ? skill.hp : 1);
-                            AddEvent(events, elapsed, "skill", unit, unit, loss, $"{unit.Name} loses life and rallies allies");
-                            var beforeHp = unit.CurrentHp;
-                            unit.CurrentHp = Math.Max(0, unit.CurrentHp - loss);
-                            AddEvent(events, elapsed, "damage", unit, unit, beforeHp - unit.CurrentHp, $"{unit.Name} loses life");
-                            if (beforeHp > 0 && unit.CurrentHp <= 0)
+                            if (unit.CurrentCount <= 1 || !allies.Any(ally => ally.IsAlive && ally != unit))
                             {
-                                AddEvent(events, elapsed, "death", unit, unit, 0, $"{unit.Name} dies");
-                                ResolveDeath(unit, unit, allies, enemies, random, events, elapsed);
+                                break;
                             }
+
+                            var lossCount = CalculateSelfCountLoss(unit, skill);
+                            AddEvent(events, elapsed, "skill", unit, unit, lossCount, $"{unit.Name} loses troops and rallies allies");
+                            var hpLoss = ApplySelfCountLoss(unit, lossCount);
+                            AddEvent(events, elapsed, "damage", unit, unit, hpLoss, $"{unit.Name} loses troops");
 
                             foreach (var ally in allies.Where(ally => ally.IsAlive && ally != unit))
                             {
@@ -698,6 +697,16 @@ namespace ProphecyCentury.Systems
         private static List<BattleRuntimeUnit> BuildEnemyUnits(RunState runState, Random random)
         {
             var data = ProphecyGameSession.Instance.Data;
+            var preset = data.FindEnemyPreset(runState.explorationBattleEnemyPresetId);
+            if (preset != null)
+            {
+                var presetUnits = BuildEnemyRuntimeUnitsFromPreset(preset);
+                if (presetUnits.Count > 0)
+                {
+                    return presetUnits;
+                }
+            }
+
             var campaignMultiplier = CampaignEnemyMultiplier(runState.campaignId);
             var budget = Math.Max(6, (int)Math.Round(GetCumulativeGoldForRound(runState.round) * 0.88f + runState.round * 0.7f));
             var maxStar = Math.Min(6, 1 + Math.Max(0, runState.round - 1) / 2);
@@ -767,6 +776,77 @@ namespace ProphecyCentury.Systems
             }
 
             return enemies;
+        }
+
+        public static List<BattleUnitSnapshot> BuildEnemyUnitSnapshotsFromPreset(EnemyPresetDefinition preset)
+        {
+            return BuildEnemyRuntimeUnitsFromPreset(preset)
+                .Select(CreateSnapshot)
+                .ToList();
+        }
+
+        private static List<BattleRuntimeUnit> BuildEnemyRuntimeUnitsFromPreset(EnemyPresetDefinition preset)
+        {
+            var enemies = new List<BattleRuntimeUnit>();
+            if (preset?.units == null)
+            {
+                return enemies;
+            }
+
+            var usedSlots = new HashSet<string>();
+            foreach (var presetUnit in preset.units)
+            {
+                if (presetUnit == null || string.IsNullOrWhiteSpace(presetUnit.unitId))
+                {
+                    continue;
+                }
+
+                var definition = ProphecyGameSession.Instance.Data.FindUnit(presetUnit.unitId);
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                var slotId = IsSupportedBattleSlot(presetUnit.slotId)
+                    ? presetUnit.slotId
+                    : ResolvePresetFallbackSlot(definition, usedSlots);
+                if (!usedSlots.Add(slotId))
+                {
+                    slotId = ResolvePresetFallbackSlot(definition, usedSlots);
+                    usedSlots.Add(slotId);
+                }
+
+                var state = new UnitCardState
+                {
+                    unitId = definition.id,
+                    name = definition.name,
+                    star = presetUnit.star > 0 ? presetUnit.star : definition.star,
+                    baseCount = presetUnit.count > 0 ? presetUnit.count : ResolveStartCount(definition),
+                    maxCount = 0
+                };
+                var runtime = CreateRuntimeUnit(state, false, definition, slotId, 1f);
+                if (runtime != null)
+                {
+                    enemies.Add(runtime);
+                }
+            }
+
+            return enemies;
+        }
+
+        private static bool IsSupportedBattleSlot(string slotId)
+        {
+            return !string.IsNullOrWhiteSpace(slotId)
+                && TryMapInitialSlotToHex(slotId, false, out _, out _);
+        }
+
+        private static string ResolvePresetFallbackSlot(UnitDefinition definition, HashSet<string> usedSlots)
+        {
+            var frontPositions = new[] { "1-1", "2-1", "2-2", "3-2" };
+            var rearPositions = new[] { "3-1", "3-3", "4-2", "4-1", "4-3", "4-4" };
+            var preferred = definition != null && definition.type == "range" ? rearPositions : frontPositions;
+            return preferred.Concat(frontPositions).Concat(rearPositions)
+                .FirstOrDefault(slot => !usedSlots.Contains(slot)) ?? "4-1";
         }
 
         private static bool IsEnemyCandidate(UnitDefinition unit, int maxStar)
@@ -1400,11 +1480,16 @@ namespace ProphecyCentury.Systems
                     {
                         if (TickSkillTimer(unit, skill.kind, Math.Max(0.1f, skill.interval <= 0f ? 1f : skill.interval)))
                         {
-                            var loss = Math.Max(1, skill.selfHpLoss > 0 ? skill.selfHpLoss : skill.damage > 0 ? skill.damage : skill.hp > 0 ? skill.hp : 3);
-                            unit.CurrentHp = Math.Max(0, unit.CurrentHp - loss);
+                            if (unit.CurrentCount <= 1 || !units.Any(ally => ally.IsAlive && ally != unit))
+                            {
+                                continue;
+                            }
+
+                            var lossCount = CalculateSelfCountLoss(unit, skill);
+                            ApplySelfCountLoss(unit, lossCount);
                             foreach (var ally in units.Where(ally => ally.IsAlive && ally != unit))
                             {
-                                ally.Attack += Math.Max(1, skill.attack);
+                                ally.Attack += Math.Max(0, skill.attack);
                             }
                             unit.SkillTriggers += 1;
                         }
@@ -1442,6 +1527,20 @@ namespace ProphecyCentury.Systems
 
             unit.SkillTimers[key] = timer;
             return false;
+        }
+
+        private static int CalculateSelfCountLoss(BattleRuntimeUnit unit, SkillDefinition skill)
+        {
+            var percent = skill.selfHpLoss > 0 ? skill.selfHpLoss : skill.damage > 0 ? skill.damage : skill.hp > 0 ? skill.hp : 25;
+            return Math.Max(1, Math.Min(unit.CurrentCount - 1, (int)Math.Ceiling(unit.CurrentCount * (percent / 100f))));
+        }
+
+        private static int ApplySelfCountLoss(BattleRuntimeUnit unit, int lossCount)
+        {
+            var beforeHp = unit.CurrentHp;
+            unit.CurrentCount = Math.Max(0, unit.CurrentCount - Math.Max(1, lossCount));
+            unit.CurrentHp = Math.Max(0, Math.Min(unit.CurrentHp, unit.CurrentCount * Math.Max(1, unit.HpPerUnit)));
+            return Math.Max(1, beforeHp - unit.CurrentHp);
         }
 
         private static void TickAreaEffects(List<BattleAreaEffect> areaEffects, List<BattleRuntimeUnit> sourceAllies, List<BattleRuntimeUnit> enemies, Random random, List<BattleEvent> events, float elapsed)

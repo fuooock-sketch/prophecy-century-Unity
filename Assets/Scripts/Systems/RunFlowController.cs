@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using ProphecyCentury.Core;
 using ProphecyCentury.Data;
@@ -13,6 +14,8 @@ namespace ProphecyCentury.Systems
         public readonly ShopSystem ShopSystem = new ShopSystem();
         public readonly BoardSystem BoardSystem = new BoardSystem();
         public readonly SynthesisSystem SynthesisSystem = new SynthesisSystem();
+        public readonly DayNightCycleController DayNightCycleController = new DayNightCycleController();
+        public readonly WorldMapSystem WorldMapSystem = new WorldMapSystem();
         public readonly ManageEventResolver ManageEventResolver;
         private readonly Random _random = new Random();
         private bool _synthesizedSinceLastConsume;
@@ -30,7 +33,95 @@ namespace ProphecyCentury.Systems
 
         public void EnterManagePhase()
         {
-            ProphecyGameSession.Instance.CurrentRun.state = "manage";
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            run.state = "manage";
+            run.phase = GamePhase.NightManage;
+        }
+
+        public bool EnterNight()
+        {
+            return DayNightCycleController.EnterNight(ProphecyGameSession.Instance.CurrentRun);
+        }
+
+        public bool EndNight()
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            if (run == null || run.phase != GamePhase.NightManage)
+            {
+                return false;
+            }
+
+            ResolveNightEndBeforeNewDay(run);
+            var advanced = DayNightCycleController.EndNight(run);
+            if (advanced)
+            {
+                StartNewDayFlow(run);
+            }
+
+            return advanced;
+        }
+
+        public bool StartNewDay()
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            if (run != null && run.phase == GamePhase.NightManage)
+            {
+                run.dayCount = Math.Max(0, run.dayCount) + 1;
+            }
+
+            var started = DayNightCycleController.StartNewDay(run);
+            if (started)
+            {
+                StartExplorationDayFlow(run);
+            }
+
+            return started;
+        }
+
+        public bool BeginMapBattle(string nodeId)
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var map = ResolveCurrentMap();
+            var node = map?.nodes?.FirstOrDefault(item => item != null && item.id == nodeId);
+            if (run == null || node == null || (node.type != "battle" && node.type != "boss"))
+            {
+                return false;
+            }
+
+            run.isExplorationBattle = true;
+            run.explorationBattleNodeId = node.id;
+            run.explorationBattleEnemyPresetId = node.enemyPresetId;
+            run.explorationBattleNodeType = node.type;
+            SetBattlePhase();
+            return true;
+        }
+
+        public NodeEventResult MoveToMapNode(string nodeId)
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var map = ResolveCurrentMap();
+            if (!WorldMapSystem.MoveToNode(run, map, nodeId))
+            {
+                return null;
+            }
+
+            return ResolveCurrentMapNode();
+        }
+
+        public NodeEventResult ResolveCurrentMapNode()
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var map = ResolveCurrentMap();
+            var result = WorldMapSystem.ResolveNode(run, map);
+            if (result == null || result.requiresBattle || result.eventType == NodeEventType.None || result.alreadyCleared)
+            {
+                return result;
+            }
+
+            WorldMapSystem.MarkNodeCleared(run, map, result.nodeId);
+            StartNextNightManageAfterDayNode(run);
+            ApplyNodeReward(run, result, result.nodeId);
+            return result;
         }
 
         public void EnterBattlePhase()
@@ -49,12 +140,16 @@ namespace ProphecyCentury.Systems
 
         public void SetBattlePhase()
         {
-            ProphecyGameSession.Instance.CurrentRun.state = "battle";
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            run.state = "battle";
+            run.phase = GamePhase.Battle;
         }
 
         public void FinishBattlePhase()
         {
-            ProphecyGameSession.Instance.CurrentRun.state = "settle";
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            run.state = "settle";
+            run.phase = GamePhase.Settle;
         }
 
         public void ResolveBattleOutcome(BattleStubResult result)
@@ -90,18 +185,31 @@ namespace ProphecyCentury.Systems
             else
             {
                 run.campaignLosses += 1;
+                run.state = "gameover";
+                run.phase = GamePhase.GameOver;
+                ClearExplorationBattleContext(run);
+                return;
             }
 
             if (run.playerHp <= 0)
             {
                 run.state = "gameover";
+                run.phase = GamePhase.GameOver;
+                ClearExplorationBattleContext(run);
                 return;
             }
 
-            if (result.Victory && run.campaignRoundLimit > 0 && run.round >= run.campaignRoundLimit)
+            if (run.isExplorationBattle)
+            {
+                ResolveExplorationBattleOutcome(run, result);
+                return;
+            }
+
+            if (run.campaignRoundLimit > 0 && run.round >= run.campaignRoundLimit)
             {
                 run.campaignCompleted = true;
                 run.state = "victory";
+                run.phase = GamePhase.Victory;
                 return;
             }
 
@@ -115,12 +223,32 @@ namespace ProphecyCentury.Systems
             var income = (ProphecyGameSession.Instance.Data.Config?.roundIncomeBase ?? 2) + run.round;
             run.gold = income;
             run.state = "manage";
+            run.phase = GamePhase.NightManage;
             ManageEventResolver.ResolveRoundStart(run);
             CaptureAbilityTrigger();
             ApplyPendingBattleRewards(run);
             TrySynthesizeAll(run);
             ShopSystem.RefreshForNewRound(run);
+            LogPlayerState(run);
         }
+        private static void LogPlayerState(RunState run)
+        {
+            try
+            {
+                var path = Path.Combine(UnityEngine.Application.persistentDataPath, "player_state_log.jsonl");
+                var def = ProphecyGameSession.Instance.Data;
+                var boardJson = string.Join(",", run.boardUnits.Select(u =>
+                {
+                    var d = def.FindUnit(u.unitId);
+                    var cnt = u.baseCount > 0 ? u.baseCount : (d != null && d.defaultCount > 0 ? d.defaultCount : d != null && d.startCount > 0 ? d.startCount : 1);
+                    return "{\"id\":\"" + u.unitId + "\",\"name\":\"" + u.name + "\",\"star\":" + u.star + ",\"count\":" + cnt + ",\"slot\":\"" + (u is BoardUnitState b ? b.boardSlotId : "?") + "\"}";
+                }));
+                var line = "{\"round\":" + run.round + ",\"type\":\"state\",\"gold\":" + run.gold + ",\"shopLevel\":" + run.shopLevel + ",\"hp\":" + run.playerHp + ",\"wins\":" + run.campaignWins + ",\"board\":[" + boardJson + "],\"handCount\":" + run.handCards.Count + "}";
+                System.IO.File.AppendAllText(path, line + System.Environment.NewLine);
+            }
+            catch { }
+        }
+
 
         public bool RefreshShop()
         {
@@ -271,7 +399,81 @@ namespace ProphecyCentury.Systems
             return true;
         }
 
-        public bool MoveBoardUnit(string fromSlotId, string toSlotId)
+        
+        /// <summary>
+        /// After a battle victory, generate a 3-card pick reward.
+        /// Harder enemies grant more rerolls. Boss grants 2 picks.
+        /// </summary>
+        public BattleUnitPickState CreateBattleUnitPickReward(int enemyScore)
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var data = ProphecyGameSession.Instance.Data;
+            var targetStar = Math.Min((run?.shopLevel ?? 1) + 1, 6);
+            int picks, rerolls;
+            if (enemyScore > 5000) { picks = 2; rerolls = 3; }
+            else if (enemyScore > 2000) { picks = 1; rerolls = 2; }
+            else if (enemyScore > 1000) { picks = 1; rerolls = 1; }
+            else { picks = 1; rerolls = 0; }
+            var state = new BattleUnitPickState { remainingPicks = picks, remainingRerolls = rerolls, choiceStar = targetStar, choices = GeneratePickChoices(targetStar, run) };
+            run.pendingBattleUnitPick = state;
+            return state;
+        }
+        public bool RerollBattleUnitPick()
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var state = run?.pendingBattleUnitPick;
+            if (state == null || state.remainingRerolls <= 0) return false;
+            state.remainingRerolls -= 1;
+            state.choices = GeneratePickChoices(state.choiceStar, run);
+            return true;
+        }
+        public bool ChooseBattleUnitPick(int choiceIndex)
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var state = run?.pendingBattleUnitPick;
+            if (state == null || state.remainingPicks <= 0 || choiceIndex < 0 || choiceIndex >= (state.choices?.Count ?? 0) || state.choices[choiceIndex].selected) return false;
+            var definition = ProphecyGameSession.Instance.Data.FindUnit(state.choices[choiceIndex].unitId);
+            if (definition == null || run.handCards.Count >= HandMaxCount) return false;
+            state.choices[choiceIndex].selected = true;
+            state.remainingPicks -= 1;
+            return ChooseUnitPickCard(definition);
+        }
+        public BattleUnitPickState GetBattleUnitPickState() { return ProphecyGameSession.Instance.CurrentRun?.pendingBattleUnitPick; }
+        public void ClearBattleUnitPick() { var r = ProphecyGameSession.Instance.CurrentRun; if (r != null) r.pendingBattleUnitPick = null; }
+        private List<BattleUnitPickChoice> GeneratePickChoices(int targetStar, RunState run)
+        {
+            var data = ProphecyGameSession.Instance.Data;
+            var pool = data.Units.Where(u => u != null && !u.hidden && u.star == targetStar).ToList();
+            if (pool.Count == 0) { var fs = data.Units.Where(u => u != null && !u.hidden && u.star <= targetStar).Select(u => u.star).DefaultIfEmpty(1).Max(); pool = data.Units.Where(u => u != null && !u.hidden && u.star == fs).ToList(); }
+            var br = new HashSet<string>(run.boardUnits.Where(u => u != null).Select(u => data.FindUnit(u.unitId)?.race).Where(r => !string.IsNullOrWhiteSpace(r)));
+            var bf = new HashSet<string>(run.boardUnits.Where(u => u != null).Select(u => data.FindUnit(u.unitId)?.faith).Where(f => !string.IsNullOrWhiteSpace(f)));
+            var pref = pool.Where(u => br.Contains(u.race) || bf.Contains(u.faith)).ToList();
+            var std = pool.Where(u => !pref.Contains(u)).ToList();
+            var choices = new List<BattleUnitPickChoice>();
+            var picked = new HashSet<string>();
+            for (var i = 0; i < 3 && pool.Count > 0; i++)
+            {
+                UnitDefinition pick;
+                if (pref.Count > 0 && _random.NextDouble() < 0.5) { var c2 = pref.Where(u => !picked.Contains(u.id)).ToList(); if (c2.Count == 0) c2 = pref; pick = c2[_random.Next(c2.Count)]; }
+                else { var c2 = std.Where(u => !picked.Contains(u.id)).ToList(); if (c2.Count == 0) c2 = pool.Where(u => !picked.Contains(u.id)).ToList(); if (c2.Count == 0) c2 = pool; pick = c2[_random.Next(c2.Count)]; }
+                picked.Add(pick.id);
+                choices.Add(new BattleUnitPickChoice { unitId = pick.id, name = pick.name, star = pick.star });
+            }
+            return choices;
+        }
+        private bool ChooseUnitPickCard(UnitDefinition definition)
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            if (run == null || definition == null || run.handCards.Count >= HandMaxCount) return false;
+            var g = new UnitCardState { unitId = definition.id, name = definition.name, star = definition.star, baseCount = ResolveStartCount(definition), maxCount = 0 };
+            run.handCards.Add(g);
+            ManageEventResolver.ResolveGainUnit(run, g);
+            CaptureAbilityTrigger();
+            TrySynthesizeAll(run);
+            return true;
+        }
+
+public bool MoveBoardUnit(string fromSlotId, string toSlotId)
         {
             return BoardSystem.MoveBoardUnit(ProphecyGameSession.Instance.CurrentRun, fromSlotId, toSlotId);
         }
@@ -301,6 +503,7 @@ namespace ProphecyCentury.Systems
             if (success)
             {
                 ManageEventResolver.ResolveLeave(run, target, "sell");
+                ManageEventResolver.ResolveHeroBoardLeave(run, target);
                 CaptureAbilityTrigger();
                 TrySynthesizeAll(run);
             }
@@ -339,7 +542,18 @@ namespace ProphecyCentury.Systems
 
         private bool TrySynthesizeAll(RunState run)
         {
+            var boardBefore = run?.boardUnits?.ToList() ?? new List<BoardUnitState>();
             var synthesized = SynthesisSystem.TrySynthesizeAll(run);
+            if (synthesized && run != null)
+            {
+                foreach (var removed in boardBefore.Where(unit => unit != null && !run.boardUnits.Contains(unit)))
+                {
+                    ManageEventResolver.ResolveHeroBoardLeave(run, removed);
+                }
+
+                CaptureAbilityTrigger();
+            }
+
             ManageEventResolver.RefreshBoardAuras(run);
             _synthesizedSinceLastConsume |= synthesized;
             return synthesized;
@@ -384,6 +598,141 @@ namespace ProphecyCentury.Systems
             }
 
             run.pendingBattleRewards = new BattleRewardState();
+        }
+
+        private void ResolveExplorationBattleOutcome(RunState run, BattleStubResult result)
+        {
+            var map = ResolveCurrentMap();
+            var nodeId = run.explorationBattleNodeId;
+            var nodeResult = WorldMapSystem.ResolveNode(run, map, nodeId);
+            if (result.Victory)
+            {
+                WorldMapSystem.MarkNodeCleared(run, map, nodeId);
+                if (WorldMapSystem.CheckVictoryCondition(run, map))
+                {
+                    ApplyNodeReward(run, nodeResult, nodeId);
+                    LogBattleResult(run, result);
+                    ClearExplorationBattleContext(run);
+                    return;
+                }
+
+                StartNextNightManageAfterDayNode(run);
+                ApplyNodeReward(run, nodeResult, nodeId);
+                ClearExplorationBattleContext(run);
+                return;
+            }
+
+            StartNextNightManageAfterDayNode(run);
+            ClearExplorationBattleContext(run);
+        }
+
+                private static void LogBattleResult(RunState run, BattleStubResult result)
+        {
+            try
+            {
+                var path = Path.Combine(UnityEngine.Application.persistentDataPath, "player_state_log.jsonl");
+                var summary = (result.Summary ?? "").Replace("\"", "'").Replace("\\", "/");
+                var line = "{\"round\":" + run.round + ",\"type\":\"battle\",\"victory\":" + (result.Victory ? "true" : "false") + ",\"playerScore\":" + result.PlayerScore + ",\"enemyScore\":" + result.EnemyScore + ",\"hpDelta\":" + result.HpDelta + ",\"summary\":\"" + summary + "\"}";
+                System.IO.File.AppendAllText(path, line + System.Environment.NewLine);
+            }
+            catch { }
+        }
+
+        private static void ApplyNodeReward(RunState run, NodeEventResult nodeResult, string sourceNodeId)
+        {
+            if (run == null || nodeResult == null || nodeResult.alreadyCleared)
+            {
+                return;
+            }
+
+            run.gold += Math.Max(0, nodeResult.rewardGold);
+            if (!string.IsNullOrWhiteSpace(nodeResult.rewardTreasureId)
+                && !run.inventoryItems.Any(item => item != null && item.itemId == nodeResult.rewardTreasureId && item.sourceNodeId == sourceNodeId))
+            {
+                run.inventoryItems.Add(new InventoryItemState
+                {
+                    itemId = nodeResult.rewardTreasureId,
+                    count = 1,
+                    sourceNodeId = sourceNodeId,
+                    acquiredDay = Math.Max(1, run.dayCount)
+                });
+            }
+        }
+
+        private WorldMapDefinition ResolveCurrentMap()
+        {
+            var data = ProphecyGameSession.Instance.Data;
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            var campaign = data?.FindCampaign(run?.campaignId);
+            return data?.FindWorldMap(campaign?.mapId) ?? data?.WorldMaps?.FirstOrDefault();
+        }
+
+        private static void ClearExplorationBattleContext(RunState run)
+        {
+            if (run == null)
+            {
+                return;
+            }
+
+            run.isExplorationBattle = false;
+            run.explorationBattleNodeId = null;
+            run.explorationBattleEnemyPresetId = null;
+            run.explorationBattleNodeType = null;
+        }
+
+        private void ResolveNightEndBeforeNewDay(RunState run)
+        {
+            ManageEventResolver.ResolveRoundEnd(run);
+            CaptureAbilityTrigger();
+            TrySynthesizeAll(run);
+            run.round += 1;
+        }
+
+        private void StartNewDayFlow(RunState run)
+        {
+            var income = (ProphecyGameSession.Instance.Data.Config?.roundIncomeBase ?? 2) + run.round;
+            run.gold = income;
+            ManageEventResolver.ResolveRoundStart(run);
+            CaptureAbilityTrigger();
+            ApplyPendingBattleRewards(run);
+            TrySynthesizeAll(run);
+            ShopSystem.RefreshForNewRound(run);
+            LogPlayerState(run);
+        }
+
+        private void StartExplorationDayFlow(RunState run)
+        {
+            if (run == null)
+            {
+                return;
+            }
+
+            run.remainingMovePoints = Math.Min(Math.Max(1, run.maxMovePoints), 1);
+        }
+
+        private static void ReturnToNightManage(RunState run)
+        {
+            if (run == null || run.phase == GamePhase.Victory || run.phase == GamePhase.GameOver)
+            {
+                return;
+            }
+
+            run.remainingMovePoints = 0;
+            run.phase = GamePhase.NightManage;
+            run.state = "manage";
+        }
+
+        private void StartNextNightManageAfterDayNode(RunState run)
+        {
+            if (run == null || run.phase == GamePhase.Victory || run.phase == GamePhase.GameOver)
+            {
+                return;
+            }
+
+            NextRound();
+            run.remainingMovePoints = 0;
+            run.phase = GamePhase.NightManage;
+            run.state = "manage";
         }
 
         private static void ClearPendingBattleState(UnitCardState unit)

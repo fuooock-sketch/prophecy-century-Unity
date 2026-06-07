@@ -1,0 +1,10 @@
+trigger_id,trigger_name,phase,timing,condition,effect_summary,engineering_entry,configurable_now,notes
+run_start,新局初始化,NightManage,选择英雄后,玩家确认英雄,初始化 RunState 和世界地图节点状态,ProphecyGameSession.StartNewRun,false,当前不走策划表配置
+round_start,经营回合开始,NightManage,进入新经营回合时,节点完成或旧战斗胜利,发放新回合收入/回合开始效果/商店刷新,RunFlowController.NextRound,true,未来可扩收入和回合开始事件
+round_end,经营回合结束,NightManage,点击探索后,无未完成选择,结算回合结束效果/合成/反馈,RunFlowController.ResolveRoundEndBeforeBattle,true,探索按钮触发
+day_start,白天开始,DayExplore,回合结束结算后,StartNewDay 成功,行动力恢复为 1,RunFlowController.StartNewDay,true,MVP 固定 1 点行动力
+node_select,节点选择,DayExplore,点击可达节点,节点可见/有连接/有行动力,移动到节点并解析事件,RunFlowController.MoveToMapNode,true,由地图配置驱动
+node_complete,节点完成,NightManage,非 Boss 节点结算后,资源/宝物/普通战斗胜利,进入下一经营回合并发节点奖励,RunFlowController.StartNextNightManageAfterDayNode,true,奖励在 NextRound 后发放
+battle_start,战斗开始,Battle,战斗节点或旧战斗入口,存在敌人阵容,生成预览并进入战斗表现,RunSceneController.PlayBattleStage,true,地图战斗跳过经营回合结束
+battle_defeat,战斗失败,GameOver,权威结算失败,result.Victory=false,立即 GameOver,RunFlowController.ResolveBattleOutcome,false,当前固定规则
+boss_victory,Boss 胜利,Victory,Boss 战胜利,Boss 节点清除,直接 Victory,WorldMapSystem.CheckVictoryCondition,true,由 boss 节点驱动

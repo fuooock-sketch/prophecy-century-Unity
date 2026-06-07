@@ -187,8 +187,8 @@
         "tags": [],
         "talentText": "—",
         "goldTalentText": "—",
-        "battleText": "每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+1；自身数量少于等于1时，技能失效。",
-        "goldBattleText": "每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+2；；自身数量少于等于1时，技能失效。",
+        "battleText": "每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+1；自身数量少于等于1或场上没有其他友军时，技能失效。",
+        "goldBattleText": "每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+2；自身数量少于等于1或场上没有其他友军时，技能失效。",
         "talents": [
             {
                 "kind": "while_on_board_on_entry_race_gain_stats",
@@ -207,16 +207,16 @@
         "battleSkills": [
             {
                 "kind": "battle_round_self_hp_loss_team_temp_attack",
-                "selfHpLoss": 40,
-                "attack": 20,
+                "selfHpLoss": 25,
+                "attack": 1,
                 "intervalRounds": 1
             }
         ],
         "goldBattleSkills": [
             {
                 "kind": "battle_round_self_hp_loss_team_temp_attack",
-                "selfHpLoss": 40,
-                "attack": 40,
+                "selfHpLoss": 25,
+                "attack": 2,
                 "intervalRounds": 1
             }
         ],
@@ -233,7 +233,7 @@
         "attackRange": 8.0,
         "firstPurchaseHp": 105,
         "firstPurchaseAverageDamage": 52,
-        "skillText": "—\n—\n每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+1；自身数量少于等于1时，技能失效。\n每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+2；；自身数量少于等于1时，技能失效。",
+        "skillText": "—\n—\n每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+1；自身数量少于等于1或场上没有其他友军时，技能失效。\n每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+2；自身数量少于等于1或场上没有其他友军时，技能失效。",
         "designOnlyInitialBaseDamage": 52
     },
     {
@@ -736,8 +736,18 @@
                 "value": 2
             }
         ],
-        "battleSkills": [],
-        "goldBattleSkills": [],
+        "battleSkills": [
+            {
+                "kind": "on_ally_crit_self_temp_power",
+                "value": 10
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_ally_crit_self_temp_power",
+                "value": 20
+            }
+        ],
         "sizeTier": 2,
         "limit": 3,
         "startCount": 4,
@@ -777,24 +787,24 @@
         "goldTalentText": "回合开始时，如果场上至少有6支莱特信仰者部队，则随机发现2支莱特信仰者部队。",
         "battleText": "—",
         "goldBattleText": "—",
-        "talents": [],
-        "goldTalents": [],
-        "battleSkills": [
+        "talents": [
             {
-                "kind": "battle_start_if_team_faith_count_next_round_discover",
+                "kind": "enter_if_board_faith_count_discover",
                 "faith": "莱特",
                 "threshold": 6,
                 "count": 1
             }
         ],
-        "goldBattleSkills": [
+        "goldTalents": [
             {
-                "kind": "battle_start_if_team_faith_count_next_round_discover",
+                "kind": "enter_if_board_faith_count_discover",
                 "faith": "莱特",
                 "threshold": 6,
                 "count": 2
             }
         ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
         "sizeTier": 2,
         "limit": 3,
         "startCount": 4,
@@ -893,8 +903,22 @@
         "goldTalentText": "莱特信仰者每累计获得数量5次，本部队获得+2数量。",
         "battleText": "开战后，己方每有1名莱特信仰者，全军临时获得+10数量。",
         "goldBattleText": "开战后，己方每有1名莱特信仰者，全军临时获得+15数量。",
-        "talents": [],
-        "goldTalents": [],
+        "talents": [
+            {
+                "kind": "on_faith_gain_count_threshold_self_gain_count",
+                "faith": "莱特",
+                "threshold": 5,
+                "value": 1
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "on_faith_gain_count_threshold_self_gain_count",
+                "faith": "莱特",
+                "threshold": 5,
+                "value": 2
+            }
+        ],
         "battleSkills": [
             {
                 "kind": "battle_start_team_attack_per_faith_count",
@@ -2916,8 +2940,18 @@
                 "value": 8
             }
         ],
-        "battleSkills": [],
-        "goldBattleSkills": [],
+        "battleSkills": [
+            {
+                "kind": "on_death_next_round_forest_gem",
+                "value": 1
+            }
+        ],
+        "goldBattleSkills": [
+            {
+                "kind": "on_death_next_round_forest_gem",
+                "value": 2
+            }
+        ],
         "sizeTier": 3,
         "limit": 3,
         "startCount": 4,
@@ -3143,8 +3177,20 @@
         "goldTalentText": "每当有部队获得数量（无论在场上、手牌还是商店），【密林宝钻】提供的获得数量+2；每回合最多触发5次。",
         "battleText": "开战后，将敌方1名总血量最高的部队锁住，使其无法移动，但可以攻击和反击，持续2个轮次。",
         "goldBattleText": "开战后，将敌方1名总血量最高的部队锁住，使其无法移动，但可以攻击和反击，持续3个轮次。",
-        "talents": [],
-        "goldTalents": [],
+        "talents": [
+            {
+                "kind": "forest_gem_gift_count_bonus_aura",
+                "value": 1,
+                "count": 5
+            }
+        ],
+        "goldTalents": [
+            {
+                "kind": "forest_gem_gift_count_bonus_aura",
+                "value": 2,
+                "count": 5
+            }
+        ],
         "battleSkills": [
             {
                 "kind": "battle_start_lock_highest_hp_targets",

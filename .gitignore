@@ -44,3 +44,9 @@ __pycache__/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Local auth / temporary export files
+lark_auth_qrcode*.png
+tmp_auth_qr*.png
+tmp_*
+**/*auth_qr.png

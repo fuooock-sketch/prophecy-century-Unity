@@ -1,0 +1,165 @@
+{
+  "phases": [
+    {
+      "phase": "NightManage",
+      "state": "manage",
+      "displayName": "夜晚经营",
+      "playerAction": "购买/部署/调整阵容/点击探索",
+      "enterCondition": "新局开始或节点完成后进入下一回合",
+      "exitCondition": "点击探索且无未完成选择",
+      "engineeringEntry": "RunFlowController.NextRound / StartNextNightManageAfterDayNode",
+      "notes": "开局默认阶段"
+    },
+    {
+      "phase": "DayExplore",
+      "state": "day",
+      "displayName": "白天探索",
+      "playerAction": "选择一个可达地图节点",
+      "enterCondition": "探索按钮完成夜晚回合结束结算",
+      "exitCondition": "节点完成或进入战斗",
+      "engineeringEntry": "RunFlowController.StartNewDay",
+      "notes": "MVP 每天 1 个节点"
+    },
+    {
+      "phase": "Battle",
+      "state": "battle",
+      "displayName": "战斗",
+      "playerAction": "确认开始行动并观看战斗",
+      "enterCondition": "战斗节点或旧经营战斗入口",
+      "exitCondition": "战斗播放结束",
+      "engineeringEntry": "RunFlowController.SetBattlePhase",
+      "notes": "地图战斗不重复结算经营回合结束"
+    },
+    {
+      "phase": "Settle",
+      "state": "settle",
+      "displayName": "战斗结算",
+      "playerAction": "无直接操作",
+      "enterCondition": "战斗结果产生",
+      "exitCondition": "进入下一状态",
+      "engineeringEntry": "RunFlowController.FinishBattlePhase",
+      "notes": "中间态"
+    },
+    {
+      "phase": "Victory",
+      "state": "victory",
+      "displayName": "胜利",
+      "playerAction": "查看结算/重新开始",
+      "enterCondition": "Boss 胜利",
+      "exitCondition": "重新选择英雄",
+      "engineeringEntry": "WorldMapSystem.CheckVictoryCondition",
+      "notes": "Boss 胜利直达"
+    },
+    {
+      "phase": "GameOver",
+      "state": "gameover",
+      "displayName": "失败",
+      "playerAction": "查看结算/重新开始",
+      "enterCondition": "任意战斗失败",
+      "exitCondition": "重新选择英雄",
+      "engineeringEntry": "RunFlowController.ResolveBattleOutcome",
+      "notes": "失败立即结束本局"
+    }
+  ],
+  "triggers": [
+    {
+      "id": "run_start",
+      "name": "新局初始化",
+      "phase": "NightManage",
+      "timing": "选择英雄后",
+      "condition": "玩家确认英雄",
+      "effectSummary": "初始化 RunState 和世界地图节点状态",
+      "engineeringEntry": "ProphecyGameSession.StartNewRun",
+      "configurableNow": false,
+      "notes": "当前不走策划表配置"
+    },
+    {
+      "id": "round_start",
+      "name": "经营回合开始",
+      "phase": "NightManage",
+      "timing": "进入新经营回合时",
+      "condition": "节点完成或旧战斗胜利",
+      "effectSummary": "发放新回合收入/回合开始效果/商店刷新",
+      "engineeringEntry": "RunFlowController.NextRound",
+      "configurableNow": true,
+      "notes": "未来可扩收入和回合开始事件"
+    },
+    {
+      "id": "round_end",
+      "name": "经营回合结束",
+      "phase": "NightManage",
+      "timing": "点击探索后",
+      "condition": "无未完成选择",
+      "effectSummary": "结算回合结束效果/合成/反馈",
+      "engineeringEntry": "RunFlowController.ResolveRoundEndBeforeBattle",
+      "configurableNow": true,
+      "notes": "探索按钮触发"
+    },
+    {
+      "id": "day_start",
+      "name": "白天开始",
+      "phase": "DayExplore",
+      "timing": "回合结束结算后",
+      "condition": "StartNewDay 成功",
+      "effectSummary": "行动力恢复为 1",
+      "engineeringEntry": "RunFlowController.StartNewDay",
+      "configurableNow": true,
+      "notes": "MVP 固定 1 点行动力"
+    },
+    {
+      "id": "node_select",
+      "name": "节点选择",
+      "phase": "DayExplore",
+      "timing": "点击可达节点",
+      "condition": "节点可见/有连接/有行动力",
+      "effectSummary": "移动到节点并解析事件",
+      "engineeringEntry": "RunFlowController.MoveToMapNode",
+      "configurableNow": true,
+      "notes": "由地图配置驱动"
+    },
+    {
+      "id": "node_complete",
+      "name": "节点完成",
+      "phase": "NightManage",
+      "timing": "非 Boss 节点结算后",
+      "condition": "资源/宝物/普通战斗胜利",
+      "effectSummary": "进入下一经营回合并发节点奖励",
+      "engineeringEntry": "RunFlowController.StartNextNightManageAfterDayNode",
+      "configurableNow": true,
+      "notes": "奖励在 NextRound 后发放"
+    },
+    {
+      "id": "battle_start",
+      "name": "战斗开始",
+      "phase": "Battle",
+      "timing": "战斗节点或旧战斗入口",
+      "condition": "存在敌人阵容",
+      "effectSummary": "生成预览并进入战斗表现",
+      "engineeringEntry": "RunSceneController.PlayBattleStage",
+      "configurableNow": true,
+      "notes": "地图战斗跳过经营回合结束"
+    },
+    {
+      "id": "battle_defeat",
+      "name": "战斗失败",
+      "phase": "GameOver",
+      "timing": "权威结算失败",
+      "condition": "result.Victory=false",
+      "effectSummary": "立即 GameOver",
+      "engineeringEntry": "RunFlowController.ResolveBattleOutcome",
+      "configurableNow": false,
+      "notes": "当前固定规则"
+    },
+    {
+      "id": "boss_victory",
+      "name": "Boss 胜利",
+      "phase": "Victory",
+      "timing": "Boss 战胜利",
+      "condition": "Boss 节点清除",
+      "effectSummary": "直接 Victory",
+      "engineeringEntry": "WorldMapSystem.CheckVictoryCondition",
+      "configurableNow": true,
+      "notes": "由 boss 节点驱动"
+    }
+  ]
+}

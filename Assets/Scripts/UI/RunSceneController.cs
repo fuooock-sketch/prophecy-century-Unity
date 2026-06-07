@@ -78,6 +78,7 @@ namespace ProphecyCentury.UI
         private string _dragBoardSlotId;
         private bool _dragSellMode;
         private bool _battlePlaybackRunning;
+        private bool _dayExploreTransitionRunning;
         private Transform _battleFieldRoot;
         private GameObject _battleStartActionButton;
         private GameObject _battlePlaybackSpeedRoot;
@@ -93,6 +94,15 @@ namespace ProphecyCentury.UI
         private GameObject _battleLogButton;
         private GameObject _battleLogModal;
         private Text _battleLogContentLabel;
+        private GameObject _gameResultModal;
+        private Text _gameResultTitleLabel;
+        private Text _gameResultContentLabel;
+        private GameObject _heroSelectionModal;
+        private Transform _heroSelectionOptionsRoot;
+        private Text _heroSelectionSubtitleLabel;
+        private bool _heroSelectionStarting;
+        private WorldMapView _worldMapView;
+        private GameObject _startDayButton;
         private const float DragSnapRadius = 58f;
         private readonly List<RuntimeDragBoardSlotVisual> _dragBoardSlots = new List<RuntimeDragBoardSlotVisual>();
         private GameObject _dragIndicatorRoot;
@@ -335,6 +345,21 @@ namespace ProphecyCentury.UI
             UpdateRuntimeDrag(Input.mousePosition);
         }
 
+        public void OpenHeroSelection()
+        {
+            EnsureHeroSelectionModal();
+            _heroSelectionStarting = false;
+            RebuildHeroSelectionOptions();
+            if (_heroSelectionSubtitleLabel != null)
+            {
+                _heroSelectionSubtitleLabel.text = "每局只能选择一次，点击英雄后进入第 1 回合经营阶段";
+                _heroSelectionSubtitleLabel.color = new Color32(214, 220, 232, 255);
+            }
+
+            _heroSelectionModal.SetActive(true);
+            _heroSelectionModal.transform.SetAsLastSibling();
+        }
+
         public void StartSelectedRun()
         {
             var data = ProphecyGameSession.Instance.Data;
@@ -358,6 +383,40 @@ namespace ProphecyCentury.UI
             }
 
             WriteLog("已开始所选战役。");
+            RefreshView();
+        }
+
+        private void StartSelectedRunWithHero(string heroId)
+        {
+            if (_heroSelectionStarting)
+            {
+                return;
+            }
+
+            var data = ProphecyGameSession.Instance.Data;
+            if (data.FindHero(heroId) == null)
+            {
+                RuntimeSfxPlayer.PlayError();
+                if (_heroSelectionSubtitleLabel != null)
+                {
+                    _heroSelectionSubtitleLabel.text = "英雄数据缺失，无法开始。";
+                    _heroSelectionSubtitleLabel.color = new Color32(255, 126, 126, 255);
+                }
+
+                return;
+            }
+
+            _heroSelectionStarting = true;
+            var campaignId = data.Campaigns.Count > 0 ? data.Campaigns[0].id : null;
+            _flow.PrepareNewRun(campaignId, heroId);
+            EnsureShopInitialized();
+            if (_heroSelectionModal != null)
+            {
+                _heroSelectionModal.SetActive(false);
+            }
+
+            ShowRun();
+            WriteLog($"已选择英雄：{FormatHeroName(heroId)}。");
             RefreshView();
         }
 
@@ -413,6 +472,154 @@ namespace ProphecyCentury.UI
                     ? "未加载英雄数据。"
                     : $"{hero.name}  {hero.title}\n{hero.short_text}\n{hero.passive_text}\n{hero.active_text}";
             }
+        }
+
+        private void EnsureHeroSelectionModal()
+        {
+            if (_heroSelectionModal != null)
+            {
+                return;
+            }
+
+            var parent = titlePanel != null ? titlePanel.transform : transform;
+            _heroSelectionModal = new GameObject("HeroSelectionModal", typeof(Image));
+            _heroSelectionModal.transform.SetParent(parent, false);
+            var modalRect = _heroSelectionModal.GetComponent<RectTransform>();
+            modalRect.anchorMin = Vector2.zero;
+            modalRect.anchorMax = Vector2.one;
+            modalRect.offsetMin = Vector2.zero;
+            modalRect.offsetMax = Vector2.zero;
+            _heroSelectionModal.GetComponent<Image>().color = new Color32(4, 3, 12, 210);
+
+            var panel = new GameObject("Panel", typeof(Image));
+            panel.transform.SetParent(_heroSelectionModal.transform, false);
+            var panelRect = panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.anchoredPosition = Vector2.zero;
+            panelRect.sizeDelta = new Vector2(1120f, 610f);
+            panel.GetComponent<Image>().color = new Color32(22, 28, 48, 252);
+
+            var title = CreateAnchoredText(panel.transform, "Title", "选择英雄", 42, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.84f), new Vector2(0.92f, 0.94f));
+            title.color = new Color32(255, 226, 132, 255);
+            _heroSelectionSubtitleLabel = CreateAnchoredText(panel.transform, "Subtitle", "每局只能选择一次，点击英雄后进入第 1 回合经营阶段", 22, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.76f), new Vector2(0.92f, 0.83f));
+            _heroSelectionSubtitleLabel.color = new Color32(214, 220, 232, 255);
+
+            var options = new GameObject("Options", typeof(GridLayoutGroup));
+            options.transform.SetParent(panel.transform, false);
+            var optionsRect = options.GetComponent<RectTransform>();
+            optionsRect.anchorMin = new Vector2(0.06f, 0.16f);
+            optionsRect.anchorMax = new Vector2(0.94f, 0.72f);
+            optionsRect.offsetMin = Vector2.zero;
+            optionsRect.offsetMax = Vector2.zero;
+            var layout = options.GetComponent<GridLayoutGroup>();
+            layout.cellSize = new Vector2(296f, 330f);
+            layout.spacing = new Vector2(34f, 0f);
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            layout.constraintCount = 3;
+            _heroSelectionOptionsRoot = options.transform;
+
+            CreateGameResultButton(panel.transform, "取消", new Vector2(0f, -250f), () => _heroSelectionModal.SetActive(false));
+            _heroSelectionModal.SetActive(false);
+        }
+
+        private void RebuildHeroSelectionOptions()
+        {
+            if (_heroSelectionOptionsRoot == null)
+            {
+                return;
+            }
+
+            ClearChildren(_heroSelectionOptionsRoot);
+            foreach (var hero in ProphecyGameSession.Instance.Data.Heroes.Take(3))
+            {
+                CreateHeroSelectionChoice(hero);
+            }
+        }
+
+        private void CreateHeroSelectionChoice(HeroDefinition hero)
+        {
+            if (hero == null || _heroSelectionOptionsRoot == null)
+            {
+                return;
+            }
+
+            var root = new GameObject(hero.id + "HeroChoice", typeof(Image), typeof(Button), typeof(LayoutElement));
+            root.transform.SetParent(_heroSelectionOptionsRoot, false);
+            var image = root.GetComponent<Image>();
+            image.color = ResolveHeroChoiceColor(hero.id);
+            var outline = root.AddComponent<Outline>();
+            outline.effectColor = ResolveHeroChoiceOutlineColor(hero.id);
+            outline.effectDistance = new Vector2(2f, -2f);
+            var layout = root.GetComponent<LayoutElement>();
+            layout.preferredWidth = 296f;
+            layout.preferredHeight = 330f;
+
+            var glyph = CreateAnchoredText(root.transform, "Glyph", hero.portrait_glyph, 58, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.68f), new Vector2(0.92f, 0.9f));
+            glyph.color = new Color32(255, 226, 132, 255);
+            var name = CreateAnchoredText(root.transform, "Name", hero.name, 30, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.56f), new Vector2(0.92f, 0.68f));
+            name.color = Color.white;
+            var title = CreateAnchoredText(root.transform, "Title", hero.title, 18, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.47f), new Vector2(0.92f, 0.56f));
+            title.color = new Color32(204, 214, 232, 255);
+            var skill = CreateAnchoredText(root.transform, "Skill", hero.passive_text, 20, TextAnchor.UpperCenter, new Vector2(0.09f, 0.16f), new Vector2(0.91f, 0.44f));
+            skill.color = new Color32(230, 236, 248, 255);
+            var buttonText = CreateAnchoredText(root.transform, "ButtonText", "选择", 22, TextAnchor.MiddleCenter, new Vector2(0.22f, 0.04f), new Vector2(0.78f, 0.14f));
+            buttonText.color = new Color32(255, 226, 132, 255);
+
+            var button = root.GetComponent<Button>();
+            button.targetGraphic = image;
+            button.colors = CreateHeroChoiceButtonColors(hero.id);
+            button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
+            button.onClick.AddListener(() => StartSelectedRunWithHero(hero.id));
+        }
+
+        private static Color32 ResolveHeroChoiceColor(string heroId)
+        {
+            switch (heroId)
+            {
+                case "james":
+                    return new Color32(38, 58, 86, 255);
+                case "magic":
+                    return new Color32(58, 48, 86, 255);
+                case "shalame":
+                    return new Color32(62, 60, 44, 255);
+                default:
+                    return new Color32(34, 45, 74, 255);
+            }
+        }
+
+        private static Color32 ResolveHeroChoiceOutlineColor(string heroId)
+        {
+            switch (heroId)
+            {
+                case "james":
+                    return new Color32(88, 154, 224, 220);
+                case "magic":
+                    return new Color32(176, 126, 236, 220);
+                case "shalame":
+                    return new Color32(238, 190, 88, 220);
+                default:
+                    return new Color32(110, 132, 170, 220);
+            }
+        }
+
+        private static ColorBlock CreateHeroChoiceButtonColors(string heroId)
+        {
+            var normal = ResolveHeroChoiceColor(heroId);
+            var highlighted = Color.Lerp(normal, Color.white, 0.16f);
+            var pressed = Color.Lerp(normal, Color.black, 0.14f);
+            return new ColorBlock
+            {
+                normalColor = normal,
+                highlightedColor = highlighted,
+                pressedColor = pressed,
+                selectedColor = highlighted,
+                disabledColor = new Color32(40, 44, 58, 180),
+                colorMultiplier = 1f,
+                fadeDuration = 0.08f
+            };
         }
 
         private void StartRunIfNeeded()
@@ -1871,7 +2078,7 @@ namespace ProphecyCentury.UI
                     .Where(item => item == null || item.sourceName != ManageEventResolver.ForestGemCardName)
                     .ToList() ?? new List<ForestGemGiftEventState>(),
                 evolveEvents = feedbackEvents.evolveEvents ?? new List<UnitEvolveEventState>(),
-                countGainEvents = new List<CountGainEventState>(),
+                countGainEvents = feedbackEvents.countGainEvents ?? new List<CountGainEventState>(),
                 entryEffectEvents = feedbackEvents.entryEffectEvents ?? new List<EntryEffectEventState>(),
                 handAddEvents = feedbackEvents.handAddEvents ?? new List<HandAddEventState>(),
                 attackChangeEvents = feedbackEvents.attackChangeEvents ?? new List<AttackChangeEventState>(),
@@ -2143,6 +2350,12 @@ namespace ProphecyCentury.UI
             var target = GetBoardSlotRect(countEvent.targetSlotId);
             if (target != null)
             {
+                if (!string.IsNullOrWhiteSpace(countEvent.label))
+                {
+                    PlayCountGainArriveFeedback(target, countEvent.amount, countEvent.label);
+                    return;
+                }
+
                 var source = GetBoardSlotRect(countEvent.sourceSlotId);
                 if (source != null && source != target)
                 {
@@ -2154,7 +2367,7 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            ShowFloatingText($"{countEvent.targetName} 数量+{countEvent.amount}");
+            ShowFloatingText($"{countEvent.targetName} {(string.IsNullOrWhiteSpace(countEvent.label) ? $"数量+{countEvent.amount}" : countEvent.label)}");
         }
 
         private IEnumerator PlayLinkedCountGainFeedback(RectTransform source, RectTransform target, int amount)
@@ -2211,7 +2424,7 @@ namespace ProphecyCentury.UI
             PlayCountGainArriveFeedback(target, amount);
         }
 
-        private void PlayCountGainArriveFeedback(RectTransform target, int amount)
+        private void PlayCountGainArriveFeedback(RectTransform target, int amount, string label = null)
         {
             if (target == null || amount <= 0)
             {
@@ -2225,7 +2438,7 @@ namespace ProphecyCentury.UI
             }
 
             StartCoroutine(PulseTransform(target, 1.08f, 0.2f));
-            ShowUnitNumberFloatingText(target, $"数量+{amount}", new Color32(116, 236, 154, 255));
+            ShowUnitNumberFloatingText(target, string.IsNullOrWhiteSpace(label) ? $"数量+{amount}" : label, new Color32(116, 236, 154, 255));
         }
 
         private void PlayAttackChangeFeedback(AttackChangeEventState attackEvent)
@@ -2631,6 +2844,12 @@ namespace ProphecyCentury.UI
 
         public void StartBattle()
         {
+            if (Run != null && (Run.state == "gameover" || Run.state == "victory"))
+            {
+                ShowGameResultModal(Run.state);
+                return;
+            }
+
             if (!string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId))
             {
                 RuntimeSfxPlayer.PlayError();
@@ -2655,6 +2874,136 @@ namespace ProphecyCentury.UI
             }
 
             StartCoroutine(PlayBattleStage());
+        }
+
+        public void StartDayExploreFromManage()
+        {
+            if (Run != null && (Run.state == "gameover" || Run.state == "victory"))
+            {
+                ShowGameResultModal(Run.state);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId))
+            {
+                RuntimeSfxPlayer.PlayError();
+                WriteLog("请先选择祝福目标。");
+                ShowFloatingText("请先选择祝福目标");
+                RefreshView();
+                return;
+            }
+
+            if (IsGoldDeployRewardOpen())
+            {
+                RuntimeSfxPlayer.PlayError();
+                WriteLog("请先选择金色上阵奖励。");
+                ShowFloatingText("请先选择奖励");
+                RefreshView();
+                return;
+            }
+
+            if (_battlePlaybackRunning || _dayExploreTransitionRunning)
+            {
+                return;
+            }
+
+            if (Run == null || Run.phase != GamePhase.NightManage)
+            {
+                RuntimeSfxPlayer.PlayError();
+                WriteLog("无法开始白天探索。");
+                RefreshView();
+                return;
+            }
+
+            StartCoroutine(EndNightManageAndStartDayExplore());
+        }
+
+        private IEnumerator EndNightManageAndStartDayExplore()
+        {
+            _dayExploreTransitionRunning = true;
+            var roundEndGoldBefore = Run != null ? Run.gold : 0;
+            var previousForestGems = CountForestGemCardsInHand();
+            var roundEndBefore = CaptureUnitNumberSnapshots();
+
+            _flow.ResolveRoundEndBeforeBattle();
+            var roundEndFeedback = _flow.ConsumeManageFeedbackEvents();
+            PlayAbilitySfxIfNeeded();
+            PlaySynthesisSfxIfNeeded();
+            var gainedForestGems = CountForestGemCardsInHand() - previousForestGems;
+            var roundEndLine = gainedForestGems > 0
+                ? $"回合结束效果已结算，密林宝钻 +{gainedForestGems}。"
+                : "回合结束效果已结算。";
+
+            WriteLog(roundEndLine);
+            RefreshView();
+            ShowGoldChangeFeedback(roundEndGoldBefore);
+            PlayNumberChangeFeedback(roundEndBefore);
+            PlayManageFeedbackIfNeeded(roundEndFeedback);
+            yield return null;
+
+            if (_flow.StartNewDay())
+            {
+                WriteLog("白天探索开始。");
+            }
+            else
+            {
+                RuntimeSfxPlayer.PlayError();
+                WriteLog("无法开始白天探索。");
+            }
+
+            _dayExploreTransitionRunning = false;
+            RefreshView();
+        }
+
+        public void EnterNightFromWorldMap()
+        {
+            if (_flow.EnterNight())
+            {
+                WriteLog("已入夜，返回经营。");
+            }
+            else
+            {
+                RuntimeSfxPlayer.PlayError();
+                WriteLog("当前无法入夜。");
+            }
+
+            RefreshView();
+        }
+
+        public void SelectWorldMapNode(string nodeId)
+        {
+            if (Run == null || Run.phase != GamePhase.DayExplore)
+            {
+                return;
+            }
+
+            var result = _flow.MoveToMapNode(nodeId);
+            if (result == null)
+            {
+                RuntimeSfxPlayer.PlayError();
+                WriteLog("无法移动到该节点。");
+                RefreshView();
+                return;
+            }
+
+            WriteLog($"移动到地图节点：{FormatNodeEvent(result)}。");
+            if (result.requiresBattle)
+            {
+                if (_flow.BeginMapBattle(result.nodeId))
+                {
+                    StartBattle();
+                    return;
+                }
+
+                RuntimeSfxPlayer.PlayError();
+                WriteLog("无法开始地图战斗。");
+            }
+            else if (result.eventType == NodeEventType.Resource || result.eventType == NodeEventType.Treasure)
+            {
+                ShowFloatingText(FormatNodeReward(result));
+            }
+
+            RefreshView();
         }
 
         public void ToggleRealtimeBattlePreview()
@@ -2820,14 +3169,21 @@ namespace ProphecyCentury.UI
             var roundEndGoldBefore = Run != null ? Run.gold : 0;
             var previousForestGems = CountForestGemCardsInHand();
             var roundEndBefore = CaptureUnitNumberSnapshots();
-            _flow.ResolveRoundEndBeforeBattle();
-            var roundEndFeedback = _flow.ConsumeManageFeedbackEvents();
-            PlayAbilitySfxIfNeeded();
-            PlaySynthesisSfxIfNeeded();
-            var gainedForestGems = CountForestGemCardsInHand() - previousForestGems;
-            var roundEndLine = gainedForestGems > 0
-                ? $"回合结束效果已结算，密林宝钻 +{gainedForestGems}。"
-                : "回合结束效果已结算。";
+            var isExplorationBattle = Run?.isExplorationBattle ?? false;
+            ManageFeedbackEventsState roundEndFeedback = null;
+            var roundEndLine = isExplorationBattle ? "地图战斗开始。" : "回合结束效果已结算。";
+            if (!isExplorationBattle)
+            {
+                _flow.ResolveRoundEndBeforeBattle();
+                roundEndFeedback = _flow.ConsumeManageFeedbackEvents();
+                PlayAbilitySfxIfNeeded();
+                PlaySynthesisSfxIfNeeded();
+                var gainedForestGems = CountForestGemCardsInHand() - previousForestGems;
+                roundEndLine = gainedForestGems > 0
+                    ? $"回合结束效果已结算，密林宝钻 +{gainedForestGems}。"
+                    : "回合结束效果已结算。";
+            }
+
             WriteLog(roundEndLine);
             RefreshView();
             ShowGoldChangeFeedback(roundEndGoldBefore);
@@ -2871,6 +3227,9 @@ namespace ProphecyCentury.UI
             _flow.FinishBattlePhase();
             _flow.ResolveBattleOutcome(result);
             RuntimeSfxPlayer.PlayBattleResult(result.Victory);
+            if (result.Victory && Run != null)
+                _flow.CreateBattleUnitPickReward(result.EnemyScore);
+
             result = visualResult;
             SetBattleStageProgress(1f);
             ClearBattleFieldRoot();
@@ -2896,6 +3255,11 @@ namespace ProphecyCentury.UI
             if (!string.IsNullOrWhiteSpace(battleRewardFeedback))
             {
                 ShowFloatingText(battleRewardFeedback);
+            }
+
+            if (Run != null && (Run.state == "gameover" || Run.state == "victory"))
+            {
+                ShowGameResultModal(Run.state);
             }
         }
 
@@ -6819,6 +7183,8 @@ namespace ProphecyCentury.UI
             StartRunIfNeeded();
             HideLegacyBoardInfoLabels();
             var data = ProphecyGameSession.Instance.Data;
+            EnsureWorldMapView();
+            EnsureStartDayButton();
             if (goldLabel != null)
             {
                 goldLabel.text = string.Empty;
@@ -6834,7 +7200,7 @@ namespace ProphecyCentury.UI
             hpLabel.text = $"{Run.playerHp}/100";
             if (stateLabel != null)
             {
-                stateLabel.text = string.Empty;
+                stateLabel.text = $"阶段：{FormatRunPhase()}";
             }
             if (hpFillImage != null)
             {
@@ -6846,7 +7212,7 @@ namespace ProphecyCentury.UI
             var campaign = data.Campaigns.FirstOrDefault(item => item.id == Run.campaignId);
             var hero = data.Heroes.FirstOrDefault(item => item.id == Run.heroId);
             campaignLabel.text = $"战役：{(campaign != null ? campaign.name : Run.campaignId)}";
-            heroLabel.text = $"英雄：{(hero != null ? hero.name : Run.heroId)}";
+            heroLabel.text = $"英雄：{(hero != null ? hero.name : Run.heroId)}{FormatHeroRuntimeLabel()}";
 
             if (shopText != null)
             {
@@ -6868,8 +7234,136 @@ namespace ProphecyCentury.UI
                 battlePreviewText.text = FormatBattlePreview();
             }
             RefreshCardLists();
+            RefreshWorldMapView();
             EnsureBattleLogButton();
             RefreshBattleLogButton();
+        }
+
+        private void EnsureWorldMapView()
+        {
+            if (_worldMapView != null)
+            {
+                return;
+            }
+
+            var parent = runPanel != null ? runPanel.transform : transform;
+            var mapObject = new GameObject("WorldMapView", typeof(Image), typeof(WorldMapView));
+            mapObject.transform.SetParent(parent, false);
+            var rect = mapObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            _worldMapView = mapObject.GetComponent<WorldMapView>();
+            _worldMapView.Bind(this);
+            mapObject.SetActive(false);
+        }
+
+        private void RefreshWorldMapView()
+        {
+            if (_worldMapView == null)
+            {
+                return;
+            }
+
+            _worldMapView.Refresh(Run, ResolveCurrentMap());
+            if (_worldMapView.gameObject.activeSelf)
+            {
+                _worldMapView.transform.SetAsLastSibling();
+            }
+
+            RefreshStartDayButton();
+        }
+
+        private void EnsureStartDayButton()
+        {
+            if (_startDayButton != null)
+            {
+                return;
+            }
+
+            var parent = runPanel != null ? runPanel.transform : transform;
+            _startDayButton = new GameObject("StartDayExploreButton", typeof(Image), typeof(Button));
+            _startDayButton.transform.SetParent(parent, false);
+            var rect = _startDayButton.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-24f, -22f);
+            rect.sizeDelta = new Vector2(168f, 48f);
+            _startDayButton.GetComponent<Image>().color = new Color32(58, 106, 132, 245);
+            var button = _startDayButton.GetComponent<Button>();
+            button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
+            button.onClick.AddListener(StartDayExploreFromManage);
+            var text = CreateChildText(_startDayButton.transform, "白天探索", 18, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
+            text.color = Color.white;
+        }
+
+        private void RefreshStartDayButton()
+        {
+            if (_startDayButton == null || Run == null)
+            {
+                return;
+            }
+
+            var visible = Run.phase == GamePhase.NightManage && Run.state == "manage" && runPanel != null && runPanel.activeInHierarchy;
+            _startDayButton.SetActive(visible);
+            if (visible)
+            {
+                _startDayButton.transform.SetAsLastSibling();
+            }
+        }
+
+        private WorldMapDefinition ResolveCurrentMap()
+        {
+            var data = ProphecyGameSession.Instance.Data;
+            var campaign = data?.FindCampaign(Run?.campaignId);
+            return data?.FindWorldMap(campaign?.mapId) ?? data?.WorldMaps?.FirstOrDefault();
+        }
+
+        private static string FormatNodeEvent(NodeEventResult result)
+        {
+            if (result == null)
+            {
+                return "未知";
+            }
+
+            switch (result.eventType)
+            {
+                case NodeEventType.Battle:
+                    return "普通战斗";
+                case NodeEventType.Boss:
+                    return "Boss 战";
+                case NodeEventType.Resource:
+                    return "资源点";
+                case NodeEventType.Treasure:
+                    return "宝物点";
+                case NodeEventType.AlreadyCleared:
+                    return "已清除";
+                default:
+                    return result.nodeType ?? "空节点";
+            }
+        }
+
+        private static string FormatNodeReward(NodeEventResult result)
+        {
+            if (result == null)
+            {
+                return string.Empty;
+            }
+
+            var parts = new List<string>();
+            if (result.rewardGold > 0)
+            {
+                parts.Add($"金币+{result.rewardGold}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(result.rewardTreasureId))
+            {
+                parts.Add("获得宝物");
+            }
+
+            return parts.Count == 0 ? "节点已清除" : string.Join("  ", parts);
         }
 
         private void EnsureBattleLogButton()
@@ -6910,6 +7404,178 @@ namespace ProphecyCentury.UI
 
             _battleLogButton.SetActive(runPanel == null || runPanel.activeInHierarchy);
             _battleLogButton.transform.SetAsLastSibling();
+        }
+
+        private void ShowGameResultModal(string resultState)
+        {
+            EnsureGameResultModal();
+            var victory = resultState == "victory";
+            if (_gameResultTitleLabel != null)
+            {
+                _gameResultTitleLabel.text = victory ? "游戏胜利" : "游戏失败";
+                _gameResultTitleLabel.color = victory ? new Color32(255, 226, 132, 255) : new Color32(255, 126, 126, 255);
+            }
+
+            if (_gameResultContentLabel != null)
+            {
+                _gameResultContentLabel.text = FormatGameResultContent(victory);
+            }
+
+            _gameResultModal.SetActive(true);
+            _gameResultModal.transform.SetAsLastSibling();
+        }
+
+        private void EnsureGameResultModal()
+        {
+            if (_gameResultModal != null)
+            {
+                return;
+            }
+
+            var parent = runPanel != null ? runPanel.transform : transform;
+            _gameResultModal = new GameObject("GameResultModal", typeof(Image));
+            _gameResultModal.transform.SetParent(parent, false);
+            var modalRect = _gameResultModal.GetComponent<RectTransform>();
+            modalRect.anchorMin = Vector2.zero;
+            modalRect.anchorMax = Vector2.one;
+            modalRect.offsetMin = Vector2.zero;
+            modalRect.offsetMax = Vector2.zero;
+            _gameResultModal.GetComponent<Image>().color = new Color32(4, 3, 12, 210);
+
+            var panel = new GameObject("Panel", typeof(Image));
+            panel.transform.SetParent(_gameResultModal.transform, false);
+            var panelRect = panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.anchoredPosition = Vector2.zero;
+            panelRect.sizeDelta = new Vector2(780f, 520f);
+            panel.GetComponent<Image>().color = new Color32(22, 28, 48, 252);
+
+            _gameResultTitleLabel = CreateAnchoredText(panel.transform, "Title", "游戏结束", 44, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.82f), new Vector2(0.92f, 0.94f));
+            _gameResultContentLabel = CreateAnchoredText(panel.transform, "Content", string.Empty, 22, TextAnchor.UpperLeft, new Vector2(0.1f, 0.25f), new Vector2(0.9f, 0.78f));
+            _gameResultContentLabel.color = new Color32(230, 236, 248, 255);
+            _gameResultContentLabel.verticalOverflow = VerticalWrapMode.Truncate;
+
+            CreateGameResultButton(panel.transform, "重新开始", new Vector2(-155f, -205f), () =>
+            {
+                _gameResultModal.SetActive(false);
+                ShowTitle();
+                OpenHeroSelection();
+            });
+            CreateGameResultButton(panel.transform, "返回标题", new Vector2(155f, -205f), () =>
+            {
+                _gameResultModal.SetActive(false);
+                ShowTitle();
+            });
+
+            _gameResultModal.SetActive(false);
+        }
+
+        private void CreateGameResultButton(Transform parent, string label, Vector2 anchoredPosition, UnityEngine.Events.UnityAction callback)
+        {
+            var buttonObject = new GameObject(label + "Button", typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+            var rect = buttonObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = new Vector2(210f, 58f);
+
+            var image = buttonObject.GetComponent<Image>();
+            image.color = new Color32(70, 82, 112, 245);
+            var button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
+            button.onClick.AddListener(callback);
+            CreateChildText(buttonObject.transform, label, 22, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
+        }
+
+        private string FormatCurrentHeroName()
+        {
+            return FormatHeroName(Run?.heroId);
+        }
+
+        private string FormatGameResultContent(bool victory)
+        {
+            if (Run == null)
+            {
+                return victory ? "通关完成。" : "战斗失败，本局结束。";
+            }
+
+            var clearedNodes = Run.worldMapNodes?.Count(node => node != null && node.isCleared) ?? 0;
+            var visibleNodes = Run.worldMapNodes?.Count(node => node != null && node.isVisible) ?? 0;
+            var treasures = Run.inventoryItems?.Where(item => item != null && item.count > 0).ToList() ?? new List<InventoryItemState>();
+            var boardCount = Run.boardUnits?.Count ?? 0;
+            var handCount = Run.handCards?.Count ?? 0;
+            var lastBattle = Run.battleHistory?.LastOrDefault();
+            var resultLine = victory ? "结局：击败 Boss，探索完成" : "结局：战斗失败，本局结束";
+            var lastBattleLine = lastBattle == null
+                ? "最后战斗：无"
+                : $"最后战斗：{(lastBattle.victory ? "胜利" : "失败")}  战力 {lastBattle.playerScore}:{lastBattle.enemyScore}";
+
+            return string.Join("\n", new[]
+            {
+                resultLine,
+                $"英雄：{FormatCurrentHeroName()}",
+                $"进度：第 {Mathf.Max(1, Run.round)} 回合 / 第 {Mathf.Max(0, Run.dayCount)} 天",
+                $"资源：生命 {Mathf.Max(0, Run.playerHp)}  金币 {Mathf.Max(0, Run.gold)}  商店等级 {Mathf.Max(1, Run.shopLevel)}",
+                $"战绩：胜 {Mathf.Max(0, Run.campaignWins)} / 败 {Mathf.Max(0, Run.campaignLosses)}",
+                $"地图：清除 {clearedNodes} 个节点，可见 {visibleNodes} 个节点，当前位置 {FormatCurrentNodeName()}",
+                $"阵容：上阵 {boardCount}，手牌 {handCount}，宝物 {treasures.Count}",
+                lastBattleLine
+            });
+        }
+
+        private string FormatCurrentNodeName()
+        {
+            var nodeId = Run?.currentNodeId;
+            if (string.IsNullOrWhiteSpace(nodeId))
+            {
+                return "未知";
+            }
+
+            var node = ResolveCurrentMap()?.nodes?.FirstOrDefault(item => item != null && item.id == nodeId);
+            return node != null ? node.name : nodeId;
+        }
+
+        private string FormatRunPhase()
+        {
+            var phase = Run?.phase.ToString();
+            var configured = ProphecyGameSession.Instance.Data?.FindRunFlowPhase(phase, Run?.state);
+            if (!string.IsNullOrWhiteSpace(configured?.displayName))
+            {
+                return configured.displayName;
+            }
+
+            return FormatRunState(Run?.state);
+        }
+
+        private string FormatHeroName(string heroId)
+        {
+            var hero = ProphecyGameSession.Instance.Data.FindHero(heroId);
+            return hero != null ? hero.name : heroId ?? "未选择";
+        }
+
+        private string FormatHeroRuntimeLabel()
+        {
+            if (Run?.heroState == null)
+            {
+                return string.Empty;
+            }
+
+            switch (Run.heroId)
+            {
+                case "shalame":
+                    return $"  数量累计 {Mathf.Clamp(Run.heroState.countGainProgress, 0, 19)}/20";
+                case "james":
+                    return "  数量获得+1";
+                case "magic":
+                    return "  离场补员";
+                default:
+                    return string.Empty;
+            }
         }
 
         private void OpenBattleLogModal()
