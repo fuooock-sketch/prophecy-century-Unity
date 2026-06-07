@@ -215,12 +215,18 @@ namespace ProphecyCentury.UI
             switch (type)
             {
                 case "start": return "起点";
-                case "battle": return "战斗";
+                case "battle":
+                case "normal_battle": return "普通战";
+                case "pressure_battle": return "压力战";
+                case "hard_battle": return "高压战";
+                case "elite_battle": return "精英";
+                case "guard_battle": return "守卫";
+                case "boss_guard": return "Boss 前守卫";
                 case "boss": return "Boss";
                 case "resource": return "资源";
                 case "treasure": return "宝物";
-                case "shop": return "商店";
                 case "event": return "事件";
+                case "rest": return "整备";
                 default: return "空";
             }
         }

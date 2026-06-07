@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using ProphecyCentury.Core;
@@ -83,7 +84,7 @@ namespace ProphecyCentury.Systems
             var run = ProphecyGameSession.Instance.CurrentRun;
             var map = ResolveCurrentMap();
             var node = map?.nodes?.FirstOrDefault(item => item != null && item.id == nodeId);
-            if (run == null || node == null || (node.type != "battle" && node.type != "boss"))
+            if (run == null || node == null || !WorldMapSystem.IsBattleNodeType(node.type))
             {
                 return false;
             }
@@ -178,6 +179,8 @@ namespace ProphecyCentury.Systems
                 run.battleHistory.RemoveAt(0);
             }
 
+            LogBattleResult(run, result);
+
             if (result.Victory)
             {
                 run.campaignWins += 1;
@@ -185,6 +188,12 @@ namespace ProphecyCentury.Systems
             else
             {
                 run.campaignLosses += 1;
+                if (run.isExplorationBattle)
+                {
+                    ResolveExplorationBattleOutcome(run, result);
+                    return;
+                }
+
                 run.state = "gameover";
                 run.phase = GamePhase.GameOver;
                 ClearExplorationBattleContext(run);
@@ -402,18 +411,43 @@ namespace ProphecyCentury.Systems
         
         /// <summary>
         /// After a battle victory, generate a 3-card pick reward.
-        /// Harder enemies grant more rerolls. Boss grants 2 picks.
+        /// World-map battle node type defines rerolls. Boss nodes grant no pick reward.
         /// </summary>
         public BattleUnitPickState CreateBattleUnitPickReward(int enemyScore)
         {
+            return CreateBattleUnitPickReward(enemyScore, ProphecyGameSession.Instance.CurrentRun?.explorationBattleNodeType);
+        }
+
+        public BattleUnitPickState CreateBattleUnitPickReward(int enemyScore, string nodeType)
+        {
             var run = ProphecyGameSession.Instance.CurrentRun;
+            if (run == null)
+            {
+                return null;
+            }
+
             var data = ProphecyGameSession.Instance.Data;
             var targetStar = Math.Min((run?.shopLevel ?? 1) + 1, 6);
             int picks, rerolls;
-            if (enemyScore > 5000) { picks = 2; rerolls = 3; }
+            if (WorldMapSystem.IsBossNodeType(nodeType))
+            {
+                picks = 0;
+                rerolls = 0;
+            }
+            else if (WorldMapSystem.IsBattleNodeType(nodeType))
+            {
+                picks = 1;
+                rerolls = WorldMapSystem.GetBattleRewardRerolls(nodeType);
+            }
+            else if (enemyScore > 5000) { picks = 2; rerolls = 3; }
             else if (enemyScore > 2000) { picks = 1; rerolls = 2; }
             else if (enemyScore > 1000) { picks = 1; rerolls = 1; }
             else { picks = 1; rerolls = 0; }
+            if (picks <= 0)
+            {
+                run.pendingBattleUnitPick = null;
+                return null;
+            }
             var state = new BattleUnitPickState { remainingPicks = picks, remainingRerolls = rerolls, choiceStar = targetStar, choices = GeneratePickChoices(targetStar, run) };
             run.pendingBattleUnitPick = state;
             return state;
@@ -611,7 +645,6 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
                 if (WorldMapSystem.CheckVictoryCondition(run, map))
                 {
                     ApplyNodeReward(run, nodeResult, nodeId);
-                    LogBattleResult(run, result);
                     ClearExplorationBattleContext(run);
                     return;
                 }
@@ -622,27 +655,123 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
                 return;
             }
 
+            if (WorldMapSystem.IsBossNodeType(nodeResult?.nodeType))
+            {
+                run.state = "gameover";
+                run.phase = GamePhase.GameOver;
+                run.lastBattleSummary = "最终 Boss 战失败。预言破灭，本局失败。";
+                ClearExplorationBattleContext(run);
+                return;
+            }
+
+            WorldMapSystem.MarkNodeCleared(run, map, nodeId);
+            run.fateValue = Math.Max(0, run.playerHp);
+            if (run.fateValue <= 0)
+            {
+                run.playerHp = 0;
+                run.state = "gameover";
+                run.phase = GamePhase.GameOver;
+                run.lastBattleSummary = "命运耗尽，预言破灭，本局失败。";
+                ClearExplorationBattleContext(run);
+                return;
+            }
+
             StartNextNightManageAfterDayNode(run);
             ClearExplorationBattleContext(run);
         }
 
-                private static void LogBattleResult(RunState run, BattleStubResult result)
+        private static void LogBattleResult(RunState run, BattleStubResult result)
         {
             try
             {
                 var path = Path.Combine(UnityEngine.Application.persistentDataPath, "player_state_log.jsonl");
-                var summary = (result.Summary ?? "").Replace("\"", "'").Replace("\\", "/");
-                var line = "{\"round\":" + run.round + ",\"type\":\"battle\",\"victory\":" + (result.Victory ? "true" : "false") + ",\"playerScore\":" + result.PlayerScore + ",\"enemyScore\":" + result.EnemyScore + ",\"hpDelta\":" + result.HpDelta + ",\"summary\":\"" + summary + "\"}";
+                var ratio = result.PlayerScore > 0 ? result.EnemyScore / (float)result.PlayerScore : 0f;
+                var nodeId = !string.IsNullOrWhiteSpace(run.explorationBattleNodeId) ? run.explorationBattleNodeId : run.currentNodeId;
+                var line = "{"
+                    + "\"logVersion\":2"
+                    + ",\"round\":" + run.round
+                    + ",\"day\":" + run.dayCount
+                    + ",\"type\":\"battle\""
+                    + ",\"phase\":\"" + JsonEscape(run.phase.ToString()) + "\""
+                    + ",\"nodeId\":\"" + JsonEscape(nodeId) + "\""
+                    + ",\"nodeType\":\"" + JsonEscape(run.explorationBattleNodeType) + "\""
+                    + ",\"enemyPresetId\":\"" + JsonEscape(run.explorationBattleEnemyPresetId) + "\""
+                    + ",\"victory\":" + (result.Victory ? "true" : "false")
+                    + ",\"playerScore\":" + result.PlayerScore
+                    + ",\"enemyScore\":" + result.EnemyScore
+                    + ",\"scoreRatio\":" + ratio.ToString("0.###", CultureInfo.InvariantCulture)
+                    + ",\"hpDelta\":" + result.HpDelta
+                    + ",\"playerDamage\":" + result.PlayerDamage
+                    + ",\"enemyDamage\":" + result.EnemyDamage
+                    + ",\"fateValue\":" + run.fateValue
+                    + ",\"playerHp\":" + run.playerHp
+                    + ",\"gold\":" + run.gold
+                    + ",\"shopLevel\":" + run.shopLevel
+                    + ",\"playerUnits\":" + FormatBattleUnitSnapshots(result.InitialPlayerUnits ?? result.PlayerUnits)
+                    + ",\"enemyUnits\":" + FormatBattleUnitSnapshots(result.InitialEnemyUnits ?? result.EnemyUnits)
+                    + ",\"summary\":\"" + JsonEscape(result.Summary) + "\""
+                    + "}";
                 System.IO.File.AppendAllText(path, line + System.Environment.NewLine);
             }
             catch { }
         }
 
-        private static void ApplyNodeReward(RunState run, NodeEventResult nodeResult, string sourceNodeId)
+        private static string FormatBattleUnitSnapshots(IEnumerable<BattleUnitSnapshot> units)
+        {
+            if (units == null)
+            {
+                return "[]";
+            }
+
+            return "[" + string.Join(",", units
+                .Where(unit => unit != null && !unit.Summoned)
+                .OrderBy(unit => unit.SlotId)
+                .Select(unit => "{"
+                    + "\"slot\":\"" + JsonEscape(unit.SlotId) + "\""
+                    + ",\"id\":\"" + JsonEscape(unit.UnitId) + "\""
+                    + ",\"name\":\"" + JsonEscape(unit.Name) + "\""
+                    + ",\"star\":" + unit.Star
+                    + ",\"count\":" + unit.CurrentCount
+                    + ",\"maxHp\":" + unit.MaxHp
+                    + ",\"attack\":" + unit.Attack
+                    + ",\"defense\":" + unit.Defense
+                    + ",\"power\":" + unit.Power
+                    + ",\"speed\":" + unit.Speed
+                    + "}")) + "]";
+        }
+
+        private static string JsonEscape(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            return value
+                .Replace("\\", "\\\\")
+                .Replace("\"", "\\\"")
+                .Replace("\r", "\\r")
+                .Replace("\n", "\\n");
+        }
+
+        private void ApplyNodeReward(RunState run, NodeEventResult nodeResult, string sourceNodeId)
         {
             if (run == null || nodeResult == null || nodeResult.alreadyCleared)
             {
                 return;
+            }
+
+            switch (nodeResult.eventType)
+            {
+                case NodeEventType.Resource:
+                    run.gold += _random.Next(3, 11);
+                    return;
+                case NodeEventType.Event:
+                    ApplyEventNodeReward(run);
+                    return;
+                case NodeEventType.Rest:
+                    ApplyRestNodeReward(run, sourceNodeId);
+                    return;
             }
 
             run.gold += Math.Max(0, nodeResult.rewardGold);
@@ -657,6 +786,76 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
                     acquiredDay = Math.Max(1, run.dayCount)
                 });
             }
+        }
+
+        private void ApplyEventNodeReward(RunState run)
+        {
+            if (run == null)
+            {
+                return;
+            }
+
+            if (_random.Next(2) == 0 && AddRandomUnitToHand(run))
+            {
+                return;
+            }
+
+            run.gold += 6;
+        }
+
+        private void ApplyRestNodeReward(RunState run, string sourceNodeId)
+        {
+            var treasures = ProphecyGameSession.Instance.Data?.Treasures?
+                .Where(treasure => treasure != null && !string.IsNullOrWhiteSpace(treasure.id))
+                .ToList();
+            if (run == null || treasures == null || treasures.Count == 0)
+            {
+                return;
+            }
+
+            var treasure = treasures[_random.Next(treasures.Count)];
+            if (run.inventoryItems.Any(item => item != null && item.itemId == treasure.id && item.sourceNodeId == sourceNodeId))
+            {
+                return;
+            }
+
+            run.inventoryItems.Add(new InventoryItemState
+            {
+                itemId = treasure.id,
+                count = 1,
+                sourceNodeId = sourceNodeId,
+                acquiredDay = Math.Max(1, run.dayCount)
+            });
+        }
+
+        private bool AddRandomUnitToHand(RunState run)
+        {
+            if (run == null || run.handCards.Count >= HandMaxCount)
+            {
+                return false;
+            }
+
+            var pool = ProphecyGameSession.Instance.Data.Units
+                .Where(unit => unit != null && !unit.hidden)
+                .ToList();
+            if (pool.Count == 0)
+            {
+                return false;
+            }
+
+            var definition = pool[_random.Next(pool.Count)];
+            run.handCards.Add(new UnitCardState
+            {
+                unitId = definition.id,
+                name = definition.name,
+                star = definition.star,
+                baseCount = ResolveStartCount(definition),
+                maxCount = 0
+            });
+            ManageEventResolver.ResolveGainUnit(run, run.handCards[run.handCards.Count - 1]);
+            CaptureAbilityTrigger();
+            TrySynthesizeAll(run);
+            return true;
         }
 
         private WorldMapDefinition ResolveCurrentMap()

@@ -1,1166 +1,844 @@
 [
   {
     "id": "abyss_wilds",
-    "name": "恶兆荒野",
+    "name": "????",
     "startNodeId": "abyss_start",
     "layers": [
       {
         "index": 0,
-        "name": "营地篝火"
+        "name": "????"
       },
       {
         "index": 1,
-        "name": "荒野边缘"
+        "name": "D1"
       },
       {
         "index": 2,
-        "name": "失路小径"
+        "name": "D2"
       },
       {
         "index": 3,
-        "name": "影棘丛林"
+        "name": "D3"
       },
       {
         "index": 4,
-        "name": "废墟岔口"
+        "name": "D4"
       },
       {
         "index": 5,
-        "name": "腐化原野"
+        "name": "D5"
       },
       {
         "index": 6,
-        "name": "低语谷"
+        "name": "D6"
       },
       {
         "index": 7,
-        "name": "灰烬高地"
+        "name": "D7"
       },
       {
         "index": 8,
-        "name": "暮光盆地"
+        "name": "D8"
       },
       {
         "index": 9,
-        "name": "赤脊山"
+        "name": "D9"
       },
       {
         "index": 10,
-        "name": "破碎隘口"
+        "name": "D10"
       },
       {
         "index": 11,
-        "name": "遗忘堡垒"
+        "name": "D11"
       },
       {
         "index": 12,
-        "name": "哀嚎深渊"
+        "name": "D12"
       },
       {
         "index": 13,
-        "name": "黑曜石门"
+        "name": "D13"
       },
       {
         "index": 14,
-        "name": "深渊近途"
+        "name": "D14"
       },
       {
         "index": 15,
-        "name": "绝望王座"
+        "name": "D15"
+      },
+      {
+        "index": 16,
+        "name": "D16"
+      },
+      {
+        "index": 17,
+        "name": "D17"
+      },
+      {
+        "index": 18,
+        "name": "D18"
+      },
+      {
+        "index": 19,
+        "name": "D19"
+      },
+      {
+        "index": 20,
+        "name": "D20"
       }
     ],
     "nodes": [
       {
         "id": "abyss_start",
-        "name": "营地篝火",
+        "name": "????",
         "layer": 0,
         "type": "start",
         "x": 0.5,
         "y": 0.03
       },
       {
-        "id": "abyss_L1_battle_1",
-        "name": "荒野劫匪",
+        "id": "D1_N1",
+        "name": "????",
         "layer": 1,
-        "type": "battle",
-        "x": 0.22,
-        "y": 0.09,
-        "enemyPresetId": "wild_bandits",
-        "reward": {
-          "gold": 2
-        }
-      },
-      {
-        "id": "abyss_L1_resource_1",
-        "name": "遗弃货箱",
-        "layer": 1,
-        "type": "resource",
-        "x": 0.78,
-        "y": 0.09,
-        "reward": {
-          "gold": 3
-        }
-      },
-      {
-        "id": "abyss_L2_battle_1",
-        "name": "废墟哨卫",
-        "layer": 2,
-        "type": "battle",
-        "x": 0.22,
-        "y": 0.17,
-        "enemyPresetId": "ruin_sentry",
-        "reward": {
-          "gold": 3
-        }
-      },
-      {
-        "id": "abyss_L2_treasure_1",
-        "name": "破碎神龛",
-        "layer": 2,
-        "type": "treasure",
-        "x": 0.78,
-        "y": 0.17,
-        "reward": {
-          "treasureId": "old_talisman"
-        }
-      },
-      {
-        "id": "abyss_L3_battle_1",
-        "name": "影棘先锋",
-        "layer": 3,
-        "type": "battle",
-        "x": 0.1,
-        "y": 0.24,
-        "enemyPresetId": "ruin_sentry",
-        "reward": {
-          "gold": 3
-        }
-      },
-      {
-        "id": "abyss_L3_battle_2",
-        "name": "荆棘哨卫",
-        "layer": 3,
-        "type": "battle",
+        "type": "normal_battle",
         "x": 0.5,
-        "y": 0.24,
-        "enemyPresetId": "ruin_sentry",
-        "reward": {
-          "gold": 3
-        }
+        "y": 0.076,
+        "enemyPresetId": "wild_bandits"
       },
       {
-        "id": "abyss_L3_resource_1",
-        "name": "密林宝箱",
-        "layer": 3,
+        "id": "D2_N1",
+        "name": "????",
+        "layer": 2,
+        "type": "normal_battle",
+        "x": 0.34,
+        "y": 0.122,
+        "enemyPresetId": "wild_bandits"
+      },
+      {
+        "id": "D2_N2",
+        "name": "????",
+        "layer": 2,
         "type": "resource",
+        "x": 0.66,
+        "y": 0.122
+      },
+      {
+        "id": "D3_N1",
+        "name": "????",
+        "layer": 3,
+        "type": "normal_battle",
+        "x": 0.25,
+        "y": 0.168,
+        "enemyPresetId": "wild_bandits"
+      },
+      {
+        "id": "D3_N2",
+        "name": "????",
+        "layer": 3,
+        "type": "pressure_battle",
+        "x": 0.5,
+        "y": 0.168,
+        "enemyPresetId": "ruin_sentry"
+      },
+      {
+        "id": "D3_N3",
+        "name": "????",
+        "layer": 3,
+        "type": "normal_battle",
+        "x": 0.75,
+        "y": 0.168,
+        "enemyPresetId": "wild_bandits"
+      },
+      {
+        "id": "D4_N1",
+        "name": "?????",
+        "layer": 4,
+        "type": "event",
+        "x": 0.25,
+        "y": 0.214
+      },
+      {
+        "id": "D4_N2",
+        "name": "????",
+        "layer": 4,
+        "type": "pressure_battle",
+        "x": 0.5,
+        "y": 0.214,
+        "enemyPresetId": "ruin_sentry"
+      },
+      {
+        "id": "D4_N3",
+        "name": "????",
+        "layer": 4,
+        "type": "resource",
+        "x": 0.75,
+        "y": 0.214
+      },
+      {
+        "id": "D5_N1",
+        "name": "????",
+        "layer": 5,
+        "type": "pressure_battle",
+        "x": 0.38,
+        "y": 0.26,
+        "enemyPresetId": "ruin_sentry"
+      },
+      {
+        "id": "D5_N2",
+        "name": "????",
+        "layer": 5,
+        "type": "normal_battle",
+        "x": 0.62,
+        "y": 0.26,
+        "enemyPresetId": "wild_bandits"
+      },
+      {
+        "id": "D6_N1",
+        "name": "????",
+        "layer": 6,
+        "type": "pressure_battle",
+        "x": 0.2,
+        "y": 0.306,
+        "enemyPresetId": "ruin_sentry"
+      },
+      {
+        "id": "D6_N2",
+        "name": "????",
+        "layer": 6,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.306,
+        "enemyPresetId": "wild_bandits"
+      },
+      {
+        "id": "D6_N3",
+        "name": "????",
+        "layer": 6,
+        "type": "elite_battle",
+        "x": 0.8,
+        "y": 0.306,
+        "enemyPresetId": "shadow_elite"
+      },
+      {
+        "id": "D7_N1",
+        "name": "????",
+        "layer": 7,
+        "type": "pressure_battle",
+        "x": 0.22,
+        "y": 0.352,
+        "enemyPresetId": "ruin_sentry"
+      },
+      {
+        "id": "D7_N2",
+        "name": "????",
+        "layer": 7,
+        "type": "event",
+        "x": 0.5,
+        "y": 0.352
+      },
+      {
+        "id": "D7_N3",
+        "name": "????",
+        "layer": 7,
+        "type": "elite_battle",
+        "x": 0.78,
+        "y": 0.352,
+        "enemyPresetId": "shadow_elite"
+      },
+      {
+        "id": "D8_N1",
+        "name": "????",
+        "layer": 8,
+        "type": "pressure_battle",
+        "x": 0.2,
+        "y": 0.398,
+        "enemyPresetId": "ruin_sentry"
+      },
+      {
+        "id": "D8_N2",
+        "name": "????",
+        "layer": 8,
+        "type": "resource",
+        "x": 0.45,
+        "y": 0.398
+      },
+      {
+        "id": "D8_N3",
+        "name": "?????",
+        "layer": 8,
+        "type": "pressure_battle",
+        "x": 0.7,
+        "y": 0.398,
+        "enemyPresetId": "ruin_sentry"
+      },
+      {
+        "id": "D8_N4",
+        "name": "????",
+        "layer": 8,
+        "type": "hard_battle",
         "x": 0.9,
-        "y": 0.24,
-        "reward": {
-          "gold": 4
-        }
+        "y": 0.398,
+        "enemyPresetId": "fallen_sanctum"
       },
       {
-        "id": "abyss_L4_battle_1",
-        "name": "暗影掠袭者",
-        "layer": 4,
-        "type": "battle",
-        "x": 0.15,
-        "y": 0.31,
-        "enemyPresetId": "shadow_raiders",
-        "reward": {
-          "gold": 4
-        }
-      },
-      {
-        "id": "abyss_L4_resource_1",
-        "name": "废墟补给",
-        "layer": 4,
-        "type": "resource",
-        "x": 0.5,
-        "y": 0.31,
-        "reward": {
-          "gold": 4
-        }
-      },
-      {
-        "id": "abyss_L4_treasure_1",
-        "name": "暗影圣所",
-        "layer": 4,
-        "type": "treasure",
-        "x": 0.85,
-        "y": 0.31,
-        "reward": {
-          "treasureId": "shadow_cloak"
-        }
-      },
-      {
-        "id": "abyss_L5_battle_1",
-        "name": "腐化前线",
-        "layer": 5,
-        "type": "battle",
-        "x": 0.08,
-        "y": 0.38,
-        "enemyPresetId": "garrison_line",
-        "reward": {
-          "gold": 4
-        }
-      },
-      {
-        "id": "abyss_L5_battle_2",
-        "name": "暗影伏击",
-        "layer": 5,
-        "type": "battle",
-        "x": 0.3,
-        "y": 0.38,
-        "enemyPresetId": "shadow_raiders",
-        "reward": {
-          "gold": 4
-        }
-      },
-      {
-        "id": "abyss_L5_resource_1",
-        "name": "腐化宝箱",
-        "layer": 5,
-        "type": "resource",
-        "x": 0.6,
-        "y": 0.38,
-        "reward": {
-          "gold": 4
-        }
-      },
-      {
-        "id": "abyss_L5_treasure_1",
-        "name": "圣香炉",
-        "layer": 5,
-        "type": "treasure",
-        "x": 0.92,
-        "y": 0.38,
-        "reward": {
-          "treasureId": "saint_censer"
-        }
-      },
-      {
-        "id": "abyss_L6_battle_1",
-        "name": "低语守卫",
-        "layer": 6,
-        "type": "battle",
-        "x": 0.08,
-        "y": 0.45,
-        "enemyPresetId": "garrison_line",
-        "reward": {
-          "gold": 5
-        }
-      },
-      {
-        "id": "abyss_L6_battle_2",
-        "name": "暗影突袭",
-        "layer": 6,
-        "type": "battle",
-        "x": 0.3,
-        "y": 0.45,
-        "enemyPresetId": "shadow_raiders",
-        "reward": {
-          "gold": 5
-        }
-      },
-      {
-        "id": "abyss_L6_resource_1",
-        "name": "低语宝箱",
-        "layer": 6,
-        "type": "resource",
-        "x": 0.6,
-        "y": 0.45,
-        "reward": {
-          "gold": 5
-        }
-      },
-      {
-        "id": "abyss_L6_treasure_1",
-        "name": "回音石窟",
-        "layer": 6,
-        "type": "treasure",
-        "x": 0.92,
-        "y": 0.45,
-        "reward": {
-          "treasureId": "shadow_cloak"
-        }
-      },
-      {
-        "id": "abyss_L7_battle_1",
-        "name": "深渊先锋",
-        "layer": 7,
-        "type": "battle",
-        "x": 0.05,
-        "y": 0.52,
-        "enemyPresetId": "abyss_vanguard",
-        "reward": {
-          "gold": 5
-        }
-      },
-      {
-        "id": "abyss_L7_battle_2",
-        "name": "灰烬卫士",
-        "layer": 7,
-        "type": "battle",
-        "x": 0.23,
-        "y": 0.52,
-        "enemyPresetId": "garrison_line",
-        "reward": {
-          "gold": 5
-        }
-      },
-      {
-        "id": "abyss_L7_resource_1",
-        "name": "灰烬矿脉",
-        "layer": 7,
-        "type": "resource",
-        "x": 0.5,
-        "y": 0.52,
-        "reward": {
-          "gold": 5
-        }
-      },
-      {
-        "id": "abyss_L7_resource_2",
-        "name": "高地货箱",
-        "layer": 7,
-        "type": "resource",
-        "x": 0.72,
-        "y": 0.52,
-        "reward": {
-          "gold": 5
-        }
-      },
-      {
-        "id": "abyss_L7_treasure_1",
-        "name": "灰烬神龛",
-        "layer": 7,
-        "type": "treasure",
-        "x": 0.95,
-        "y": 0.52,
-        "reward": {
-          "treasureId": "ruin_crown"
-        }
-      },
-      {
-        "id": "abyss_L8_battle_1",
-        "name": "暮光先锋",
-        "layer": 8,
-        "type": "battle",
-        "x": 0.05,
-        "y": 0.59,
-        "enemyPresetId": "abyss_vanguard",
-        "reward": {
-          "gold": 5
-        }
-      },
-      {
-        "id": "abyss_L8_battle_2",
-        "name": "盆地卫士",
-        "layer": 8,
-        "type": "battle",
-        "x": 0.23,
-        "y": 0.59,
-        "enemyPresetId": "garrison_line",
-        "reward": {
-          "gold": 5
-        }
-      },
-      {
-        "id": "abyss_L8_resource_1",
-        "name": "暮光宝库",
-        "layer": 8,
-        "type": "resource",
-        "x": 0.5,
-        "y": 0.59,
-        "reward": {
-          "gold": 6
-        }
-      },
-      {
-        "id": "abyss_L8_resource_2",
-        "name": "盆地货箱",
-        "layer": 8,
-        "type": "resource",
-        "x": 0.72,
-        "y": 0.59,
-        "reward": {
-          "gold": 6
-        }
-      },
-      {
-        "id": "abyss_L8_treasure_1",
-        "name": "暮光圣徽",
-        "layer": 8,
-        "type": "treasure",
-        "x": 0.95,
-        "y": 0.59,
-        "reward": {
-          "treasureId": "ruin_crown"
-        }
-      },
-      {
-        "id": "abyss_L9_battle_1",
-        "name": "赤脊守军",
+        "id": "D9_N1",
+        "name": "????",
         "layer": 9,
-        "type": "battle",
-        "x": 0.1,
-        "y": 0.66,
-        "enemyPresetId": "fallen_sanctum",
-        "reward": {
-          "gold": 5
-        }
+        "type": "pressure_battle",
+        "x": 0.25,
+        "y": 0.444,
+        "enemyPresetId": "ruin_sentry"
       },
       {
-        "id": "abyss_L9_battle_2",
-        "name": "赤脊突击队",
-        "layer": 9,
-        "type": "battle",
-        "x": 0.33,
-        "y": 0.66,
-        "enemyPresetId": "abyss_vanguard",
-        "reward": {
-          "gold": 5
-        }
-      },
-      {
-        "id": "abyss_L9_resource_1",
-        "name": "赤脊矿藏",
+        "id": "D9_N2",
+        "name": "????",
         "layer": 9,
         "type": "resource",
+        "x": 0.55,
+        "y": 0.444
+      },
+      {
+        "id": "D9_N3",
+        "name": "?????",
+        "layer": 9,
+        "type": "hard_battle",
+        "x": 0.82,
+        "y": 0.444,
+        "enemyPresetId": "fallen_sanctum"
+      },
+      {
+        "id": "D10_N1",
+        "name": "????",
+        "layer": 10,
+        "type": "guard_battle",
+        "x": 0.35,
+        "y": 0.49,
+        "enemyPresetId": "garrison_fortress"
+      },
+      {
+        "id": "D10_N2",
+        "name": "????",
+        "layer": 10,
+        "type": "pressure_battle",
         "x": 0.65,
-        "y": 0.66,
-        "reward": {
-          "gold": 6
-        }
+        "y": 0.49,
+        "enemyPresetId": "ruin_sentry"
       },
       {
-        "id": "abyss_L9_treasure_1",
-        "name": "赤脊神殿",
-        "layer": 9,
-        "type": "treasure",
-        "x": 0.92,
-        "y": 0.66,
-        "reward": {
-          "treasureId": "ruin_crown"
-        }
+        "id": "D11_N1",
+        "name": "????",
+        "layer": 11,
+        "type": "pressure_battle",
+        "x": 0.3,
+        "y": 0.536,
+        "enemyPresetId": "ruin_sentry"
       },
       {
-        "id": "abyss_L10_battle_1",
-        "name": "隘口圣殿卫",
-        "layer": 10,
-        "type": "battle",
-        "x": 0.1,
-        "y": 0.73,
-        "enemyPresetId": "fallen_sanctum",
-        "reward": {
-          "gold": 6
-        }
+        "id": "D11_N2",
+        "name": "????",
+        "layer": 11,
+        "type": "hard_battle",
+        "x": 0.7,
+        "y": 0.536,
+        "enemyPresetId": "fallen_sanctum"
       },
       {
-        "id": "abyss_L10_battle_2",
-        "name": "隘口罚罪者",
-        "layer": 10,
-        "type": "battle",
-        "x": 0.33,
-        "y": 0.73,
-        "enemyPresetId": "fallen_sanctum",
-        "reward": {
-          "gold": 6
-        }
+        "id": "D12_N1",
+        "name": "????",
+        "layer": 12,
+        "type": "elite_battle",
+        "x": 0.25,
+        "y": 0.582,
+        "enemyPresetId": "shadow_elite"
       },
       {
-        "id": "abyss_L10_resource_1",
-        "name": "隘口补给线",
-        "layer": 10,
+        "id": "D12_N2",
+        "name": "????",
+        "layer": 12,
+        "type": "hard_battle",
+        "x": 0.55,
+        "y": 0.582,
+        "enemyPresetId": "fallen_sanctum"
+      },
+      {
+        "id": "D12_N3",
+        "name": "????",
+        "layer": 12,
+        "type": "rest",
+        "x": 0.82,
+        "y": 0.582
+      },
+      {
+        "id": "D13_N1",
+        "name": "?????",
+        "layer": 13,
+        "type": "hard_battle",
+        "x": 0.28,
+        "y": 0.628,
+        "enemyPresetId": "fallen_sanctum"
+      },
+      {
+        "id": "D13_N2",
+        "name": "????",
+        "layer": 13,
         "type": "resource",
-        "x": 0.65,
-        "y": 0.73,
-        "reward": {
-          "gold": 6
-        }
+        "x": 0.55,
+        "y": 0.628
       },
       {
-        "id": "abyss_L10_treasure_1",
-        "name": "隘口密室",
-        "layer": 10,
-        "type": "treasure",
-        "x": 0.92,
-        "y": 0.73,
-        "reward": {
-          "treasureId": "abyss_heart"
-        }
-      },
-      {
-        "id": "abyss_L11_battle_1",
-        "name": "堡垒末日先驱",
-        "layer": 11,
-        "type": "battle",
-        "x": 0.15,
-        "y": 0.8,
-        "enemyPresetId": "doom_herald",
-        "reward": {
-          "gold": 6
-        }
-      },
-      {
-        "id": "abyss_L11_battle_2",
-        "name": "堡垒圣殿卫",
-        "layer": 11,
-        "type": "battle",
-        "x": 0.5,
-        "y": 0.8,
-        "enemyPresetId": "fallen_sanctum",
-        "reward": {
-          "gold": 6
-        }
-      },
-      {
-        "id": "abyss_L11_treasure_1",
-        "name": "堡垒遗物库",
-        "layer": 11,
-        "type": "treasure",
-        "x": 0.85,
-        "y": 0.8,
-        "reward": {
-          "treasureId": "abyss_heart"
-        }
-      },
-      {
-        "id": "abyss_L12_battle_1",
-        "name": "深渊末日先驱",
-        "layer": 12,
-        "type": "battle",
-        "x": 0.15,
-        "y": 0.87,
-        "enemyPresetId": "doom_herald",
-        "reward": {
-          "gold": 7
-        }
-      },
-      {
-        "id": "abyss_L12_battle_2",
-        "name": "深渊守备队",
-        "layer": 12,
-        "type": "battle",
-        "x": 0.5,
-        "y": 0.87,
-        "enemyPresetId": "fallen_sanctum",
-        "reward": {
-          "gold": 7
-        }
-      },
-      {
-        "id": "abyss_L12_treasure_1",
-        "name": "深渊遗宝",
-        "layer": 12,
-        "type": "treasure",
-        "x": 0.85,
-        "y": 0.87,
-        "reward": {
-          "treasureId": "abyss_heart"
-        }
-      },
-      {
-        "id": "abyss_L13_battle_1",
-        "name": "石门守卫",
+        "id": "D13_N3",
+        "name": "????",
         "layer": 13,
-        "type": "battle",
-        "x": 0.3,
-        "y": 0.93,
-        "enemyPresetId": "doom_herald",
-        "reward": {
-          "gold": 7
-        }
+        "type": "hard_battle",
+        "x": 0.82,
+        "y": 0.628,
+        "enemyPresetId": "fallen_sanctum"
       },
       {
-        "id": "abyss_L13_treasure_1",
-        "name": "门内密室",
-        "layer": 13,
-        "type": "treasure",
-        "x": 0.7,
-        "y": 0.93,
-        "reward": {
-          "treasureId": "abyss_heart"
-        }
-      },
-      {
-        "id": "abyss_L14_battle_1",
-        "name": "近途先锋",
+        "id": "D14_N1",
+        "name": "????",
         "layer": 14,
-        "type": "battle",
-        "x": 0.3,
-        "y": 0.96,
-        "enemyPresetId": "doom_herald",
-        "reward": {
-          "gold": 8
-        }
+        "type": "event",
+        "x": 0.25,
+        "y": 0.674
       },
       {
-        "id": "abyss_L14_treasure_1",
-        "name": "近途密藏",
+        "id": "D14_N2",
+        "name": "????",
         "layer": 14,
-        "type": "treasure",
-        "x": 0.7,
-        "y": 0.96,
-        "reward": {
-          "treasureId": "abyss_heart"
-        }
+        "type": "hard_battle",
+        "x": 0.5,
+        "y": 0.674,
+        "enemyPresetId": "fallen_sanctum"
       },
       {
-        "id": "abyss_throne",
-        "name": "深渊王座",
+        "id": "D14_N3",
+        "name": "????",
+        "layer": 14,
+        "type": "rest",
+        "x": 0.78,
+        "y": 0.674
+      },
+      {
+        "id": "D15_N1",
+        "name": "????",
         "layer": 15,
+        "type": "guard_battle",
+        "x": 0.38,
+        "y": 0.72,
+        "enemyPresetId": "garrison_fortress"
+      },
+      {
+        "id": "D15_N2",
+        "name": "??????",
+        "layer": 15,
+        "type": "hard_battle",
+        "x": 0.66,
+        "y": 0.72,
+        "enemyPresetId": "fallen_sanctum"
+      },
+      {
+        "id": "D16_N1",
+        "name": "????",
+        "layer": 16,
+        "type": "hard_battle",
+        "x": 0.5,
+        "y": 0.766,
+        "enemyPresetId": "fallen_sanctum"
+      },
+      {
+        "id": "D17_N1",
+        "name": "????",
+        "layer": 17,
+        "type": "elite_battle",
+        "x": 0.25,
+        "y": 0.812,
+        "enemyPresetId": "shadow_elite"
+      },
+      {
+        "id": "D17_N2",
+        "name": "????",
+        "layer": 17,
+        "type": "hard_battle",
+        "x": 0.55,
+        "y": 0.812,
+        "enemyPresetId": "fallen_sanctum"
+      },
+      {
+        "id": "D17_N3",
+        "name": "????",
+        "layer": 17,
+        "type": "resource",
+        "x": 0.82,
+        "y": 0.812
+      },
+      {
+        "id": "D18_N1",
+        "name": "?????",
+        "layer": 18,
+        "type": "hard_battle",
+        "x": 0.25,
+        "y": 0.858,
+        "enemyPresetId": "fallen_sanctum"
+      },
+      {
+        "id": "D18_N2",
+        "name": "????",
+        "layer": 18,
+        "type": "event",
+        "x": 0.55,
+        "y": 0.858
+      },
+      {
+        "id": "D18_N3",
+        "name": "????",
+        "layer": 18,
+        "type": "hard_battle",
+        "x": 0.82,
+        "y": 0.858,
+        "enemyPresetId": "fallen_sanctum"
+      },
+      {
+        "id": "D19_N1",
+        "name": "Boss ???",
+        "layer": 19,
+        "type": "boss_guard",
+        "x": 0.5,
+        "y": 0.904,
+        "enemyPresetId": "doom_commander"
+      },
+      {
+        "id": "D20_N1",
+        "name": "????",
+        "layer": 20,
         "type": "boss",
         "x": 0.5,
-        "y": 0.99,
-        "enemyPresetId": "abyss_lord",
-        "reward": {
-          "gold": 10,
-          "treasureId": "abyss_heart"
-        }
+        "y": 0.95,
+        "enemyPresetId": "abyss_lord"
       }
     ],
     "connections": [
       {
         "fromNodeId": "abyss_start",
-        "toNodeId": "abyss_L1_battle_1"
+        "toNodeId": "D1_N1"
       },
       {
-        "fromNodeId": "abyss_start",
-        "toNodeId": "abyss_L1_resource_1"
+        "fromNodeId": "D1_N1",
+        "toNodeId": "D2_N1"
       },
       {
-        "fromNodeId": "abyss_L1_battle_1",
-        "toNodeId": "abyss_L2_battle_1"
+        "fromNodeId": "D1_N1",
+        "toNodeId": "D2_N2"
       },
       {
-        "fromNodeId": "abyss_L1_battle_1",
-        "toNodeId": "abyss_L2_treasure_1"
+        "fromNodeId": "D2_N1",
+        "toNodeId": "D3_N1"
       },
       {
-        "fromNodeId": "abyss_L1_resource_1",
-        "toNodeId": "abyss_L2_battle_1"
+        "fromNodeId": "D2_N1",
+        "toNodeId": "D3_N2"
       },
       {
-        "fromNodeId": "abyss_L1_resource_1",
-        "toNodeId": "abyss_L2_treasure_1"
+        "fromNodeId": "D2_N2",
+        "toNodeId": "D3_N2"
       },
       {
-        "fromNodeId": "abyss_L2_battle_1",
-        "toNodeId": "abyss_L3_battle_1"
+        "fromNodeId": "D2_N2",
+        "toNodeId": "D3_N3"
       },
       {
-        "fromNodeId": "abyss_L2_battle_1",
-        "toNodeId": "abyss_L3_battle_2"
+        "fromNodeId": "D3_N1",
+        "toNodeId": "D4_N1"
       },
       {
-        "fromNodeId": "abyss_L2_battle_1",
-        "toNodeId": "abyss_L3_resource_1"
+        "fromNodeId": "D3_N1",
+        "toNodeId": "D4_N2"
       },
       {
-        "fromNodeId": "abyss_L2_treasure_1",
-        "toNodeId": "abyss_L3_battle_1"
+        "fromNodeId": "D3_N2",
+        "toNodeId": "D4_N2"
       },
       {
-        "fromNodeId": "abyss_L2_treasure_1",
-        "toNodeId": "abyss_L3_battle_2"
+        "fromNodeId": "D3_N2",
+        "toNodeId": "D4_N3"
       },
       {
-        "fromNodeId": "abyss_L2_treasure_1",
-        "toNodeId": "abyss_L3_resource_1"
+        "fromNodeId": "D3_N3",
+        "toNodeId": "D4_N2"
       },
       {
-        "fromNodeId": "abyss_L3_battle_1",
-        "toNodeId": "abyss_L4_battle_1"
+        "fromNodeId": "D3_N3",
+        "toNodeId": "D4_N3"
       },
       {
-        "fromNodeId": "abyss_L3_battle_1",
-        "toNodeId": "abyss_L4_resource_1"
+        "fromNodeId": "D4_N1",
+        "toNodeId": "D5_N1"
       },
       {
-        "fromNodeId": "abyss_L3_battle_1",
-        "toNodeId": "abyss_L4_treasure_1"
+        "fromNodeId": "D4_N2",
+        "toNodeId": "D5_N1"
       },
       {
-        "fromNodeId": "abyss_L3_battle_2",
-        "toNodeId": "abyss_L4_battle_1"
+        "fromNodeId": "D4_N2",
+        "toNodeId": "D5_N2"
       },
       {
-        "fromNodeId": "abyss_L3_battle_2",
-        "toNodeId": "abyss_L4_resource_1"
+        "fromNodeId": "D4_N3",
+        "toNodeId": "D5_N2"
       },
       {
-        "fromNodeId": "abyss_L3_battle_2",
-        "toNodeId": "abyss_L4_treasure_1"
+        "fromNodeId": "D5_N1",
+        "toNodeId": "D6_N1"
       },
       {
-        "fromNodeId": "abyss_L3_resource_1",
-        "toNodeId": "abyss_L4_battle_1"
+        "fromNodeId": "D5_N1",
+        "toNodeId": "D6_N2"
       },
       {
-        "fromNodeId": "abyss_L4_battle_1",
-        "toNodeId": "abyss_L5_battle_1"
+        "fromNodeId": "D5_N2",
+        "toNodeId": "D6_N2"
       },
       {
-        "fromNodeId": "abyss_L4_battle_1",
-        "toNodeId": "abyss_L5_battle_2"
+        "fromNodeId": "D5_N2",
+        "toNodeId": "D6_N3"
       },
       {
-        "fromNodeId": "abyss_L4_battle_1",
-        "toNodeId": "abyss_L5_resource_1"
+        "fromNodeId": "D6_N1",
+        "toNodeId": "D7_N1"
       },
       {
-        "fromNodeId": "abyss_L4_battle_1",
-        "toNodeId": "abyss_L5_treasure_1"
+        "fromNodeId": "D6_N1",
+        "toNodeId": "D7_N2"
       },
       {
-        "fromNodeId": "abyss_L4_resource_1",
-        "toNodeId": "abyss_L5_battle_1"
+        "fromNodeId": "D6_N2",
+        "toNodeId": "D7_N1"
       },
       {
-        "fromNodeId": "abyss_L4_resource_1",
-        "toNodeId": "abyss_L5_battle_2"
+        "fromNodeId": "D6_N2",
+        "toNodeId": "D7_N2"
       },
       {
-        "fromNodeId": "abyss_L4_treasure_1",
-        "toNodeId": "abyss_L5_battle_1"
+        "fromNodeId": "D6_N2",
+        "toNodeId": "D7_N3"
       },
       {
-        "fromNodeId": "abyss_L4_treasure_1",
-        "toNodeId": "abyss_L5_battle_2"
+        "fromNodeId": "D6_N3",
+        "toNodeId": "D7_N3"
       },
       {
-        "fromNodeId": "abyss_L5_battle_1",
-        "toNodeId": "abyss_L6_battle_1"
+        "fromNodeId": "D7_N1",
+        "toNodeId": "D8_N1"
       },
       {
-        "fromNodeId": "abyss_L5_battle_1",
-        "toNodeId": "abyss_L6_battle_2"
+        "fromNodeId": "D7_N1",
+        "toNodeId": "D8_N2"
       },
       {
-        "fromNodeId": "abyss_L5_battle_1",
-        "toNodeId": "abyss_L6_resource_1"
+        "fromNodeId": "D7_N2",
+        "toNodeId": "D8_N1"
       },
       {
-        "fromNodeId": "abyss_L5_battle_1",
-        "toNodeId": "abyss_L6_treasure_1"
+        "fromNodeId": "D7_N2",
+        "toNodeId": "D8_N3"
       },
       {
-        "fromNodeId": "abyss_L5_battle_2",
-        "toNodeId": "abyss_L6_battle_1"
+        "fromNodeId": "D7_N3",
+        "toNodeId": "D8_N3"
       },
       {
-        "fromNodeId": "abyss_L5_battle_2",
-        "toNodeId": "abyss_L6_battle_2"
+        "fromNodeId": "D7_N3",
+        "toNodeId": "D8_N4"
       },
       {
-        "fromNodeId": "abyss_L5_battle_2",
-        "toNodeId": "abyss_L6_resource_1"
+        "fromNodeId": "D8_N1",
+        "toNodeId": "D9_N1"
       },
       {
-        "fromNodeId": "abyss_L5_battle_2",
-        "toNodeId": "abyss_L6_treasure_1"
+        "fromNodeId": "D8_N1",
+        "toNodeId": "D9_N2"
       },
       {
-        "fromNodeId": "abyss_L5_resource_1",
-        "toNodeId": "abyss_L6_battle_1"
+        "fromNodeId": "D8_N2",
+        "toNodeId": "D9_N1"
       },
       {
-        "fromNodeId": "abyss_L5_resource_1",
-        "toNodeId": "abyss_L6_battle_2"
+        "fromNodeId": "D8_N3",
+        "toNodeId": "D9_N1"
       },
       {
-        "fromNodeId": "abyss_L5_resource_1",
-        "toNodeId": "abyss_L6_resource_1"
+        "fromNodeId": "D8_N3",
+        "toNodeId": "D9_N3"
       },
       {
-        "fromNodeId": "abyss_L5_resource_1",
-        "toNodeId": "abyss_L6_treasure_1"
+        "fromNodeId": "D8_N4",
+        "toNodeId": "D9_N3"
       },
       {
-        "fromNodeId": "abyss_L5_treasure_1",
-        "toNodeId": "abyss_L6_battle_1"
+        "fromNodeId": "D9_N1",
+        "toNodeId": "D10_N1"
       },
       {
-        "fromNodeId": "abyss_L5_treasure_1",
-        "toNodeId": "abyss_L6_battle_2"
+        "fromNodeId": "D9_N2",
+        "toNodeId": "D10_N1"
       },
       {
-        "fromNodeId": "abyss_L5_treasure_1",
-        "toNodeId": "abyss_L6_resource_1"
+        "fromNodeId": "D9_N2",
+        "toNodeId": "D10_N2"
       },
       {
-        "fromNodeId": "abyss_L5_treasure_1",
-        "toNodeId": "abyss_L6_treasure_1"
+        "fromNodeId": "D9_N3",
+        "toNodeId": "D10_N2"
       },
       {
-        "fromNodeId": "abyss_L6_battle_1",
-        "toNodeId": "abyss_L7_battle_1"
+        "fromNodeId": "D10_N1",
+        "toNodeId": "D11_N1"
       },
       {
-        "fromNodeId": "abyss_L6_battle_1",
-        "toNodeId": "abyss_L7_battle_2"
+        "fromNodeId": "D10_N1",
+        "toNodeId": "D11_N2"
       },
       {
-        "fromNodeId": "abyss_L6_battle_1",
-        "toNodeId": "abyss_L7_resource_1"
+        "fromNodeId": "D10_N2",
+        "toNodeId": "D11_N1"
       },
       {
-        "fromNodeId": "abyss_L6_battle_1",
-        "toNodeId": "abyss_L7_resource_2"
+        "fromNodeId": "D10_N2",
+        "toNodeId": "D11_N2"
       },
       {
-        "fromNodeId": "abyss_L6_battle_1",
-        "toNodeId": "abyss_L7_treasure_1"
+        "fromNodeId": "D11_N1",
+        "toNodeId": "D12_N1"
       },
       {
-        "fromNodeId": "abyss_L6_battle_2",
-        "toNodeId": "abyss_L7_battle_1"
+        "fromNodeId": "D11_N1",
+        "toNodeId": "D12_N2"
       },
       {
-        "fromNodeId": "abyss_L6_battle_2",
-        "toNodeId": "abyss_L7_battle_2"
+        "fromNodeId": "D11_N2",
+        "toNodeId": "D12_N2"
       },
       {
-        "fromNodeId": "abyss_L6_battle_2",
-        "toNodeId": "abyss_L7_resource_1"
+        "fromNodeId": "D11_N2",
+        "toNodeId": "D12_N3"
       },
       {
-        "fromNodeId": "abyss_L6_battle_2",
-        "toNodeId": "abyss_L7_resource_2"
+        "fromNodeId": "D12_N1",
+        "toNodeId": "D13_N1"
       },
       {
-        "fromNodeId": "abyss_L6_battle_2",
-        "toNodeId": "abyss_L7_treasure_1"
+        "fromNodeId": "D12_N1",
+        "toNodeId": "D13_N3"
       },
       {
-        "fromNodeId": "abyss_L6_resource_1",
-        "toNodeId": "abyss_L7_battle_1"
+        "fromNodeId": "D12_N2",
+        "toNodeId": "D13_N1"
       },
       {
-        "fromNodeId": "abyss_L6_resource_1",
-        "toNodeId": "abyss_L7_battle_2"
+        "fromNodeId": "D12_N2",
+        "toNodeId": "D13_N2"
       },
       {
-        "fromNodeId": "abyss_L6_resource_1",
-        "toNodeId": "abyss_L7_resource_1"
+        "fromNodeId": "D12_N2",
+        "toNodeId": "D13_N3"
       },
       {
-        "fromNodeId": "abyss_L6_resource_1",
-        "toNodeId": "abyss_L7_resource_2"
+        "fromNodeId": "D12_N3",
+        "toNodeId": "D13_N3"
       },
       {
-        "fromNodeId": "abyss_L6_resource_1",
-        "toNodeId": "abyss_L7_treasure_1"
+        "fromNodeId": "D13_N1",
+        "toNodeId": "D14_N1"
       },
       {
-        "fromNodeId": "abyss_L6_treasure_1",
-        "toNodeId": "abyss_L7_battle_1"
+        "fromNodeId": "D13_N1",
+        "toNodeId": "D14_N2"
       },
       {
-        "fromNodeId": "abyss_L6_treasure_1",
-        "toNodeId": "abyss_L7_battle_2"
+        "fromNodeId": "D13_N2",
+        "toNodeId": "D14_N2"
       },
       {
-        "fromNodeId": "abyss_L6_treasure_1",
-        "toNodeId": "abyss_L7_resource_1"
+        "fromNodeId": "D13_N3",
+        "toNodeId": "D14_N2"
       },
       {
-        "fromNodeId": "abyss_L6_treasure_1",
-        "toNodeId": "abyss_L7_resource_2"
+        "fromNodeId": "D13_N3",
+        "toNodeId": "D14_N3"
       },
       {
-        "fromNodeId": "abyss_L6_treasure_1",
-        "toNodeId": "abyss_L7_treasure_1"
+        "fromNodeId": "D14_N1",
+        "toNodeId": "D15_N1"
       },
       {
-        "fromNodeId": "abyss_L7_battle_1",
-        "toNodeId": "abyss_L8_battle_1"
+        "fromNodeId": "D14_N2",
+        "toNodeId": "D15_N1"
       },
       {
-        "fromNodeId": "abyss_L7_battle_1",
-        "toNodeId": "abyss_L8_battle_2"
+        "fromNodeId": "D14_N2",
+        "toNodeId": "D15_N2"
       },
       {
-        "fromNodeId": "abyss_L7_battle_1",
-        "toNodeId": "abyss_L8_resource_1"
+        "fromNodeId": "D14_N3",
+        "toNodeId": "D15_N2"
       },
       {
-        "fromNodeId": "abyss_L7_battle_1",
-        "toNodeId": "abyss_L8_resource_2"
+        "fromNodeId": "D15_N1",
+        "toNodeId": "D16_N1"
       },
       {
-        "fromNodeId": "abyss_L7_battle_1",
-        "toNodeId": "abyss_L8_treasure_1"
+        "fromNodeId": "D15_N2",
+        "toNodeId": "D16_N1"
       },
       {
-        "fromNodeId": "abyss_L7_battle_2",
-        "toNodeId": "abyss_L8_battle_1"
+        "fromNodeId": "D16_N1",
+        "toNodeId": "D17_N1"
       },
       {
-        "fromNodeId": "abyss_L7_battle_2",
-        "toNodeId": "abyss_L8_battle_2"
+        "fromNodeId": "D16_N1",
+        "toNodeId": "D17_N2"
       },
       {
-        "fromNodeId": "abyss_L7_battle_2",
-        "toNodeId": "abyss_L8_resource_1"
+        "fromNodeId": "D16_N1",
+        "toNodeId": "D17_N3"
       },
       {
-        "fromNodeId": "abyss_L7_battle_2",
-        "toNodeId": "abyss_L8_resource_2"
+        "fromNodeId": "D17_N1",
+        "toNodeId": "D18_N1"
       },
       {
-        "fromNodeId": "abyss_L7_battle_2",
-        "toNodeId": "abyss_L8_treasure_1"
+        "fromNodeId": "D17_N1",
+        "toNodeId": "D18_N2"
       },
       {
-        "fromNodeId": "abyss_L7_resource_1",
-        "toNodeId": "abyss_L8_battle_1"
+        "fromNodeId": "D17_N2",
+        "toNodeId": "D18_N1"
       },
       {
-        "fromNodeId": "abyss_L7_resource_1",
-        "toNodeId": "abyss_L8_battle_2"
+        "fromNodeId": "D17_N2",
+        "toNodeId": "D18_N3"
       },
       {
-        "fromNodeId": "abyss_L7_resource_2",
-        "toNodeId": "abyss_L8_battle_1"
+        "fromNodeId": "D17_N3",
+        "toNodeId": "D18_N3"
       },
       {
-        "fromNodeId": "abyss_L7_resource_2",
-        "toNodeId": "abyss_L8_battle_2"
+        "fromNodeId": "D18_N1",
+        "toNodeId": "D19_N1"
       },
       {
-        "fromNodeId": "abyss_L7_treasure_1",
-        "toNodeId": "abyss_L8_battle_1"
+        "fromNodeId": "D18_N2",
+        "toNodeId": "D19_N1"
       },
       {
-        "fromNodeId": "abyss_L7_treasure_1",
-        "toNodeId": "abyss_L8_battle_2"
+        "fromNodeId": "D18_N3",
+        "toNodeId": "D19_N1"
       },
       {
-        "fromNodeId": "abyss_L8_battle_1",
-        "toNodeId": "abyss_L9_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L8_battle_1",
-        "toNodeId": "abyss_L9_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L8_battle_1",
-        "toNodeId": "abyss_L9_resource_1"
-      },
-      {
-        "fromNodeId": "abyss_L8_battle_1",
-        "toNodeId": "abyss_L9_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L8_battle_2",
-        "toNodeId": "abyss_L9_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L8_battle_2",
-        "toNodeId": "abyss_L9_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L8_battle_2",
-        "toNodeId": "abyss_L9_resource_1"
-      },
-      {
-        "fromNodeId": "abyss_L8_battle_2",
-        "toNodeId": "abyss_L9_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L8_resource_1",
-        "toNodeId": "abyss_L9_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L8_resource_1",
-        "toNodeId": "abyss_L9_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L8_resource_2",
-        "toNodeId": "abyss_L9_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L8_resource_2",
-        "toNodeId": "abyss_L9_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L8_treasure_1",
-        "toNodeId": "abyss_L9_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L8_treasure_1",
-        "toNodeId": "abyss_L9_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L9_battle_1",
-        "toNodeId": "abyss_L10_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L9_battle_1",
-        "toNodeId": "abyss_L10_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L9_battle_1",
-        "toNodeId": "abyss_L10_resource_1"
-      },
-      {
-        "fromNodeId": "abyss_L9_battle_1",
-        "toNodeId": "abyss_L10_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L9_battle_2",
-        "toNodeId": "abyss_L10_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L9_battle_2",
-        "toNodeId": "abyss_L10_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L9_battle_2",
-        "toNodeId": "abyss_L10_resource_1"
-      },
-      {
-        "fromNodeId": "abyss_L9_battle_2",
-        "toNodeId": "abyss_L10_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L9_resource_1",
-        "toNodeId": "abyss_L10_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L9_resource_1",
-        "toNodeId": "abyss_L10_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L9_treasure_1",
-        "toNodeId": "abyss_L10_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L9_treasure_1",
-        "toNodeId": "abyss_L10_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L10_battle_1",
-        "toNodeId": "abyss_L11_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L10_battle_1",
-        "toNodeId": "abyss_L11_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L10_battle_1",
-        "toNodeId": "abyss_L11_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L10_battle_2",
-        "toNodeId": "abyss_L11_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L10_battle_2",
-        "toNodeId": "abyss_L11_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L10_battle_2",
-        "toNodeId": "abyss_L11_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L10_resource_1",
-        "toNodeId": "abyss_L11_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L10_resource_1",
-        "toNodeId": "abyss_L11_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L10_treasure_1",
-        "toNodeId": "abyss_L11_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L10_treasure_1",
-        "toNodeId": "abyss_L11_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L11_battle_1",
-        "toNodeId": "abyss_L12_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L11_battle_1",
-        "toNodeId": "abyss_L12_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L11_battle_1",
-        "toNodeId": "abyss_L12_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L11_battle_2",
-        "toNodeId": "abyss_L12_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L11_battle_2",
-        "toNodeId": "abyss_L12_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L11_battle_2",
-        "toNodeId": "abyss_L12_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L11_treasure_1",
-        "toNodeId": "abyss_L12_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L11_treasure_1",
-        "toNodeId": "abyss_L12_battle_2"
-      },
-      {
-        "fromNodeId": "abyss_L11_treasure_1",
-        "toNodeId": "abyss_L12_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L12_battle_1",
-        "toNodeId": "abyss_L13_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L12_battle_1",
-        "toNodeId": "abyss_L13_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L12_battle_2",
-        "toNodeId": "abyss_L13_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L12_battle_2",
-        "toNodeId": "abyss_L13_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L12_treasure_1",
-        "toNodeId": "abyss_L13_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L13_battle_1",
-        "toNodeId": "abyss_L14_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L13_battle_1",
-        "toNodeId": "abyss_L14_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L13_treasure_1",
-        "toNodeId": "abyss_L14_battle_1"
-      },
-      {
-        "fromNodeId": "abyss_L13_treasure_1",
-        "toNodeId": "abyss_L14_treasure_1"
-      },
-      {
-        "fromNodeId": "abyss_L14_battle_1",
-        "toNodeId": "abyss_throne"
-      },
-      {
-        "fromNodeId": "abyss_L14_treasure_1",
-        "toNodeId": "abyss_throne"
+        "fromNodeId": "D19_N1",
+        "toNodeId": "D20_N1"
       }
     ]
   }

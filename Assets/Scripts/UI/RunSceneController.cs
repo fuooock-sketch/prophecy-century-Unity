@@ -91,6 +91,10 @@ namespace ProphecyCentury.UI
         private Text _goldDeployRewardTitleLabel;
         private Text _goldDeployRewardSubtitleLabel;
         private int _goldDeployRewardActualStar;
+        private GameObject _battleUnitPickModal;
+        private Transform _battleUnitPickOptionsRoot;
+        private Text _battleUnitPickTitleLabel;
+        private Text _battleUnitPickSubtitleLabel;
         private GameObject _battleLogButton;
         private GameObject _battleLogModal;
         private Text _battleLogContentLabel;
@@ -1662,6 +1666,188 @@ namespace ProphecyCentury.UI
             PlayNumberChangeFeedback(before);
         }
 
+        private void OpenBattleUnitPickModal()
+        {
+            var state = _flow.GetBattleUnitPickState();
+            if (state == null || state.choices == null || state.choices.Count == 0 || state.remainingPicks <= 0)
+            {
+                return;
+            }
+
+            EnsureBattleUnitPickModal();
+            RebuildBattleUnitPickModal();
+            _battleUnitPickModal.SetActive(true);
+            _battleUnitPickModal.transform.SetAsLastSibling();
+            RuntimeSfxPlayer.PlayAbilityTrigger();
+            WriteLog($"战斗胜利奖励：三选一，剩余刷新 {state.remainingRerolls} 次。");
+        }
+
+        private void EnsureBattleUnitPickModal()
+        {
+            if (_battleUnitPickModal != null)
+            {
+                return;
+            }
+
+            var parent = runPanel != null ? runPanel.transform : transform;
+            _battleUnitPickModal = new GameObject("BattleUnitPickModal", typeof(Image));
+            _battleUnitPickModal.transform.SetParent(parent, false);
+            var modalRect = _battleUnitPickModal.GetComponent<RectTransform>();
+            modalRect.anchorMin = Vector2.zero;
+            modalRect.anchorMax = Vector2.one;
+            modalRect.offsetMin = Vector2.zero;
+            modalRect.offsetMax = Vector2.zero;
+            _battleUnitPickModal.GetComponent<Image>().color = new Color32(4, 3, 12, 210);
+
+            var panel = new GameObject("Panel", typeof(Image));
+            panel.transform.SetParent(_battleUnitPickModal.transform, false);
+            var panelRect = panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(1060f, 680f);
+            panelRect.anchoredPosition = Vector2.zero;
+            panel.GetComponent<Image>().color = new Color32(30, 38, 70, 252);
+
+            _battleUnitPickTitleLabel = CreateAnchoredText(panel.transform, "Title", "战斗胜利奖励", 38, TextAnchor.MiddleCenter, new Vector2(0.05f, 0.84f), new Vector2(0.95f, 0.95f));
+            _battleUnitPickTitleLabel.color = new Color32(255, 216, 107, 255);
+            _battleUnitPickSubtitleLabel = CreateAnchoredText(panel.transform, "Subtitle", string.Empty, 22, TextAnchor.MiddleCenter, new Vector2(0.05f, 0.74f), new Vector2(0.95f, 0.83f));
+
+            var options = new GameObject("Options", typeof(GridLayoutGroup));
+            options.transform.SetParent(panel.transform, false);
+            var optionsRect = options.GetComponent<RectTransform>();
+            optionsRect.anchorMin = new Vector2(0.11f, 0.23f);
+            optionsRect.anchorMax = new Vector2(0.89f, 0.72f);
+            optionsRect.offsetMin = Vector2.zero;
+            optionsRect.offsetMax = Vector2.zero;
+            var layout = options.GetComponent<GridLayoutGroup>();
+            layout.cellSize = new Vector2(221f, 286f);
+            layout.spacing = new Vector2(48f, 0f);
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            layout.constraintCount = 3;
+            _battleUnitPickOptionsRoot = options.transform;
+
+            CreateGameResultButton(panel.transform, "刷新", new Vector2(-155f, -265f), RerollBattleUnitPickReward);
+            CreateGameResultButton(panel.transform, "跳过", new Vector2(155f, -265f), SkipBattleUnitPickReward);
+            _battleUnitPickModal.SetActive(false);
+        }
+
+        private void RebuildBattleUnitPickModal()
+        {
+            var state = _flow.GetBattleUnitPickState();
+            if (state == null)
+            {
+                return;
+            }
+
+            if (_battleUnitPickTitleLabel != null)
+            {
+                _battleUnitPickTitleLabel.text = "战斗胜利奖励";
+            }
+
+            if (_battleUnitPickSubtitleLabel != null)
+            {
+                _battleUnitPickSubtitleLabel.text = $"选择 1 张加入手牌  ·  剩余刷新 {Mathf.Max(0, state.remainingRerolls)} 次";
+                _battleUnitPickSubtitleLabel.color = new Color32(214, 220, 232, 255);
+            }
+
+            ClearChildren(_battleUnitPickOptionsRoot);
+            foreach (var choice in state.choices ?? new List<BattleUnitPickChoice>())
+            {
+                CreateBattleUnitPickChoice(choice);
+            }
+        }
+
+        private void CreateBattleUnitPickChoice(BattleUnitPickChoice choice)
+        {
+            var definition = ProphecyGameSession.Instance.Data.FindUnit(choice?.unitId);
+            if (definition == null)
+            {
+                return;
+            }
+
+            var cardState = new UnitCardState
+            {
+                unitId = definition.id,
+                name = definition.name,
+                star = definition.star
+            };
+            var view = UnitCardView.CreateRuntimeInstance(_battleUnitPickOptionsRoot);
+            var rect = view.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(221f, 286f);
+            var layout = view.GetComponent<LayoutElement>() ?? view.gameObject.AddComponent<LayoutElement>();
+            layout.preferredWidth = 221f;
+            layout.preferredHeight = 286f;
+            layout.flexibleWidth = 0f;
+            layout.flexibleHeight = 0f;
+            view.Bind(definition, cardState, UnitCardPresentationMode.Grid, GetUnitCardRaceStyles());
+
+            var button = view.GetComponent<Button>() ?? view.gameObject.AddComponent<Button>();
+            button.targetGraphic = view.BackgroundImage != null ? view.BackgroundImage : view.GetComponent<Image>();
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
+            button.onClick.AddListener(() => SelectBattleUnitPickReward(choice));
+
+            var tooltip = view.gameObject.AddComponent<RuntimeUnitTooltip>();
+            tooltip.Unit = cardState;
+        }
+
+        private void SelectBattleUnitPickReward(BattleUnitPickChoice choice)
+        {
+            var state = _flow.GetBattleUnitPickState();
+            var index = state?.choices?.IndexOf(choice) ?? -1;
+            var before = CaptureUnitNumberSnapshots();
+            var success = _flow.ChooseBattleUnitPick(index);
+            if (!success)
+            {
+                RuntimeSfxPlayer.PlayError();
+                ShowFloatingText("无法领取奖励");
+                return;
+            }
+
+            var definition = ProphecyGameSession.Instance.Data.FindUnit(choice.unitId);
+            _flow.ClearBattleUnitPick();
+            if (_battleUnitPickModal != null)
+            {
+                _battleUnitPickModal.SetActive(false);
+            }
+
+            RuntimeSfxPlayer.PlayBuyCard();
+            PlayAbilitySfxIfNeeded();
+            PlaySynthesisSfxIfNeeded();
+            WriteLog($"已选择战斗奖励：{definition?.name ?? choice.name}。");
+            RefreshView();
+            PlayNumberChangeFeedback(before);
+        }
+
+        private void RerollBattleUnitPickReward()
+        {
+            if (!_flow.RerollBattleUnitPick())
+            {
+                RuntimeSfxPlayer.PlayError();
+                ShowFloatingText("刷新次数不足");
+                RebuildBattleUnitPickModal();
+                return;
+            }
+
+            RuntimeSfxPlayer.PlayClick();
+            RebuildBattleUnitPickModal();
+            WriteLog("已刷新战斗奖励候选。");
+        }
+
+        private void SkipBattleUnitPickReward()
+        {
+            _flow.ClearBattleUnitPick();
+            if (_battleUnitPickModal != null)
+            {
+                _battleUnitPickModal.SetActive(false);
+            }
+
+            WriteLog("已跳过战斗奖励。");
+            RefreshView();
+        }
+
         private static Text CreateAnchoredText(Transform parent, string name, string value, int fontSize, TextAnchor alignment, Vector2 anchorMin, Vector2 anchorMax)
         {
             var textObject = new GameObject(name, typeof(Text));
@@ -2175,6 +2361,12 @@ namespace ProphecyCentury.UI
             if (gem != null)
             {
                 Destroy(gem.gameObject);
+            }
+
+            if (target == null)
+            {
+                ShowFloatingText($"{giftEvent.targetName} ◆+{giftEvent.amount}");
+                yield break;
             }
 
             var targetImage = target.GetComponent<Image>();
@@ -2998,7 +3190,10 @@ namespace ProphecyCentury.UI
                 RuntimeSfxPlayer.PlayError();
                 WriteLog("无法开始地图战斗。");
             }
-            else if (result.eventType == NodeEventType.Resource || result.eventType == NodeEventType.Treasure)
+            else if (result.eventType == NodeEventType.Resource
+                || result.eventType == NodeEventType.Treasure
+                || result.eventType == NodeEventType.Event
+                || result.eventType == NodeEventType.Rest)
             {
                 ShowFloatingText(FormatNodeReward(result));
             }
@@ -3170,6 +3365,7 @@ namespace ProphecyCentury.UI
             var previousForestGems = CountForestGemCardsInHand();
             var roundEndBefore = CaptureUnitNumberSnapshots();
             var isExplorationBattle = Run?.isExplorationBattle ?? false;
+            var explorationBattleNodeType = Run?.explorationBattleNodeType;
             ManageFeedbackEventsState roundEndFeedback = null;
             var roundEndLine = isExplorationBattle ? "地图战斗开始。" : "回合结束效果已结算。";
             if (!isExplorationBattle)
@@ -3201,7 +3397,7 @@ namespace ProphecyCentury.UI
             var setupResult = CreateBattlePreviewStageResult(preview);
             var unitViews = RebuildBattleStagePlaybackUnits(setupResult);
             EnableBattleSetupDragging(unitViews);
-            SetBattleStageText("战斗准备", $"我方战力 {previewPlayerScore}，敌方战力 {previewEnemyScore}\n可拖动我方单位调整本场临时站位，点击开始行动后双方才会移动和攻击。");
+            SetBattleStageText("战斗准备", $"我方战力 {previewPlayerScore}，敌方战力 {previewEnemyScore}\n{FormatEnemyLineup(preview)}\n可拖动我方单位调整本场临时站位，点击开始行动后双方才会移动和攻击。");
             yield return WaitForBattleStartAction();
 
             var authoritativeResult = _battleStub.Resolve(Run);
@@ -3227,8 +3423,11 @@ namespace ProphecyCentury.UI
             _flow.FinishBattlePhase();
             _flow.ResolveBattleOutcome(result);
             RuntimeSfxPlayer.PlayBattleResult(result.Victory);
-            if (result.Victory && Run != null)
-                _flow.CreateBattleUnitPickReward(result.EnemyScore);
+            BattleUnitPickState battlePickReward = null;
+            if (result.Victory && Run != null && !WorldMapSystem.IsBossNodeType(explorationBattleNodeType))
+            {
+                battlePickReward = _flow.CreateBattleUnitPickReward(result.EnemyScore, explorationBattleNodeType);
+            }
 
             result = visualResult;
             SetBattleStageProgress(1f);
@@ -3250,6 +3449,11 @@ namespace ProphecyCentury.UI
             RestoreOperationalUiAfterBattle();
             _battlePlaybackRunning = false;
             RefreshView();
+            if (battlePickReward != null && Run != null && Run.phase != GamePhase.GameOver && Run.phase != GamePhase.Victory)
+            {
+                OpenBattleUnitPickModal();
+            }
+
             ShowGoldChangeFeedback(settleGoldBefore);
             PlayNumberChangeFeedback(settleBefore);
             if (!string.IsNullOrWhiteSpace(battleRewardFeedback))
@@ -6481,8 +6685,9 @@ namespace ProphecyCentury.UI
 
         private IEnumerator AnimatePlayerHpDisplay(int hpBefore, int hpAfter)
         {
-            var from = Mathf.Clamp(hpBefore, 0, 100);
-            var to = Mathf.Clamp(hpAfter, 0, 100);
+            var maxFate = Mathf.Max(1, Run != null && Run.maxFateValue > 0 ? Run.maxFateValue : 100);
+            var from = Mathf.Clamp(hpBefore, 0, maxFate);
+            var to = Mathf.Clamp(hpAfter, 0, maxFate);
             var elapsed = 0f;
             const float duration = 0.65f;
             while (elapsed < duration)
@@ -6498,15 +6703,16 @@ namespace ProphecyCentury.UI
 
         private void SetPlayerHpDisplay(int hp)
         {
-            var clamped = Mathf.Clamp(hp, 0, 100);
+            var maxFate = Mathf.Max(1, Run != null && Run.maxFateValue > 0 ? Run.maxFateValue : 100);
+            var clamped = Mathf.Clamp(hp, 0, maxFate);
             if (hpLabel != null)
             {
-                hpLabel.text = $"{clamped}/100";
+                hpLabel.text = $"命运值 {clamped}/{maxFate}";
             }
 
             if (hpFillImage != null)
             {
-                hpFillImage.fillAmount = Mathf.Clamp01(clamped / 100f);
+                hpFillImage.fillAmount = Mathf.Clamp01(clamped / (float)maxFate);
             }
         }
 
@@ -7197,14 +7403,14 @@ namespace ProphecyCentury.UI
 
             SetTextLabel("RoundLabelV2", roundText);
             UpdateRoundGoldIcon();
-            hpLabel.text = $"{Run.playerHp}/100";
+            hpLabel.text = $"命运值 {Mathf.Max(0, Run.playerHp)}/{Mathf.Max(1, Run.maxFateValue > 0 ? Run.maxFateValue : 100)}";
             if (stateLabel != null)
             {
                 stateLabel.text = $"阶段：{FormatRunPhase()}";
             }
             if (hpFillImage != null)
             {
-                hpFillImage.fillAmount = Mathf.Clamp01(Run.playerHp / 100f);
+                hpFillImage.fillAmount = Mathf.Clamp01(Run.playerHp / (float)Mathf.Max(1, Run.maxFateValue > 0 ? Run.maxFateValue : 100));
             }
             RefreshShopMetaStars();
             RefreshShopActionLabels();
@@ -7338,6 +7544,10 @@ namespace ProphecyCentury.UI
                     return "资源点";
                 case NodeEventType.Treasure:
                     return "宝物点";
+                case NodeEventType.Event:
+                    return "事件点";
+                case NodeEventType.Rest:
+                    return "整备点";
                 case NodeEventType.AlreadyCleared:
                     return "已清除";
                 default:
@@ -7361,6 +7571,16 @@ namespace ProphecyCentury.UI
             if (!string.IsNullOrWhiteSpace(result.rewardTreasureId))
             {
                 parts.Add("获得宝物");
+            }
+
+            if (result.eventType == NodeEventType.Event)
+            {
+                parts.Add("事件奖励已结算");
+            }
+
+            if (result.eventType == NodeEventType.Rest)
+            {
+                parts.Add("获得随机整备 Buff");
             }
 
             return parts.Count == 0 ? "节点已清除" : string.Join("  ", parts);
@@ -8726,8 +8946,9 @@ namespace ProphecyCentury.UI
 
         private string FormatBattlePreview()
         {
-            var playerScore = BattleStubSystem.EstimatePlayerScore(Run);
-            var enemyScore = BattleStubSystem.EstimateEnemyScore(Run);
+            var preview = _battleStub.CreatePreview(Run);
+            var playerScore = preview?.PlayerScore ?? BattleStubSystem.EstimatePlayerScore(Run);
+            var enemyScore = preview?.EnemyScore ?? BattleStubSystem.EstimateEnemyScore(Run);
             var limit = Run.campaignRoundLimit > 0 ? Run.campaignRoundLimit : 20;
             var rewards = Run.pendingBattleRewards;
             var rewardLine = rewards == null
@@ -8746,7 +8967,26 @@ namespace ProphecyCentury.UI
             }
 
             var realtimeLine = useRealtimeBattlePreview ? "实时预览：开" : "实时预览：关";
-            return $"战斗预览\n进度 {Run.round}/{limit}  胜{Run.campaignWins}/败{Run.campaignLosses}  {realtimeLine}\n战力 {playerScore} : {enemyScore}\n{rewardLine}\n最近：{history}";
+            return $"战斗预览\n进度 {Run.round}/{limit}  胜{Run.campaignWins}/败{Run.campaignLosses}  {realtimeLine}\n战力 {playerScore} : {enemyScore}\n{FormatEnemyLineup(preview)}\n{rewardLine}\n最近：{history}";
+        }
+
+        private static string FormatEnemyLineup(BattlePreviewResult preview)
+        {
+            var enemies = preview?.InitialEnemyUnits != null && preview.InitialEnemyUnits.Count > 0
+                ? preview.InitialEnemyUnits
+                : preview?.EnemyUnits;
+            if (enemies == null || enemies.Count == 0)
+            {
+                return "敌方阵容：未知";
+            }
+
+            var lines = enemies
+                .Where(unit => unit != null && !unit.Summoned)
+                .OrderBy(unit => unit.SlotId)
+                .Take(6)
+                .Select(unit => $"{unit.Name} ★{Mathf.Max(1, unit.Star)} x{Mathf.Max(1, unit.CurrentCount)}  攻{unit.Attack} 血{unit.MaxHp}")
+                .ToList();
+            return lines.Count == 0 ? "敌方阵容：未知" : "敌方阵容：\n" + string.Join("\n", lines);
         }
 
         private static string FormatRunState(string state)

@@ -28,6 +28,8 @@ namespace ProphecyCentury.Model
         public int maxMovePoints;
         public string currentNodeId;
         public int playerHp;
+        public int fateValue;
+        public int maxFateValue;
         public int shopLevel;
         public int shopUpgradeAnchorRound;
         public int campaignRoundLimit;

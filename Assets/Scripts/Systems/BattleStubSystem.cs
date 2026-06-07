@@ -25,7 +25,7 @@ namespace ProphecyCentury.Systems
             var random = new Random(runState.round * 7919 + runState.boardUnits.Count * 131);
             var battleTime = MaxBattleSeconds;
             var players = BuildPlayerUnits(runState);
-            var enemies = BuildEnemyUnits(runState, random);
+            var enemies = BuildEnemyUnits(runState, random, EstimatePlayerScore(runState));
             var initialPlayerUnits = players.Select(CreateSnapshot).ToList();
             var initialEnemyUnits = enemies.Select(CreateSnapshot).ToList();
             var events = new List<BattleEvent>();
@@ -99,7 +99,11 @@ namespace ProphecyCentury.Systems
                 victory = TotalAliveHp(players) >= TotalAliveHp(enemies);
             }
 
-            var damage = victory ? 0 : CalculateHpLoss(runState, enemies);
+            var damage = victory
+                ? 0
+                : runState.isExplorationBattle
+                    ? CalculateFateDamage(runState, enemies)
+                    : CalculateHpLoss(runState, enemies);
             return Finish(runState, victory, playerScore, enemyScore, damage, attacks, players, enemies, events, initialPlayerUnits, initialEnemyUnits);
         }
 
@@ -107,7 +111,7 @@ namespace ProphecyCentury.Systems
         {
             var random = new Random(runState.round * 7919 + runState.boardUnits.Count * 131);
             var players = BuildPlayerUnits(runState);
-            var enemies = BuildEnemyUnits(runState, random);
+            var enemies = BuildEnemyUnits(runState, random, EstimatePlayerScore(runState));
             var initialPlayerUnits = players.Select(CreateSnapshot).ToList();
             var initialEnemyUnits = enemies.Select(CreateSnapshot).ToList();
             ResolveBattleStart(players, enemies, random);
@@ -137,7 +141,7 @@ namespace ProphecyCentury.Systems
         public static int EstimateEnemyScore(RunState runState)
         {
             var random = new Random(runState.round * 7919 + runState.boardUnits.Count * 131);
-            var units = BuildEnemyUnits(runState, random);
+            var units = BuildEnemyUnits(runState, random, EstimatePlayerScore(runState));
             ResolveBattleStart(units, new List<BattleRuntimeUnit>(), random);
             ApplyContinuousAuras(units);
             return EstimateScore(units);
@@ -589,6 +593,10 @@ namespace ProphecyCentury.Systems
             if (hpLoss > 0)
             {
                 runState.playerHp -= hpLoss;
+                if (runState.isExplorationBattle)
+                {
+                    runState.fateValue = Math.Max(0, runState.playerHp);
+                }
             }
 
             ApplyPostBattleRewards(runState, victory, players, events);
@@ -596,9 +604,10 @@ namespace ProphecyCentury.Systems
             var enemyAlive = enemies.Count(unit => unit.IsAlive);
             var playerDamage = players.Sum(unit => unit.DamageDone);
             var enemyDamage = enemies.Sum(unit => unit.DamageDone);
+            var lossLabel = runState.isExplorationBattle ? $"fate -{hpLoss}" : $"lost {hpLoss} HP";
             var summary = victory
                 ? $"Victory. Player score {playerScore}, enemy score {enemyScore}, player units alive {playerAlive}, attacks {attacks}."
-                : $"Defeat. Player score {playerScore}, enemy score {enemyScore}, enemy units alive {enemyAlive}, lost {hpLoss} HP.";
+                : $"Defeat. Player score {playerScore}, enemy score {enemyScore}, enemy units alive {enemyAlive}, {lossLabel}.";
             var finishTime = events != null && events.Count > 0 ? events[events.Count - 1].Time + StepSeconds : 0f;
             AddEvent(events, finishTime, victory ? "victory" : "defeat", null, null, hpLoss, summary);
             return new BattleStubResult
@@ -694,13 +703,13 @@ namespace ProphecyCentury.Systems
                 .ToList();
         }
 
-        private static List<BattleRuntimeUnit> BuildEnemyUnits(RunState runState, Random random)
+        private static List<BattleRuntimeUnit> BuildEnemyUnits(RunState runState, Random random, int playerScore)
         {
             var data = ProphecyGameSession.Instance.Data;
             var preset = data.FindEnemyPreset(runState.explorationBattleEnemyPresetId);
             if (preset != null)
             {
-                var presetUnits = BuildEnemyRuntimeUnitsFromPreset(preset);
+                var presetUnits = BuildEnemyRuntimeUnitsFromPreset(preset, runState, playerScore);
                 if (presetUnits.Count > 0)
                 {
                     return presetUnits;
@@ -780,12 +789,12 @@ namespace ProphecyCentury.Systems
 
         public static List<BattleUnitSnapshot> BuildEnemyUnitSnapshotsFromPreset(EnemyPresetDefinition preset)
         {
-            return BuildEnemyRuntimeUnitsFromPreset(preset)
+            return BuildEnemyRuntimeUnitsFromPreset(preset, null, 0)
                 .Select(CreateSnapshot)
                 .ToList();
         }
 
-        private static List<BattleRuntimeUnit> BuildEnemyRuntimeUnitsFromPreset(EnemyPresetDefinition preset)
+        private static List<BattleRuntimeUnit> BuildEnemyRuntimeUnitsFromPreset(EnemyPresetDefinition preset, RunState runState, int playerScore)
         {
             var enemies = new List<BattleRuntimeUnit>();
             if (preset?.units == null)
@@ -831,7 +840,74 @@ namespace ProphecyCentury.Systems
                 }
             }
 
+            ApplyWorldMapPresetScaling(enemies, runState, playerScore);
             return enemies;
+        }
+
+        private static void ApplyWorldMapPresetScaling(List<BattleRuntimeUnit> enemies, RunState runState, int playerScore)
+        {
+            if (enemies == null || enemies.Count == 0 || runState == null || !runState.isExplorationBattle || playerScore <= 0)
+            {
+                return;
+            }
+
+            var baseScore = EstimateScore(enemies);
+            if (baseScore <= 0)
+            {
+                return;
+            }
+
+            var targetScore = (int)Math.Round(playerScore * WorldMapEnemyTargetRatio(runState));
+            if (targetScore <= baseScore)
+            {
+                return;
+            }
+
+            var countMultiplier = Math.Min(600f, targetScore / (float)baseScore);
+            foreach (var enemy in enemies)
+            {
+                ScaleEnemyCount(enemy, countMultiplier);
+            }
+        }
+
+        private static float WorldMapEnemyTargetRatio(RunState runState)
+        {
+            var day = Math.Max(runState?.dayCount ?? 1, runState?.round ?? 1);
+            switch (runState?.explorationBattleNodeType)
+            {
+                case "boss":
+                    return 1.20f;
+                case "boss_guard":
+                    return 1.10f;
+                case "elite_battle":
+                    return 1.05f;
+                case "hard_battle":
+                case "guard_battle":
+                    return 0.95f;
+                case "pressure_battle":
+                    return day <= 4 ? 0.62f : day <= 8 ? 0.85f : 1.05f;
+                case "normal_battle":
+                    return day <= 2 ? 0.50f : Math.Min(0.68f, 0.42f + day * 0.018f);
+                default:
+                    return 0.55f;
+            }
+        }
+
+        private static void ScaleEnemyCount(BattleRuntimeUnit enemy, float countMultiplier)
+        {
+            if (enemy == null || countMultiplier <= 1f)
+            {
+                return;
+            }
+
+            var count = Math.Max(1, (int)Math.Round(enemy.BaseCount * countMultiplier));
+            var hpPerUnit = Math.Max(1, enemy.HpPerUnit);
+            enemy.BaseCount = count;
+            enemy.CurrentCount = count;
+            enemy.MaxCount = count;
+            enemy.MaxHp = Math.Max(1, count * hpPerUnit);
+            enemy.CurrentHp = enemy.MaxHp;
+            enemy.CurrentTotalHp = enemy.MaxHp;
         }
 
         private static bool IsSupportedBattleSlot(string slotId)
@@ -2206,6 +2282,20 @@ namespace ProphecyCentury.Systems
 
             var pressure = alive.Sum(unit => Math.Max(1, unit.MaxHp / 120 + unit.Attack / 180));
             return Math.Max(1, Math.Min(20, 2 + runState.round / 2 + pressure));
+        }
+
+        private static int CalculateFateDamage(RunState runState, IReadOnlyList<BattleRuntimeUnit> enemies)
+        {
+            if (WorldMapSystem.IsBossNodeType(runState?.explorationBattleNodeType))
+            {
+                return Math.Max(0, runState?.playerHp ?? 0);
+            }
+
+            var aliveStarSum = enemies?
+                .Where(unit => unit != null && unit.IsAlive)
+                .Sum(unit => Math.Max(1, unit.Definition?.star ?? 1)) ?? 0;
+            var dayBonus = Math.Max(0, (runState?.dayCount ?? 0) / 5);
+            return Math.Max(1, WorldMapSystem.GetBaseFateDamage(runState?.explorationBattleNodeType) + aliveStarSum + dayBonus);
         }
 
         private static int TotalAliveHp(IEnumerable<BattleRuntimeUnit> units)

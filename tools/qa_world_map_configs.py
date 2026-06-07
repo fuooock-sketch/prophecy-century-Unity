@@ -10,6 +10,17 @@ from typing import Any
 
 
 DATA_DIR = Path("Assets/Resources/Data")
+BATTLE_NODE_TYPES = {
+    "battle",
+    "normal_battle",
+    "pressure_battle",
+    "hard_battle",
+    "elite_battle",
+    "guard_battle",
+    "boss_guard",
+    "boss",
+}
+NON_BATTLE_NODE_TYPES = {"resource", "event", "rest"}
 
 
 def load_json(name: str) -> Any:
@@ -61,7 +72,7 @@ def validate() -> list[str]:
         for node in nodes:
             node_id = node.get("id")
             require(bool(node_id), f"Map {map_id} contains empty node id", issues)
-            if node.get("type") in {"battle", "boss"}:
+            if node.get("type") in BATTLE_NODE_TYPES:
                 preset_id = node.get("enemyPresetId")
                 require(preset_id in presets_by_id, f"Map {map_id} node {node_id} references missing enemy preset {preset_id}", issues)
 
@@ -79,6 +90,18 @@ def validate() -> list[str]:
                 from_layer = int(node_by_id[from_id].get("layer") or 0)
                 to_layer = int(node_by_id[to_id].get("layer") or 0)
                 require(to_layer == from_layer + 1, f"Map {map_id} connection {from_id}->{to_id} is not next-layer", issues)
+                from_type = node_by_id[from_id].get("type")
+                to_type = node_by_id[to_id].get("type")
+                require(
+                    not (from_type in NON_BATTLE_NODE_TYPES and to_type in NON_BATTLE_NODE_TYPES),
+                    f"Map {map_id} connection {from_id}->{to_id} creates consecutive non-battle nodes",
+                    issues,
+                )
+                require(
+                    not (from_type == "elite_battle" and to_type == "rest"),
+                    f"Map {map_id} connection {from_id}->{to_id} connects elite directly to rest",
+                    issues,
+                )
                 outgoing.setdefault(from_id, []).append(to_id)
 
         visited = set()
@@ -98,6 +121,22 @@ def validate() -> list[str]:
             f"Map {map_id} boss is not reachable from start",
             issues,
         )
+
+        by_layer: dict[int, list[dict[str, Any]]] = {}
+        for node in nodes:
+            by_layer.setdefault(int(node.get("layer") or 0), []).append(node)
+
+        require(set(by_layer) == set(range(21)), f"Map {map_id} must contain layers D0~D20", issues)
+        require(by_layer.get(1, [{}])[0].get("type") == "normal_battle", f"Map {map_id} D1 must be normal_battle", issues)
+        require(len(by_layer.get(19, [])) == 1 and by_layer[19][0].get("type") == "boss_guard", f"Map {map_id} D19 must be one boss_guard", issues)
+        require(len(by_layer.get(20, [])) == 1 and by_layer[20][0].get("type") == "boss", f"Map {map_id} D20 must be one boss", issues)
+        require(
+            not any(node.get("type") == "elite_battle" and int(node.get("layer") or 0) <= 5 for node in nodes),
+            f"Map {map_id} has elite nodes in D1~D5",
+            issues,
+        )
+        for layer, layer_nodes in by_layer.items():
+            require(1 <= len(layer_nodes) <= 4, f"Map {map_id} layer D{layer} has {len(layer_nodes)} nodes", issues)
 
     return issues
 

@@ -1,6 +1,7 @@
 using System.Linq;
 using ProphecyCentury.Data;
 using ProphecyCentury.Model;
+using ProphecyCentury.Systems;
 using UnityEngine;
 
 namespace ProphecyCentury.Core
@@ -48,6 +49,7 @@ namespace ProphecyCentury.Core
             var map = ResolveCampaignMap(campaign);
             var startNodeId = map?.startNodeId ?? "start";
 
+            var startFateValue = Data.Config?.playerStartHp ?? 100;
             CurrentRun = new RunState
             {
                 saveVersion = 1,
@@ -61,7 +63,9 @@ namespace ProphecyCentury.Core
                 maxMovePoints = 1,
                 remainingMovePoints = 0,
                 currentNodeId = startNodeId,
-                playerHp = Data.Config?.playerStartHp ?? 100,
+                playerHp = startFateValue,
+                fateValue = startFateValue,
+                maxFateValue = startFateValue,
                 shopLevel = 1,
                 shopUpgradeAnchorRound = 1,
                 campaignRoundLimit = ResolveCampaignRoundLimit(campaign)
@@ -135,6 +139,8 @@ namespace ProphecyCentury.Core
                     isCleared = node.type == "start"
                 });
             }
+
+            WorldMapSystem.RevealFutureLayers(run, map, startNodeId);
         }
     }
 }

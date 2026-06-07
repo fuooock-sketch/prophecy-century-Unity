@@ -9,6 +9,77 @@ namespace ProphecyCentury.Systems
     public sealed class WorldMapSystem
     {
         private const int MoveCost = 1;
+        private static readonly HashSet<string> BattleNodeTypes = new HashSet<string>
+        {
+            "battle",
+            "safe_battle",
+            "normal_battle",
+            "pressure_battle",
+            "hard_battle",
+            "elite_battle",
+            "guard_battle",
+            "boss_guard",
+            "boss"
+        };
+
+        private static readonly HashSet<string> NonBattleNodeTypes = new HashSet<string>
+        {
+            "resource",
+            "event",
+            "rest"
+        };
+
+        public static bool IsBattleNodeType(string nodeType)
+        {
+            return !string.IsNullOrWhiteSpace(nodeType) && BattleNodeTypes.Contains(nodeType);
+        }
+
+        public static bool IsBossNodeType(string nodeType)
+        {
+            return nodeType == "boss";
+        }
+
+        public static bool IsNonBattleNodeType(string nodeType)
+        {
+            return !string.IsNullOrWhiteSpace(nodeType) && NonBattleNodeTypes.Contains(nodeType);
+        }
+
+        public static int GetBattleRewardRerolls(string nodeType)
+        {
+            switch (nodeType)
+            {
+                case "pressure_battle":
+                case "hard_battle":
+                case "guard_battle":
+                    return 2;
+                case "elite_battle":
+                case "boss_guard":
+                    return 3;
+                case "boss":
+                    return 0;
+                default:
+                    return 1;
+            }
+        }
+
+        public static int GetBaseFateDamage(string nodeType)
+        {
+            switch (nodeType)
+            {
+                case "pressure_battle":
+                    return 5;
+                case "hard_battle":
+                    return 7;
+                case "elite_battle":
+                    return 9;
+                case "guard_battle":
+                    return 8;
+                case "boss_guard":
+                    return 10;
+                default:
+                    return 3;
+            }
+        }
 
         public IReadOnlyList<WorldMapNodeDefinition> GetAvailableDestinations(RunState run, WorldMapDefinition map)
         {
@@ -69,7 +140,7 @@ namespace ProphecyCentury.Systems
                 targetState.isVisited = true;
             }
 
-            RevealConnectedDestinations(run, map, targetNodeId);
+            RevealFutureLayers(run, map, targetNodeId);
             return true;
         }
 
@@ -106,6 +177,7 @@ namespace ProphecyCentury.Systems
                 case "pressure_battle":
                 case "hard_battle":
                 case "elite_battle":
+                case "guard_battle":
                 case "boss_guard":
                 case "battle":   // legacy alias
                     return NodeEventResult.Battle(node);
@@ -119,8 +191,6 @@ namespace ProphecyCentury.Systems
                     return NodeEventResult.Resource(node);
                 case "treasure":
                     return NodeEventResult.Treasure(node);
-                case "shop":
-                    return NodeEventResult.Shop(node);
                 case "event":
                     return NodeEventResult.Event(node);
                 case "rest":
@@ -145,7 +215,7 @@ namespace ProphecyCentury.Systems
             state.isVisible = true;
             state.isVisited = true;
             state.isCleared = true;
-            RevealConnectedDestinations(run, map, nodeId);
+            RevealFutureLayers(run, map, nodeId);
             return true;
         }
 
@@ -171,19 +241,36 @@ namespace ProphecyCentury.Systems
             return false;
         }
 
-        private static void RevealConnectedDestinations(RunState run, WorldMapDefinition map, string nodeId)
+        public static void RevealFutureLayers(RunState run, WorldMapDefinition map, string nodeId, int layerDepth = 3)
         {
             if (run == null || map?.connections == null)
             {
                 return;
             }
 
-            foreach (var connection in map.connections.Where(connection => connection != null && connection.fromNodeId == nodeId))
+            var queue = new Queue<(string NodeId, int Depth)>();
+            var visited = new HashSet<string> { nodeId };
+            queue.Enqueue((nodeId, 0));
+            while (queue.Count > 0)
             {
-                var state = FindNodeState(run, connection.toNodeId);
-                if (state != null)
+                var current = queue.Dequeue();
+                if (current.Depth >= layerDepth)
                 {
-                    state.isVisible = true;
+                    continue;
+                }
+
+                foreach (var connection in map.connections.Where(connection => connection != null && connection.fromNodeId == current.NodeId))
+                {
+                    var state = FindNodeState(run, connection.toNodeId);
+                    if (state != null)
+                    {
+                        state.isVisible = true;
+                    }
+
+                    if (visited.Add(connection.toNodeId))
+                    {
+                        queue.Enqueue((connection.toNodeId, current.Depth + 1));
+                    }
                 }
             }
         }
@@ -215,8 +302,8 @@ namespace ProphecyCentury.Systems
         Battle,
         Resource,
         Treasure,
-        Shop,
         Event,
+        Rest,
         Boss
     }
 
@@ -269,11 +356,6 @@ namespace ProphecyCentury.Systems
             return FromNode(NodeEventType.Treasure, node);
         }
 
-        public static NodeEventResult Shop(WorldMapNodeDefinition node)
-        {
-            return FromNode(NodeEventType.Shop, node);
-        }
-
         public static NodeEventResult Event(WorldMapNodeDefinition node)
         {
             return FromNode(NodeEventType.Event, node);
@@ -281,7 +363,7 @@ namespace ProphecyCentury.Systems
 
         public static NodeEventResult Rest(WorldMapNodeDefinition node)
         {
-            return FromNode(NodeEventType.Resource, node);
+            return FromNode(NodeEventType.Rest, node);
         }
 
         private static NodeEventResult FromNode(NodeEventType eventType, WorldMapNodeDefinition node)
