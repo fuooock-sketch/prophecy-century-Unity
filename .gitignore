@@ -40,6 +40,12 @@ sysinfo.txt
 __pycache__/
 *.py[cod]
 
+# Local agent / tool caches
+.codex/
+tools/bin/
+tools/obj/
+tools/__pycache__/
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -50,3 +56,5 @@ lark_auth_qrcode*.png
 tmp_auth_qr*.png
 tmp_*
 **/*auth_qr.png
+tools/gif_*.txt
+tools/extract_result.txt
