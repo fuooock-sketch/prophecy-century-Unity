@@ -259,6 +259,12 @@ namespace ProphecyCentury.Systems
                         GainCount(runState, owner, ResolveRoundCountGain(talent, owner), owner, processed, depth);
                     }
                     break;
+                case "on_gain_race_unit_self_gain_count":
+                    if (eventType == "on_gain_unit" && UnitDef(target)?.race == talent.race)
+                    {
+                        GainCount(runState, owner, Value(talent, owner), target, processed, depth);
+                    }
+                    break;
                 case "while_on_board_on_entry_tagged_units_gain_attack":
                     if (eventType == "on_entry" && target != owner && CountsAsRace(runState, target, talent.entryRace))
                     {
@@ -314,7 +320,7 @@ namespace ProphecyCentury.Systems
                     }
                     break;
                 case "on_gain_defense_team_gain_attack":
-                    if (eventType == "on_gain_count" && target == owner)
+                    if (eventType == "on_gain_count" && target is BoardUnitState && source != owner)
                     {
                         foreach (var unit in runState.boardUnits)
                         {
@@ -375,7 +381,7 @@ namespace ProphecyCentury.Systems
                     }
                     break;
                 case "enter_if_board_faith_count_discover":
-                    if (eventType == "on_entry" && target == owner && runState.boardUnits.Count(unit => UnitDef(unit)?.faith == talent.faith) > Math.Max(0, talent.threshold))
+                    if (eventType == "on_entry" && target == owner && runState.boardUnits.Count(unit => UnitDef(unit)?.faith == talent.faith) >= Math.Max(1, talent.threshold))
                     {
                         AddRandomUnitsToHand(runState, unit => unit.faith == talent.faith && !unit.hidden, Count(talent, owner), owner);
                     }
@@ -1287,7 +1293,7 @@ namespace ProphecyCentury.Systems
             {
                 var currentRun = ProphecyGameSession.Instance.CurrentRun;
                 var round = Math.Max(1, currentRun != null ? currentRun.round : 1);
-                return Math.Max(1, baseValue * round);
+                return Math.Max(1, Math.Abs(talent.roundOffset) * round);
             }
 
             return Math.Max(1, baseValue);
@@ -1319,7 +1325,7 @@ namespace ProphecyCentury.Systems
 
         private bool AddUnitToHand(RunState runState, string unitId, UnitCardState source = null)
         {
-            if (runState.handCards.Count >= HandMaxCount || string.IsNullOrWhiteSpace(unitId))
+            if (runState == null || string.IsNullOrWhiteSpace(unitId))
             {
                 return false;
             }
@@ -1338,6 +1344,22 @@ namespace ProphecyCentury.Systems
                 baseCount = ResolveStartCount(unit),
                 maxCount = 0
             };
+            if (runState.handCards == null)
+            {
+                runState.handCards = new List<UnitCardState>();
+            }
+
+            if (runState.pendingHandCards == null)
+            {
+                runState.pendingHandCards = new List<UnitCardState>();
+            }
+
+            if (runState.handCards.Count >= HandMaxCount)
+            {
+                runState.pendingHandCards.Add(card);
+                return true;
+            }
+
             runState.handCards.Add(card);
             var boardSource = source as BoardUnitState;
             _feedbackEvents.handAddEvents.Add(new HandAddEventState
@@ -1348,6 +1370,7 @@ namespace ProphecyCentury.Systems
                 unitName = unit.name,
                 handIndex = runState.handCards.Count - 1
             });
+            Dispatch(runState, "on_gain_unit", card, "gain_unit", source, 0, new HashSet<string>());
             return true;
         }
 
@@ -1447,6 +1470,8 @@ namespace ProphecyCentury.Systems
                 case "on_gain_power_self_gain_attack":
                 case "on_gain_power_convert_to_attack_random_board_unit":
                     return eventType == "on_gain_count";
+                case "on_gain_race_unit_self_gain_count":
+                    return eventType == "on_gain_unit";
                 case "on_gain_defense_team_gain_attack":
                     return eventType == "on_gain_count";
                 case "on_gain_stat_retrigger_side_adjacent_entry_effects":
@@ -1650,8 +1675,10 @@ namespace ProphecyCentury.Systems
             return runState.boardUnits.Any(owner =>
                 owner != null
                 && TryParseSlot(owner.boardSlotId, out var ownerRow, out _)
-                && ownerRow == unitRow
-                && GetTalents(owner).Any(talent => talent.kind == "same_row_units_count_as_race" && (string.IsNullOrWhiteSpace(talent.race) || talent.race == race)));
+                && GetTalents(owner).Any(talent =>
+                    talent.kind == "same_row_units_count_as_race"
+                    && (string.IsNullOrWhiteSpace(talent.race) || talent.race == race)
+                    && (ownerRow == unitRow || (talent.mode == "same_and_forward_rows" && unitRow == ownerRow - 1))));
         }
 
         private static int CountRace(RunState runState, string race, string fallbackRace)

@@ -229,8 +229,7 @@ namespace ProphecyCentury.Systems
         {
             var run = ProphecyGameSession.Instance.CurrentRun;
             run.round += 1;
-            var income = (ProphecyGameSession.Instance.Data.Config?.roundIncomeBase ?? 2) + run.round;
-            run.gold = income;
+            ApplyNewRoundEconomy(run);
             run.state = "manage";
             run.phase = GamePhase.NightManage;
             ManageEventResolver.ResolveRoundStart(run);
@@ -252,7 +251,7 @@ namespace ProphecyCentury.Systems
                     var cnt = u.baseCount > 0 ? u.baseCount : (d != null && d.defaultCount > 0 ? d.defaultCount : d != null && d.startCount > 0 ? d.startCount : 1);
                     return "{\"id\":\"" + u.unitId + "\",\"name\":\"" + u.name + "\",\"star\":" + u.star + ",\"count\":" + cnt + ",\"slot\":\"" + (u is BoardUnitState b ? b.boardSlotId : "?") + "\"}";
                 }));
-                var line = "{\"round\":" + run.round + ",\"type\":\"state\",\"gold\":" + run.gold + ",\"shopLevel\":" + run.shopLevel + ",\"hp\":" + run.playerHp + ",\"wins\":" + run.campaignWins + ",\"board\":[" + boardJson + "],\"handCount\":" + run.handCards.Count + "}";
+                var line = "{\"round\":" + run.round + ",\"type\":\"state\",\"gold\":" + run.gold + ",\"shopLevel\":" + run.shopLevel + ",\"hp\":" + run.playerHp + ",\"wins\":" + run.campaignWins + ",\"board\":[" + boardJson + "],\"handCount\":" + run.handCards.Count + ",\"pendingHandCount\":" + (run.pendingHandCards?.Count ?? 0) + "}";
                 System.IO.File.AppendAllText(path, line + System.Environment.NewLine);
             }
             catch { }
@@ -304,6 +303,8 @@ namespace ProphecyCentury.Systems
                 {
                     TrySynthesizeAll(run);
                 }
+
+                FlushPendingHandCards(run);
             }
 
             return success;
@@ -324,6 +325,7 @@ namespace ProphecyCentury.Systems
             {
                 CaptureAbilityTrigger();
                 TrySynthesizeAll(run);
+                FlushPendingHandCards(run);
             }
 
             return value;
@@ -337,6 +339,7 @@ namespace ProphecyCentury.Systems
             {
                 CaptureAbilityTrigger();
                 TrySynthesizeAll(run);
+                FlushPendingHandCards(run);
             }
 
             return success;
@@ -388,7 +391,7 @@ namespace ProphecyCentury.Systems
         public bool ChooseGoldDeployReward(UnitDefinition definition)
         {
             var run = ProphecyGameSession.Instance.CurrentRun;
-            if (run == null || definition == null || run.handCards.Count >= HandMaxCount)
+            if (run == null || definition == null)
             {
                 return false;
             }
@@ -401,11 +404,7 @@ namespace ProphecyCentury.Systems
                 baseCount = ResolveStartCount(definition),
                 maxCount = 0
             };
-            run.handCards.Add(gained);
-            ManageEventResolver.ResolveGainUnit(run, gained);
-            CaptureAbilityTrigger();
-            TrySynthesizeAll(run);
-            return true;
+            return AddCardToHandOrCache(run, gained, true);
         }
 
         
@@ -467,7 +466,7 @@ namespace ProphecyCentury.Systems
             var state = run?.pendingBattleUnitPick;
             if (state == null || state.remainingPicks <= 0 || choiceIndex < 0 || choiceIndex >= (state.choices?.Count ?? 0) || state.choices[choiceIndex].selected) return false;
             var definition = ProphecyGameSession.Instance.Data.FindUnit(state.choices[choiceIndex].unitId);
-            if (definition == null || run.handCards.Count >= HandMaxCount) return false;
+            if (definition == null) return false;
             state.choices[choiceIndex].selected = true;
             state.remainingPicks -= 1;
             return ChooseUnitPickCard(definition);
@@ -498,13 +497,9 @@ namespace ProphecyCentury.Systems
         private bool ChooseUnitPickCard(UnitDefinition definition)
         {
             var run = ProphecyGameSession.Instance.CurrentRun;
-            if (run == null || definition == null || run.handCards.Count >= HandMaxCount) return false;
+            if (run == null || definition == null) return false;
             var g = new UnitCardState { unitId = definition.id, name = definition.name, star = definition.star, baseCount = ResolveStartCount(definition), maxCount = 0 };
-            run.handCards.Add(g);
-            ManageEventResolver.ResolveGainUnit(run, g);
-            CaptureAbilityTrigger();
-            TrySynthesizeAll(run);
-            return true;
+            return AddCardToHandOrCache(run, g, true);
         }
 
 public bool MoveBoardUnit(string fromSlotId, string toSlotId)
@@ -522,6 +517,7 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
             if (success)
             {
                 TrySynthesizeAll(run);
+                FlushPendingHandCards(run);
             }
 
             return success;
@@ -540,6 +536,7 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
                 ManageEventResolver.ResolveHeroBoardLeave(run, target);
                 CaptureAbilityTrigger();
                 TrySynthesizeAll(run);
+                FlushPendingHandCards(run);
             }
 
             return success;
@@ -590,6 +587,11 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
 
             ManageEventResolver.RefreshBoardAuras(run);
             _synthesizedSinceLastConsume |= synthesized;
+            if (synthesized)
+            {
+                FlushPendingHandCards(run);
+            }
+
             return synthesized;
         }
 
@@ -632,6 +634,7 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
             }
 
             run.pendingBattleRewards = new BattleRewardState();
+            FlushPendingHandCards(run);
         }
 
         private void ResolveExplorationBattleOutcome(RunState run, BattleStubResult result)
@@ -830,7 +833,7 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
 
         private bool AddRandomUnitToHand(RunState run)
         {
-            if (run == null || run.handCards.Count >= HandMaxCount)
+            if (run == null)
             {
                 return false;
             }
@@ -844,18 +847,15 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
             }
 
             var definition = pool[_random.Next(pool.Count)];
-            run.handCards.Add(new UnitCardState
+            var card = new UnitCardState
             {
                 unitId = definition.id,
                 name = definition.name,
                 star = definition.star,
                 baseCount = ResolveStartCount(definition),
                 maxCount = 0
-            });
-            ManageEventResolver.ResolveGainUnit(run, run.handCards[run.handCards.Count - 1]);
-            CaptureAbilityTrigger();
-            TrySynthesizeAll(run);
-            return true;
+            };
+            return AddCardToHandOrCache(run, card, true);
         }
 
         private WorldMapDefinition ResolveCurrentMap()
@@ -889,14 +889,31 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
 
         private void StartNewDayFlow(RunState run)
         {
-            var income = (ProphecyGameSession.Instance.Data.Config?.roundIncomeBase ?? 2) + run.round;
-            run.gold = income;
+            ApplyNewRoundEconomy(run);
             ManageEventResolver.ResolveRoundStart(run);
             CaptureAbilityTrigger();
             ApplyPendingBattleRewards(run);
             TrySynthesizeAll(run);
             ShopSystem.RefreshForNewRound(run);
             LogPlayerState(run);
+        }
+
+        private static void ApplyNewRoundEconomy(RunState run)
+        {
+            var config = ProphecyGameSession.Instance.Data.Config;
+            var carryGold = Math.Min(Math.Max(0, run.gold), Math.Max(0, config?.goldCarryLimit ?? 0));
+            run.gold = ResolveRoundIncome(config, run.round) + carryGold;
+        }
+
+        private static int ResolveRoundIncome(GameConfigData config, int round)
+        {
+            if (config?.roundIncomeByRound != null && config.roundIncomeByRound.Length > 0)
+            {
+                var index = Math.Max(0, Math.Min(config.roundIncomeByRound.Length - 1, round - 1));
+                return Math.Max(0, config.roundIncomeByRound[index]);
+            }
+
+            return (config?.roundIncomeBase ?? 2) + round;
         }
 
         private void StartExplorationDayFlow(RunState run)
@@ -972,24 +989,27 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
                     && (string.IsNullOrWhiteSpace(reward.race) || unit.race == reward.race))
                 .ToList();
             var added = 0;
-            for (var i = 0; i < reward.count && run.handCards.Count < HandMaxCount && pool.Count > 0; i += 1)
+            for (var i = 0; i < reward.count && pool.Count > 0; i += 1)
             {
                 var unit = pool[_random.Next(pool.Count)];
-                run.handCards.Add(new UnitCardState
+                var card = new UnitCardState
                 {
                     unitId = unit.id,
                     name = unit.name,
                     star = unit.star,
                     baseCount = ResolveStartCount(unit),
                     maxCount = 0
-                });
-                added += 1;
+                };
+                if (AddCardToHandOrCache(run, card, true))
+                {
+                    added += 1;
+                }
             }
 
             return added;
         }
 
-        private static int AddForestGemCardsToHand(RunState run, int amount)
+        private int AddForestGemCardsToHand(RunState run, int amount)
         {
             if (run?.handCards == null || amount <= 0)
             {
@@ -997,13 +1017,83 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
             }
 
             var added = 0;
-            while (added < amount && run.handCards.Count < HandMaxCount)
+            while (added < amount)
             {
-                run.handCards.Add(ManageEventResolver.CreateForestGemCard());
-                added += 1;
+                if (AddCardToHandOrCache(run, ManageEventResolver.CreateForestGemCard(), false))
+                {
+                    added += 1;
+                }
             }
 
             return added;
+        }
+
+        private bool AddCardToHandOrCache(RunState run, UnitCardState card, bool triggerGainUnit)
+        {
+            if (run == null || card == null)
+            {
+                return false;
+            }
+
+            if (run.handCards == null)
+            {
+                run.handCards = new List<UnitCardState>();
+            }
+
+            if (run.pendingHandCards == null)
+            {
+                run.pendingHandCards = new List<UnitCardState>();
+            }
+
+            if (run.handCards.Count < HandMaxCount)
+            {
+                run.handCards.Add(card);
+                if (triggerGainUnit && !ManageEventResolver.IsForestGemCard(card))
+                {
+                    ManageEventResolver.ResolveGainUnit(run, card);
+                    CaptureAbilityTrigger();
+                }
+
+                TrySynthesizeAll(run);
+            }
+            else
+            {
+                run.pendingHandCards.Add(card);
+            }
+
+            return true;
+        }
+
+        private void FlushPendingHandCards(RunState run)
+        {
+            if (run?.handCards == null || run.pendingHandCards == null || run.pendingHandCards.Count == 0)
+            {
+                return;
+            }
+
+            var addedAny = false;
+            while (run.pendingHandCards.Count > 0 && run.handCards.Count < HandMaxCount)
+            {
+                var card = run.pendingHandCards[0];
+                run.pendingHandCards.RemoveAt(0);
+                if (card == null)
+                {
+                    continue;
+                }
+
+                run.handCards.Add(card);
+                if (!ManageEventResolver.IsForestGemCard(card))
+                {
+                    ManageEventResolver.ResolveGainUnit(run, card);
+                    CaptureAbilityTrigger();
+                }
+                addedAny = true;
+            }
+
+            if (addedAny)
+            {
+                TrySynthesizeAll(run);
+            }
         }
 
         private static int ResolveStartCount(UnitDefinition unit)

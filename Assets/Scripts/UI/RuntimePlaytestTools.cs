@@ -344,7 +344,7 @@ namespace ProphecyCentury.UI
 
                     flow.FinishBattlePhase();
                     flow.ResolveBattleOutcome(result);
-                    var income = (session.Data.Config?.roundIncomeBase ?? 2) + testRun.round;
+                    var income = ResolveRoundIncome(session.Data.Config, testRun.round);
                     var appliedBonusGold = Mathf.Max(0, testRun.gold - income);
 
                     totalAttacks += attacks;
@@ -382,6 +382,17 @@ namespace ProphecyCentury.UI
                 $"battles_with_applied_gold={battlesWithAppliedGold}, pending_gold={totalPendingGold}, " +
                 $"applied_bonus_gold={totalAppliedBonusGold}, " +
                 $"expected_per_attack={expectedChance:P1}, observed_per_attack={observedChance:P1}.");
+        }
+
+        private static int ResolveRoundIncome(GameConfigData config, int round)
+        {
+            if (config?.roundIncomeByRound != null && config.roundIncomeByRound.Length > 0)
+            {
+                var index = Mathf.Clamp(round - 1, 0, config.roundIncomeByRound.Length - 1);
+                return Mathf.Max(0, config.roundIncomeByRound[index]);
+            }
+
+            return (config?.roundIncomeBase ?? 2) + round;
         }
 
         private void EnsureToolbar()

@@ -14,18 +14,19 @@ namespace ProphecyCentury.Systems
         private const int MaxBattleSeconds = 40;
         private const int MaxBattleRounds = 50;
         private const int MaxBattleEvents = 2000;
-        private const int BattleHexColumnCount = 11;
+        private const int BattleHexColumnCount = 13;
+        private const int BattleHexMaxRows = 6;
         private const float LUCK_CRIT_CHANCE_PER_POINT = 0.06f;
         private const float LUCK_CRIT_DAMAGE_MULTIPLIER = 1.5f;
         private const float MORALE_EXTRA_ATTACK_CHANCE_PER_POINT = 0.04f;
-        private static readonly int[] BattleHexRowsByColumn = { 4, 3, 4, 3, 4, 3, 4, 3, 4, 3, 4 };
+        private static readonly int[] BattleHexRowsByColumn = { 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6 };
 
         public BattleStubResult Resolve(RunState runState)
         {
             var random = new Random(runState.round * 7919 + runState.boardUnits.Count * 131);
             var battleTime = MaxBattleSeconds;
             var players = BuildPlayerUnits(runState);
-            var enemies = BuildEnemyUnits(runState, random, EstimatePlayerScore(runState));
+            var enemies = BuildEnemyUnits(runState, random);
             var initialPlayerUnits = players.Select(CreateSnapshot).ToList();
             var initialEnemyUnits = enemies.Select(CreateSnapshot).ToList();
             var events = new List<BattleEvent>();
@@ -111,7 +112,7 @@ namespace ProphecyCentury.Systems
         {
             var random = new Random(runState.round * 7919 + runState.boardUnits.Count * 131);
             var players = BuildPlayerUnits(runState);
-            var enemies = BuildEnemyUnits(runState, random, EstimatePlayerScore(runState));
+            var enemies = BuildEnemyUnits(runState, random);
             var initialPlayerUnits = players.Select(CreateSnapshot).ToList();
             var initialEnemyUnits = enemies.Select(CreateSnapshot).ToList();
             ResolveBattleStart(players, enemies, random);
@@ -141,7 +142,7 @@ namespace ProphecyCentury.Systems
         public static int EstimateEnemyScore(RunState runState)
         {
             var random = new Random(runState.round * 7919 + runState.boardUnits.Count * 131);
-            var units = BuildEnemyUnits(runState, random, EstimatePlayerScore(runState));
+            var units = BuildEnemyUnits(runState, random);
             ResolveBattleStart(units, new List<BattleRuntimeUnit>(), random);
             ApplyContinuousAuras(units);
             return EstimateScore(units);
@@ -674,6 +675,7 @@ namespace ProphecyCentury.Systems
                 MaxHp = unit.MaxHp,
                 CurrentHp = unit.CurrentHp,
                 BaseCount = unit.BaseCount,
+                InitialCount = unit.InitialCount,
                 CurrentCount = unit.CurrentCount,
                 MaxCount = unit.MaxCount,
                 HpPerUnit = unit.HpPerUnit,
@@ -703,13 +705,13 @@ namespace ProphecyCentury.Systems
                 .ToList();
         }
 
-        private static List<BattleRuntimeUnit> BuildEnemyUnits(RunState runState, Random random, int playerScore)
+        private static List<BattleRuntimeUnit> BuildEnemyUnits(RunState runState, Random random)
         {
             var data = ProphecyGameSession.Instance.Data;
             var preset = data.FindEnemyPreset(runState.explorationBattleEnemyPresetId);
             if (preset != null)
             {
-                var presetUnits = BuildEnemyRuntimeUnitsFromPreset(preset, runState, playerScore);
+                var presetUnits = BuildEnemyRuntimeUnitsFromPreset(preset, runState);
                 if (presetUnits.Count > 0)
                 {
                     return presetUnits;
@@ -789,12 +791,12 @@ namespace ProphecyCentury.Systems
 
         public static List<BattleUnitSnapshot> BuildEnemyUnitSnapshotsFromPreset(EnemyPresetDefinition preset)
         {
-            return BuildEnemyRuntimeUnitsFromPreset(preset, null, 0)
+            return BuildEnemyRuntimeUnitsFromPreset(preset, null)
                 .Select(CreateSnapshot)
                 .ToList();
         }
 
-        private static List<BattleRuntimeUnit> BuildEnemyRuntimeUnitsFromPreset(EnemyPresetDefinition preset, RunState runState, int playerScore)
+        private static List<BattleRuntimeUnit> BuildEnemyRuntimeUnitsFromPreset(EnemyPresetDefinition preset, RunState runState)
         {
             var enemies = new List<BattleRuntimeUnit>();
             if (preset?.units == null)
@@ -840,13 +842,79 @@ namespace ProphecyCentury.Systems
                 }
             }
 
-            ApplyWorldMapPresetScaling(enemies, runState, playerScore);
+            FillWorldMapPresetLineup(enemies, usedSlots, runState);
+            ApplyWorldMapPresetScaling(enemies, runState);
             return enemies;
         }
 
-        private static void ApplyWorldMapPresetScaling(List<BattleRuntimeUnit> enemies, RunState runState, int playerScore)
+        private static void FillWorldMapPresetLineup(List<BattleRuntimeUnit> enemies, HashSet<string> usedSlots, RunState runState)
         {
-            if (enemies == null || enemies.Count == 0 || runState == null || !runState.isExplorationBattle || playerScore <= 0)
+            if (enemies == null || usedSlots == null || runState == null || !runState.isExplorationBattle)
+            {
+                return;
+            }
+
+            var targetCount = ResolveWorldMapMinEnemyUnits(runState);
+            if (targetCount <= enemies.Count)
+            {
+                return;
+            }
+
+            var data = ProphecyGameSession.Instance?.Data;
+            if (data?.Units == null)
+            {
+                return;
+            }
+
+            var day = Math.Max(runState.dayCount, runState.round);
+            var maxStar = Math.Min(6, Math.Max(1, 1 + (day - 1) / 3));
+            var existingIds = new HashSet<string>(enemies.Select(unit => unit.UnitId).Where(id => !string.IsNullOrWhiteSpace(id)));
+            var pool = data.Units
+                .Where(unit => IsEnemyCandidate(unit, maxStar))
+                .OrderByDescending(unit => unit.star)
+                .ThenBy(unit => unit.type == "range" ? 1 : 0)
+                .ThenBy(unit => unit.id)
+                .ToList();
+
+            while (enemies.Count < targetCount && usedSlots.Count < 10)
+            {
+                var preferRange = enemies.Count(unit => unit.Type == "range") < Math.Max(1, targetCount / 3);
+                var picked = pool.FirstOrDefault(unit => !existingIds.Contains(unit.id) && ((preferRange && unit.type == "range") || (!preferRange && unit.type != "range")))
+                    ?? pool.FirstOrDefault(unit => !existingIds.Contains(unit.id))
+                    ?? pool.FirstOrDefault();
+                if (picked == null)
+                {
+                    return;
+                }
+
+                var slotId = ResolvePresetFallbackSlot(picked, usedSlots);
+                if (!usedSlots.Add(slotId))
+                {
+                    return;
+                }
+
+                var state = new UnitCardState
+                {
+                    unitId = picked.id,
+                    name = picked.name,
+                    star = picked.star,
+                    baseCount = Math.Max(1, Math.Min(4, ResolveStartCount(picked))),
+                    maxCount = 0
+                };
+                var runtime = CreateRuntimeUnit(state, false, picked, slotId, 1f);
+                if (runtime == null)
+                {
+                    continue;
+                }
+
+                enemies.Add(runtime);
+                existingIds.Add(picked.id);
+            }
+        }
+
+        private static void ApplyWorldMapPresetScaling(List<BattleRuntimeUnit> enemies, RunState runState)
+        {
+            if (enemies == null || enemies.Count == 0 || runState == null || !runState.isExplorationBattle)
             {
                 return;
             }
@@ -857,7 +925,13 @@ namespace ProphecyCentury.Systems
                 return;
             }
 
-            var targetScore = (int)Math.Round(playerScore * WorldMapEnemyTargetRatio(runState));
+            var scoreBasis = ResolveWorldMapExpectedPlayerScore(runState);
+            if (scoreBasis <= 0)
+            {
+                return;
+            }
+
+            var targetScore = (int)Math.Round(scoreBasis * WorldMapEnemyTargetRatio(runState));
             if (targetScore <= baseScore)
             {
                 return;
@@ -868,6 +942,47 @@ namespace ProphecyCentury.Systems
             {
                 ScaleEnemyCount(enemy, countMultiplier);
             }
+        }
+
+        private static int ResolveWorldMapExpectedPlayerScore(RunState runState)
+        {
+            var day = Math.Max(runState?.dayCount ?? 1, runState?.round ?? 1);
+            var curve = ProphecyGameSession.Instance?.Data?.Config?.worldMapExpectedPlayerScoreByDay;
+            if (curve != null && curve.Length > 0)
+            {
+                var index = Math.Min(Math.Max(day, 1), curve.Length) - 1;
+                return Math.Max(0, curve[index]);
+            }
+
+            var fallbackCurve = new[]
+            {
+                120, 250, 450, 800, 1200, 1700, 2300, 2900, 3600, 4300,
+                5100, 5900, 6700, 7500, 8300, 9100, 10000, 10900, 11800, 12800
+            };
+            if (day <= fallbackCurve.Length)
+            {
+                return fallbackCurve[day - 1];
+            }
+
+            return fallbackCurve[fallbackCurve.Length - 1];
+        }
+
+        private static int ResolveWorldMapMinEnemyUnits(RunState runState)
+        {
+            var day = Math.Max(runState?.dayCount ?? 1, runState?.round ?? 1);
+            var curve = ProphecyGameSession.Instance?.Data?.Config?.worldMapMinEnemyUnitsByDay;
+            if (curve != null && curve.Length > 0)
+            {
+                var index = Math.Min(Math.Max(day, 1), curve.Length) - 1;
+                return Math.Max(1, Math.Min(10, curve[index]));
+            }
+
+            if (runState?.explorationBattleNodeType == "boss" || runState?.explorationBattleNodeType == "boss_guard")
+            {
+                return 6;
+            }
+
+            return day <= 2 ? 2 : day <= 5 ? 3 : day <= 9 ? 4 : 5;
         }
 
         private static float WorldMapEnemyTargetRatio(RunState runState)
@@ -903,6 +1018,7 @@ namespace ProphecyCentury.Systems
             var count = Math.Max(1, (int)Math.Round(enemy.BaseCount * countMultiplier));
             var hpPerUnit = Math.Max(1, enemy.HpPerUnit);
             enemy.BaseCount = count;
+            enemy.InitialCount = count;
             enemy.CurrentCount = count;
             enemy.MaxCount = count;
             enemy.MaxHp = Math.Max(1, count * hpPerUnit);
@@ -1041,6 +1157,7 @@ namespace ProphecyCentury.Systems
                 MaxHp = Math.Max(1, hp),
                 CurrentHp = Math.Max(1, hp),
                 BaseCount = baseCount,
+                InitialCount = baseCount,
                 CurrentCount = baseCount,
                 MaxCount = baseCount,
                 HpPerUnit = hpPerUnit,
@@ -1097,7 +1214,11 @@ namespace ProphecyCentury.Systems
                     switch (skill.kind)
                     {
                         case "battle_start_team_shield":
-                            foreach (var ally in allies.Where(ally => ally.IsAlive))
+                            var shieldTargets = allies
+                                .Where(ally => ally.IsAlive)
+                                .OrderBy(_ => random.Next())
+                                .Take(skill.count > 0 ? Math.Max(1, skill.count) : int.MaxValue);
+                            foreach (var ally in shieldTargets)
                             {
                                 ally.ShieldLayers += Math.Max(1, skill.layers);
                             }
@@ -1123,9 +1244,24 @@ namespace ProphecyCentury.Systems
                             }
                             unit.SkillTriggers += teamAttack > 0 ? 1 : 0;
                             break;
+                        case "battle_start_team_count_per_faith_count":
+                            var teamCountGain = CountFaith(allies, skill.faith, unit.Faith) * Math.Max(1, skill.value);
+                            foreach (var ally in allies.Where(ally => ally.IsAlive))
+                            {
+                                AddTemporaryCount(ally, teamCountGain);
+                            }
+                            unit.SkillTriggers += teamCountGain > 0 ? 1 : 0;
+                            break;
                         case "battle_start_self_stats_per_faith_count":
                             var faithCount = CountFaith(allies, skill.faith, unit.Faith);
                             AddBattleStats(unit, skill, faithCount);
+                            break;
+                        case "battle_start_self_count_percent_per_faith_count":
+                            var selfFaithCount = CountFaith(allies, skill.faith, unit.Faith);
+                            var percent = Math.Max(0, skill.value) * selfFaithCount;
+                            var countGain = (int)Math.Ceiling(unit.CurrentCount * (percent / 100f));
+                            AddTemporaryCount(unit, countGain);
+                            unit.SkillTriggers += countGain > 0 ? 1 : 0;
                             break;
                         case "battle_start_speedup_first_attack_crit_stun_restore":
                             unit.OriginalSpeed = unit.Speed;
@@ -1397,6 +1533,18 @@ namespace ProphecyCentury.Systems
                 {
                     forceCrit = true;
                     critMultiplier = Math.Max(critMultiplier, Math.Max(1.5f, skill.multiplier));
+                    attacker.SkillTriggers += 1;
+                }
+
+                if (skill.kind == "first_hits_force_crit_if_count_multiplier" && attacker.AttackCount < Math.Max(1, skill.count))
+                {
+                    forceCrit = true;
+                    var initialCount = Math.Max(1, attacker.InitialCount);
+                    var threshold = Math.Max(1, skill.threshold);
+                    var multiplier = attacker.CurrentCount > initialCount * threshold
+                        ? Math.Max(1.5f, skill.multiplier)
+                        : ProphecyGameSession.Instance.Data.Config?.critDamageMultiple ?? 1.5f;
+                    critMultiplier = Math.Max(critMultiplier, multiplier);
                     attacker.SkillTriggers += 1;
                 }
 
@@ -2076,6 +2224,7 @@ namespace ProphecyCentury.Systems
 
             var hpPerUnit = Math.Max(1, unit.HpPerUnit);
             unit.BaseCount = Math.Max(1, count);
+            unit.InitialCount = unit.BaseCount;
             unit.CurrentCount = unit.BaseCount;
             unit.CurrentTotalHp = unit.CurrentCount * hpPerUnit;
             unit.CurrentHp = unit.CurrentTotalHp;
@@ -2372,43 +2521,43 @@ namespace ProphecyCentury.Systems
             {
                 case "4-1":
                     column = 0;
-                    row = 0;
+                    row = 1;
                     break;
                 case "4-2":
                     column = 0;
-                    row = 1;
+                    row = 2;
                     break;
                 case "4-3":
                     column = 0;
-                    row = 2;
+                    row = 3;
                     break;
                 case "4-4":
                     column = 0;
-                    row = 3;
+                    row = 4;
                     break;
                 case "3-1":
                     column = 1;
-                    row = 0;
+                    row = 1;
                     break;
                 case "3-2":
                     column = 1;
-                    row = 1;
+                    row = 2;
                     break;
                 case "3-3":
                     column = 1;
-                    row = 2;
+                    row = 3;
                     break;
                 case "2-1":
                     column = 2;
-                    row = 1;
+                    row = 2;
                     break;
                 case "2-2":
                     column = 2;
-                    row = 2;
+                    row = 3;
                     break;
                 case "1-1":
                     column = 3;
-                    row = 1;
+                    row = 2;
                     break;
                 default:
                     return TryParseHexSlot(slotId, out column, out row);
@@ -2483,7 +2632,7 @@ namespace ProphecyCentury.Systems
                 new HexCoord(column, row + 1)
             };
 
-            if (BattleHexRowsByColumn[column] == 4)
+            if (BattleHexRowsByColumn[column] == BattleHexMaxRows)
             {
                 candidates.Add(new HexCoord(column - 1, row - 1));
                 candidates.Add(new HexCoord(column - 1, row));
@@ -2673,6 +2822,7 @@ namespace ProphecyCentury.Systems
         public int MaxHp;
         public int CurrentHp;
         public int BaseCount;
+        public int InitialCount;
         public int CurrentCount;
         public int MaxCount;
         public int HpPerUnit;
@@ -2726,6 +2876,7 @@ namespace ProphecyCentury.Systems
         public int MaxHp;
         public int CurrentHp;
         public int BaseCount;
+        public int InitialCount;
         public int CurrentCount;
         public int MaxCount;
         public int HpPerUnit;

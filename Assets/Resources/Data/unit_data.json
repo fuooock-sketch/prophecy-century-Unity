@@ -268,22 +268,22 @@
         "goldTalents": [
             {
                 "kind": "same_row_units_count_as_race",
-                "race": "甘地"
+                "race": "甘地",
+                "mode": "same_and_forward_rows"
             }
         ],
         "battleSkills": [
             {
-                "kind": "battle_start_self_stats_per_faith_count",
+                "kind": "battle_start_self_count_percent_per_faith_count",
                 "faith": "莱特",
-                "attack": 50
+                "value": 20
             }
         ],
         "goldBattleSkills": [
             {
-                "kind": "battle_start_self_stats_per_faith_count",
+                "kind": "battle_start_self_count_percent_per_faith_count",
                 "faith": "莱特",
-                "attack": 50,
-                "morale": 50
+                "value": 30
             }
         ],
         "sizeTier": 1,
@@ -330,7 +330,7 @@
                 "kind": "round_start_if_race_count_temp_power",
                 "race": "甘地",
                 "threshold": 5,
-                "roundOffset": 1
+                "roundOffset": 5
             }
         ],
         "goldTalents": [
@@ -338,7 +338,7 @@
                 "kind": "round_start_if_race_count_temp_power",
                 "race": "甘地",
                 "threshold": 5,
-                "roundOffset": 4
+                "roundOffset": 10
             }
         ],
         "battleSkills": [
@@ -418,9 +418,9 @@
                 "kind": "battle_start_stealth"
             },
             {
-                "kind": "passive_every_nth_attack_force_crit",
-                "count": 3,
-                "threshold": 5,
+                "kind": "first_hits_force_crit_if_count_multiplier",
+                "count": 1,
+                "threshold": 2,
                 "multiplier": 3
             }
         ],
@@ -429,10 +429,10 @@
                 "kind": "battle_start_stealth"
             },
             {
-                "kind": "passive_every_nth_attack_force_crit",
+                "kind": "first_hits_force_crit_if_count_multiplier",
                 "count": 2,
-                "threshold": 5,
-                "multiplier": 4
+                "threshold": 2,
+                "multiplier": 6
             }
         ],
         "sizeTier": 1,
@@ -493,13 +493,15 @@
         "battleSkills": [
             {
                 "kind": "battle_start_team_shield",
+                "count": 2,
                 "layers": 1
             }
         ],
         "goldBattleSkills": [
             {
                 "kind": "battle_start_team_shield",
-                "layers": 2
+                "count": 4,
+                "layers": 1
             }
         ],
         "sizeTier": 1,
@@ -602,16 +604,14 @@
         "goldBattleText": "每次攻击都会造成周围2距离内的范围伤害",
         "talents": [
             {
-                "kind": "round_start_retrigger_race_round_end_talents",
-                "times": 1,
+                "kind": "on_gain_race_unit_self_gain_count",
                 "race": "甘地",
                 "value": 2
             }
         ],
         "goldTalents": [
             {
-                "kind": "round_start_retrigger_race_round_end_talents",
-                "times": 2,
+                "kind": "on_gain_race_unit_self_gain_count",
                 "race": "甘地",
                 "value": 4
             }
@@ -682,7 +682,7 @@
             {
                 "kind": "battle_start_summon_units",
                 "summonUnitId": "light_illusion",
-                "count": 4
+                "count": 3
             }
         ],
         "sizeTier": 2,
@@ -921,17 +921,15 @@
         ],
         "battleSkills": [
             {
-                "kind": "battle_start_team_attack_per_faith_count",
+                "kind": "battle_start_team_count_per_faith_count",
                 "faith": "莱特",
-                "valuePerFaith": 4,
                 "value": 10
             }
         ],
         "goldBattleSkills": [
             {
-                "kind": "battle_start_team_attack_per_faith_count",
+                "kind": "battle_start_team_count_per_faith_count",
                 "faith": "莱特",
-                "valuePerFaith": 8,
                 "value": 15
             }
         ],

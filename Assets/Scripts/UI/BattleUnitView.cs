@@ -12,9 +12,13 @@ namespace ProphecyCentury.UI
 
         private static readonly Color32 HealthBarBackColor = new Color32(24, 28, 28, 230);
         private static readonly Color32 HealthBarFillColor = new Color32(86, 218, 156, 255);
+        private static readonly Color32 EnemyHealthBarFillColor = new Color32(226, 54, 64, 255);
         private static readonly Color32 CountBadgePlayerColor = new Color32(24, 140, 168, 245);
         private static readonly Color32 CountBadgeEnemyColor = new Color32(168, 86, 34, 245);
         private static readonly Color32 CountBadgeBorderColor = new Color32(24, 16, 12, 230);
+        private static readonly Vector2 BattleIconSize = new Vector2(168f, 168f);
+        private static readonly Vector2 BattleHealthBarSize = new Vector2(148f, 16f);
+        private static readonly Vector2 BattleCountBadgeSize = new Vector2(98f, 50f);
 
         private bool _playerSide;
         private const int PlayerLabelFontSize = 32;
@@ -89,6 +93,8 @@ namespace ProphecyCentury.UI
             if (unitIconImage != null)
             {
                 RuntimeUnitIconCache.ApplyTo(unitIconImage, iconName);
+                unitIconImage.rectTransform.anchoredPosition = new Vector2(0f, 44f);
+                unitIconImage.rectTransform.sizeDelta = BattleIconSize;
                 unitIconImage.rectTransform.localScale = playerSide ? Vector3.one : new Vector3(-1f, 1f, 1f);
             }
 
@@ -120,7 +126,7 @@ namespace ProphecyCentury.UI
             var amount = Mathf.Clamp01(Mathf.Max(0, hp) / (float)Mathf.Max(1, maxHp));
             SetBarFill(amount);
 
-            var healthLabel = GetOrCreateBarLabel(12);
+            var healthLabel = GetOrCreateBarLabel(16);
             if (healthLabel != null)
             {
                 healthLabel.text = string.IsNullOrWhiteSpace(healthText) ? string.Empty : healthText;
@@ -216,8 +222,8 @@ namespace ProphecyCentury.UI
             badgeRect.anchorMin = new Vector2(0.5f, 0f);
             badgeRect.anchorMax = new Vector2(0.5f, 0f);
             badgeRect.pivot = new Vector2(0.5f, 0.5f);
-            badgeRect.anchoredPosition = new Vector2(0f, 54f);
-            badgeRect.sizeDelta = new Vector2(58f, 28f);
+            badgeRect.anchoredPosition = new Vector2(0f, 68f);
+            badgeRect.sizeDelta = BattleCountBadgeSize;
 
             var badgeImage = badge.GetComponent<Image>() ?? badge.gameObject.AddComponent<Image>();
             badgeImage.color = CountBadgeBorderColor;
@@ -261,7 +267,7 @@ namespace ProphecyCentury.UI
                 outline.useGraphicAlpha = true;
             }
 
-            label.fontSize = 18;
+            label.fontSize = 36;
             label.fontStyle = FontStyle.Bold;
             badge.SetAsLastSibling();
             return label;
@@ -276,15 +282,15 @@ namespace ProphecyCentury.UI
                 rect.anchorMin = new Vector2(0.5f, 0f);
                 rect.anchorMax = new Vector2(0.5f, 0f);
                 rect.pivot = new Vector2(0.5f, 0.5f);
-                rect.anchoredPosition = new Vector2(0f, 74f);
-                rect.sizeDelta = new Vector2(108f, 10f);
+                rect.anchoredPosition = new Vector2(0f, 98f);
+                rect.sizeDelta = BattleHealthBarSize;
                 healthBar.color = HealthBarBackColor;
                 healthBar.raycastTarget = false;
             }
 
             if (healthFillImage != null)
             {
-                healthFillImage.color = HealthBarFillColor;
+                healthFillImage.color = _playerSide ? HealthBarFillColor : EnemyHealthBarFillColor;
                 healthFillImage.raycastTarget = false;
             }
         }

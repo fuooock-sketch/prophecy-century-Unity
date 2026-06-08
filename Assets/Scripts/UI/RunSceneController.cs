@@ -58,10 +58,12 @@ namespace ProphecyCentury.UI
         private readonly BattleRealtimeSystem _battleRealtime = new BattleRealtimeSystem();
         private readonly SaveGameSystem _saveGame = new SaveGameSystem();
         private const string BattleUnitPrefabResourcePath = "Prefabs/UI/BattleUnitView";
-        private const int BattleHexColumnCount = 11;
-        private const float BattleHexHorizontalStep = 0.75f;
-        private const float BattleHexHeightRatio = 0.8660254f;
-        private static readonly int[] BattleHexRowsByColumn = { 4, 3, 4, 3, 4, 3, 4, 3, 4, 3, 4 };
+        private const int BattleHexColumnCount = 13;
+        private const int BattleHexMaxRows = 6;
+        private const float BattleHexHorizontalStep = 0.78f;
+        private const float BattleHexHeightRatio = 0.78f;
+        private const float BattleHexFlatShoulderRatio = 0.56f;
+        private static readonly int[] BattleHexRowsByColumn = { 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6 };
         private const int HandMaxCount = 9;
         private const float TargetSearchInterval = 1f;
         private const float VisualAttackRangeSlack = 36f;
@@ -83,7 +85,8 @@ namespace ProphecyCentury.UI
         private GameObject _battleStartActionButton;
         private GameObject _battlePlaybackSpeedRoot;
         private float _battlePlaybackSpeed = 0.5f;
-        private bool _battleStartActionRequested;
+        private float _battlePlaybackSpeedBeforePause = 0.5f;
+        private bool _battlePlaybackPaused;
         private bool _battleSetupDraggingEnabled;
         private float _visualBattleActionPauseRemaining;
         private GameObject _goldDeployRewardModal;
@@ -1652,7 +1655,7 @@ namespace ProphecyCentury.UI
             {
                 RuntimeSfxPlayer.PlayError();
                 WriteLog("无法领取金色上阵奖励：手牌已满。");
-                ShowFloatingText("手牌已满");
+                ShowFloatingText("无法领取奖励");
                 RefreshView();
                 return;
             }
@@ -1748,7 +1751,7 @@ namespace ProphecyCentury.UI
 
             if (_battleUnitPickSubtitleLabel != null)
             {
-                _battleUnitPickSubtitleLabel.text = $"选择 1 张加入手牌  ·  剩余刷新 {Mathf.Max(0, state.remainingRerolls)} 次";
+                _battleUnitPickSubtitleLabel.text = $"选择 1 张加入手牌，满手牌时进入缓存  ·  剩余刷新 {Mathf.Max(0, state.remainingRerolls)} 次";
                 _battleUnitPickSubtitleLabel.color = new Color32(214, 220, 232, 255);
             }
 
@@ -3131,7 +3134,7 @@ namespace ProphecyCentury.UI
             ShowGoldChangeFeedback(roundEndGoldBefore);
             PlayNumberChangeFeedback(roundEndBefore);
             PlayManageFeedbackIfNeeded(roundEndFeedback);
-            yield return null;
+            yield return PlayBattleStartCountdown("探索");
 
             if (_flow.StartNewDay())
             {
@@ -3385,7 +3388,10 @@ namespace ProphecyCentury.UI
             ShowGoldChangeFeedback(roundEndGoldBefore);
             PlayNumberChangeFeedback(roundEndBefore);
             PlayManageFeedbackIfNeeded(roundEndFeedback);
-            yield return PlayBattleStartCountdown();
+            if (!isExplorationBattle)
+            {
+                yield return PlayBattleStartCountdown();
+            }
 
             _battlePlayerPositionOverrides.Clear();
             _flow.SetBattlePhase();
@@ -3396,9 +3402,8 @@ namespace ProphecyCentury.UI
             var previewEnemyScore = preview.EnemyScore;
             var setupResult = CreateBattlePreviewStageResult(preview);
             var unitViews = RebuildBattleStagePlaybackUnits(setupResult);
-            EnableBattleSetupDragging(unitViews);
-            SetBattleStageText("战斗准备", $"我方战力 {previewPlayerScore}，敌方战力 {previewEnemyScore}\n{FormatEnemyLineup(preview)}\n可拖动我方单位调整本场临时站位，点击开始行动后双方才会移动和攻击。");
-            yield return WaitForBattleStartAction();
+            _battleSetupDraggingEnabled = false;
+            SetBattleStageText("战斗开始", $"我方战力 {previewPlayerScore}，敌方战力 {previewEnemyScore}\n{FormatEnemyLineup(preview)}");
 
             var authoritativeResult = _battleStub.Resolve(Run);
             WriteBattleTurnDebugLog(authoritativeResult);
@@ -3431,9 +3436,8 @@ namespace ProphecyCentury.UI
 
             result = visualResult;
             SetBattleStageProgress(1f);
-            ClearBattleFieldRoot();
-            RebuildBattleStageResultUnits(result);
             SetBattleStageText(result.Victory ? "胜利" : "失败", FormatBattleStageResult(result));
+            yield return PlayBattleSettlementLossSummary(result);
             WriteLog(result.Summary);
             yield return new WaitForSeconds(2.25f);
 
@@ -3469,6 +3473,7 @@ namespace ProphecyCentury.UI
 
         private IEnumerator PlayVisualRealtimeBattle(Dictionary<string, BattleStageUnitView> views, BattleStubResult result, string openingLine)
         {
+            SetBattleStartActionButtonVisible(true);
             var uniqueViews = views.Values.Distinct().ToList();
             var summonEvents = (result?.Events ?? new List<BattleEvent>())
                 .Where(item => item.Kind == "summon")
@@ -3574,7 +3579,7 @@ namespace ProphecyCentury.UI
                 }
 
                 var playbackSpeed = elapsed >= 20f ? 2f : 1f;
-                var deltaTime = Time.deltaTime * playbackSpeed;
+                var deltaTime = GetBattlePlaybackDeltaTime() * playbackSpeed;
                 if (_visualBattleActionPauseRemaining > 0f)
                 {
                     _visualBattleActionPauseRemaining = Mathf.Max(0f, _visualBattleActionPauseRemaining - deltaTime);
@@ -3592,12 +3597,15 @@ namespace ProphecyCentury.UI
                 elapsed += deltaTime;
                 yield return null;
             }
+
+            SetBattleStartActionButtonVisible(false);
         }
 
         private IEnumerator PlayVisualTurnBattle(Dictionary<string, BattleStageUnitView> views, BattleStubResult result, string openingLine)
         {
             EnsureBattlePlaybackSpeedControls();
             SetBattlePlaybackSpeedControlsVisible(true);
+            SetBattleStartActionButtonVisible(true);
             var events = (result?.Events ?? new List<BattleEvent>())
                 .OrderBy(item => item.Time)
                 .ToList();
@@ -3680,6 +3688,7 @@ namespace ProphecyCentury.UI
 
             SetBattleStageProgress(0.95f);
             SetBattlePlaybackSpeedControlsVisible(false);
+            SetBattleStartActionButtonVisible(false);
         }
 
         private IEnumerator PlayBattleMoveEvent(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
@@ -3702,11 +3711,12 @@ namespace ProphecyCentury.UI
             var duration = ScaledBattlePlaybackDuration(Mathf.Clamp(0.22f * Mathf.Max(1, routePoints.Count - 1), 0.28f, 0.9f));
             while (elapsed < duration && source.Rect != null)
             {
-                elapsed += Time.deltaTime;
+                var deltaTime = GetBattlePlaybackDeltaTime();
+                elapsed += deltaTime;
                 var t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
                 source.Rect.anchoredPosition = SampleBattleRoute(routePoints, t);
-                UpdateBattleFloatingTexts(floatingTexts, Time.deltaTime);
-                UpdateBattleEffectBursts(bursts, Time.deltaTime);
+                UpdateBattleFloatingTexts(floatingTexts, deltaTime);
+                UpdateBattleEffectBursts(bursts, deltaTime);
                 yield return null;
             }
 
@@ -3911,7 +3921,8 @@ namespace ProphecyCentury.UI
             var elapsed = 0f;
             while (elapsed < duration && source.Rect != null && target.Rect != null)
             {
-                elapsed += Time.deltaTime;
+                var deltaTime = GetBattlePlaybackDeltaTime();
+                elapsed += deltaTime;
                 var t = Mathf.Clamp01(elapsed / duration);
                 targetPosition = target.Rect.anchoredPosition;
                 direction = targetPosition - origin;
@@ -3922,8 +3933,8 @@ namespace ProphecyCentury.UI
                 var curved = Vector2.Lerp(origin, landing, Mathf.SmoothStep(0f, 1f, t)) + apex * Mathf.Sin(t * Mathf.PI);
                 source.Rect.anchoredPosition = curved;
                 source.Rect.localScale = originScale * Mathf.Lerp(1f, 1.12f, Mathf.Sin(t * Mathf.PI));
-                UpdateBattleFloatingTexts(floatingTexts, Time.deltaTime);
-                UpdateBattleEffectBursts(bursts, Time.deltaTime);
+                UpdateBattleFloatingTexts(floatingTexts, deltaTime);
+                UpdateBattleEffectBursts(bursts, deltaTime);
                 yield return null;
             }
 
@@ -3989,14 +4000,15 @@ namespace ProphecyCentury.UI
             var elapsed = 0f;
             while (elapsed < duration && rect != null)
             {
-                elapsed += Time.deltaTime;
+                var deltaTime = GetBattlePlaybackDeltaTime();
+                elapsed += deltaTime;
                 var t = Mathf.Clamp01(elapsed / duration);
                 end = target.Rect != null ? target.Rect.anchoredPosition : end;
                 var arc = new Vector2(0f, Mathf.Sin(t * Mathf.PI) * (skill ? 32f : 18f));
                 rect.anchoredPosition = Vector2.Lerp(start, end, Mathf.SmoothStep(0f, 1f, t)) + arc;
                 rect.localScale = Vector3.one * Mathf.Lerp(1f, skill ? 1.35f : 1.15f, Mathf.Sin(t * Mathf.PI));
-                UpdateBattleFloatingTexts(floatingTexts, Time.deltaTime);
-                UpdateBattleEffectBursts(bursts, Time.deltaTime);
+                UpdateBattleFloatingTexts(floatingTexts, deltaTime);
+                UpdateBattleEffectBursts(bursts, deltaTime);
                 yield return null;
             }
 
@@ -4025,12 +4037,13 @@ namespace ProphecyCentury.UI
             var elapsed = 0f;
             while (elapsed < duration && source.Rect != null)
             {
-                elapsed += Time.deltaTime;
+                var deltaTime = GetBattlePlaybackDeltaTime();
+                elapsed += deltaTime;
                 var t = Mathf.Clamp01(elapsed / duration);
                 var phase = t < 0.5f ? t / 0.5f : (1f - t) / 0.5f;
                 source.Rect.anchoredPosition = Vector2.Lerp(origin, lunge, Mathf.SmoothStep(0f, 1f, phase));
-                UpdateBattleFloatingTexts(floatingTexts, Time.deltaTime);
-                UpdateBattleEffectBursts(bursts, Time.deltaTime);
+                UpdateBattleFloatingTexts(floatingTexts, deltaTime);
+                UpdateBattleEffectBursts(bursts, deltaTime);
                 yield return null;
             }
 
@@ -4205,7 +4218,8 @@ namespace ProphecyCentury.UI
             var elapsed = 0f;
             while (elapsed < duration && rect != null)
             {
-                elapsed += Time.deltaTime;
+                var deltaTime = GetBattlePlaybackDeltaTime();
+                elapsed += deltaTime;
                 var t = Mathf.Clamp01(elapsed / duration);
                 if (target.Rect != null)
                 {
@@ -4220,8 +4234,8 @@ namespace ProphecyCentury.UI
                     image.color = Color.Lerp(new Color32(116, 236, 154, 235), new Color32(255, 236, 142, 235), t);
                 }
 
-                UpdateBattleFloatingTexts(floatingTexts, Time.deltaTime);
-                UpdateBattleEffectBursts(bursts, Time.deltaTime);
+                UpdateBattleFloatingTexts(floatingTexts, deltaTime);
+                UpdateBattleEffectBursts(bursts, deltaTime);
                 yield return null;
             }
 
@@ -4280,9 +4294,10 @@ namespace ProphecyCentury.UI
             var elapsed = 0f;
             while (elapsed < duration)
             {
-                elapsed += Time.deltaTime;
-                UpdateBattleFloatingTexts(floatingTexts, Time.deltaTime);
-                UpdateBattleEffectBursts(bursts, Time.deltaTime);
+                var deltaTime = GetBattlePlaybackDeltaTime();
+                elapsed += deltaTime;
+                UpdateBattleFloatingTexts(floatingTexts, deltaTime);
+                UpdateBattleEffectBursts(bursts, deltaTime);
                 yield return null;
             }
         }
@@ -4290,6 +4305,11 @@ namespace ProphecyCentury.UI
         private float ScaledBattlePlaybackDuration(float baseDuration)
         {
             return Mathf.Max(0.02f, baseDuration / Mathf.Max(0.1f, _battlePlaybackSpeed));
+        }
+
+        private float GetBattlePlaybackDeltaTime()
+        {
+            return _battlePlaybackPaused ? 0f : Time.deltaTime;
         }
 
         private Dictionary<string, BattleStageUnitView> RebuildBattleStagePlaybackUnits(BattleStubResult result)
@@ -4466,24 +4486,21 @@ namespace ProphecyCentury.UI
                 : Camera.main;
         }
 
-        private IEnumerator WaitForBattleStartAction()
-        {
-            _battleStartActionRequested = false;
-            SetBattleStartActionButtonVisible(true);
-            while (!_battleStartActionRequested)
-            {
-                yield return null;
-            }
-
-            SetBattleStartActionButtonVisible(false);
-        }
-
         private void SetBattleStartActionButtonVisible(bool visible)
         {
             EnsureBattleStartActionButton();
             if (_battleStartActionButton == null)
             {
                 return;
+            }
+
+            if (visible)
+            {
+                RefreshBattlePauseButtonLabel();
+            }
+            else
+            {
+                _battlePlaybackPaused = false;
             }
 
             _battleStartActionButton.SetActive(visible);
@@ -4493,7 +4510,44 @@ namespace ProphecyCentury.UI
             }
         }
 
-        private IEnumerator PlayBattleStartCountdown()
+        private void ToggleBattlePlaybackPaused()
+        {
+            if (!_battlePlaybackRunning)
+            {
+                return;
+            }
+
+            if (_battlePlaybackPaused)
+            {
+                _battlePlaybackPaused = false;
+                _battlePlaybackSpeed = Mathf.Max(0.1f, _battlePlaybackSpeedBeforePause);
+            }
+            else
+            {
+                _battlePlaybackSpeedBeforePause = Mathf.Max(0.1f, _battlePlaybackSpeed);
+                _battlePlaybackPaused = true;
+            }
+
+            RefreshBattlePauseButtonLabel();
+            RefreshBattlePlaybackSpeedButtons();
+        }
+
+        private void RefreshBattlePauseButtonLabel()
+        {
+            if (_battleStartActionButton == null)
+            {
+                return;
+            }
+
+            var label = _battleStartActionButton.transform.Find("Label")?.GetComponent<Text>()
+                ?? _battleStartActionButton.GetComponentInChildren<Text>();
+            if (label != null)
+            {
+                label.text = _battlePlaybackPaused ? "继续" : "暂停";
+            }
+        }
+
+        private IEnumerator PlayBattleStartCountdown(string finalText = "开战")
         {
             var parent = runPanel != null ? runPanel.transform : transform;
             var overlay = new GameObject("BattleStartCountdown", typeof(RectTransform), typeof(CanvasGroup));
@@ -4530,7 +4584,7 @@ namespace ProphecyCentury.UI
             outline.effectColor = new Color32(0, 0, 0, 230);
             outline.effectDistance = new Vector2(5f, -5f);
 
-            var steps = new[] { "3", "2", "1", "开战" };
+            var steps = new[] { "3", "2", "1", finalText };
             foreach (var step in steps)
             {
                 text.text = step;
@@ -4670,9 +4724,10 @@ namespace ProphecyCentury.UI
             var button = _battleStartActionButton.GetComponent<Button>();
             button.targetGraphic = image;
             button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
-            button.onClick.AddListener(() => _battleStartActionRequested = true);
+            button.onClick.AddListener(ToggleBattlePlaybackPaused);
 
-            var text = CreateChildText(_battleStartActionButton.transform, "开始行动", 26, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
+            var text = CreateChildText(_battleStartActionButton.transform, "暂停", 26, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
+            text.name = "Label";
             text.color = Color.white;
             _battleStartActionButton.SetActive(false);
         }
@@ -4733,11 +4788,7 @@ namespace ProphecyCentury.UI
                     var image = cellObject.GetComponent<Image>();
                     image.sprite = sprite;
                     image.raycastTarget = false;
-                    image.color = column < 4
-                        ? new Color32(104, 205, 255, 235)
-                        : column > 6
-                            ? new Color32(255, 124, 146, 235)
-                            : new Color32(255, 235, 148, 220);
+                    image.color = new Color32(255, 255, 255, 128);
                 }
             }
 
@@ -4747,8 +4798,8 @@ namespace ProphecyCentury.UI
         private static void CreateBattleCenterGuide(Transform gridRoot, Vector2 rootSize, Vector2 cellSize)
         {
             if (gridRoot == null
-                || !TryGetBattleHexCenter(rootSize, 5, 1, out var top)
-                || !TryGetBattleHexCenter(rootSize, 5, 2, out var bottom))
+                || !TryGetBattleHexCenter(rootSize, BattleHexColumnCount / 2, BattleHexMaxRows / 2 - 1, out var top)
+                || !TryGetBattleHexCenter(rootSize, BattleHexColumnCount / 2, BattleHexMaxRows / 2, out var bottom))
             {
                 return;
             }
@@ -4782,7 +4833,7 @@ namespace ProphecyCentury.UI
             texture.wrapMode = TextureWrapMode.Clamp;
             texture.filterMode = FilterMode.Bilinear;
             var clear = new Color32(0, 0, 0, 0);
-            var fill = new Color32(255, 255, 255, 35);
+            var fill = new Color32(255, 255, 255, 180);
             var line = new Color32(255, 255, 255, 255);
 
             for (var y = 0; y < height; y += 1)
@@ -4821,7 +4872,7 @@ namespace ProphecyCentury.UI
                 return false;
             }
 
-            var shoulder = halfWidth * 0.5f;
+            var shoulder = halfWidth * BattleHexFlatShoulderRatio;
             if (x <= shoulder)
             {
                 return true;
@@ -6837,6 +6888,111 @@ namespace ProphecyCentury.UI
             }
         }
 
+        private IEnumerator PlayBattleSettlementLossSummary(BattleStubResult result)
+        {
+            ClearChildren(battlePlayerRoot);
+            ClearChildren(battleEnemyRoot);
+            DisableLayout(battlePlayerRoot);
+            DisableLayout(battleEnemyRoot);
+            var fieldRoot = CreateBattleFieldRoot();
+            var floatingTexts = new List<BattleFloatingTextView>();
+            var bursts = new List<BattleEffectBurstView>();
+            var views = new List<BattleStageUnitView>();
+
+            if (result == null)
+            {
+                yield break;
+            }
+
+            var initialPlayers = result.InitialPlayerUnits != null && result.InitialPlayerUnits.Count > 0
+                ? result.InitialPlayerUnits
+                : result.PlayerUnits;
+            var initialEnemies = result.InitialEnemyUnits != null && result.InitialEnemyUnits.Count > 0
+                ? result.InitialEnemyUnits
+                : result.EnemyUnits;
+
+            foreach (var unit in initialPlayers.Where(unit => unit != null && !unit.Summoned).OrderBy(unit => unit.SlotId))
+            {
+                var view = CreateBattleStagePositionedUnit(fieldRoot, unit, true);
+                if (view != null)
+                {
+                    views.Add(view);
+                    QueueSettlementLossFeedback(view, unit, FindMatchingBattleResultUnit(unit, result.PlayerUnits), floatingTexts, bursts);
+                }
+            }
+
+            foreach (var unit in initialEnemies.Where(unit => unit != null && !unit.Summoned).OrderBy(unit => unit.SlotId))
+            {
+                var view = CreateBattleStagePositionedUnit(fieldRoot, unit, false);
+                if (view != null)
+                {
+                    views.Add(view);
+                    QueueSettlementLossFeedback(view, unit, FindMatchingBattleResultUnit(unit, result.EnemyUnits), floatingTexts, bursts);
+                }
+            }
+
+            if (!views.Any(view => view != null && view.CurrentCount < view.MaxCount))
+            {
+                SetBattleStageText(result.Victory ? "胜利" : "失败", $"{FormatBattleStageResult(result)}\n本场没有单位减损。");
+                yield return WaitAndUpdateBattleEffects(0.75f, floatingTexts, bursts);
+                yield break;
+            }
+
+            SetBattleStageText(result.Victory ? "胜利" : "失败", $"{FormatBattleStageResult(result)}\n正在结算双方减损。");
+            yield return WaitAndUpdateBattleEffects(1.25f, floatingTexts, bursts);
+        }
+
+        private void QueueSettlementLossFeedback(
+            BattleStageUnitView view,
+            BattleUnitSnapshot initial,
+            BattleUnitSnapshot final,
+            List<BattleFloatingTextView> floatingTexts,
+            List<BattleEffectBurstView> bursts)
+        {
+            if (view?.Rect == null || initial == null)
+            {
+                return;
+            }
+
+            var initialCount = Mathf.Max(0, initial.CurrentCount);
+            var finalCount = final == null ? 0 : Mathf.Max(0, final.CurrentCount);
+            var loss = Mathf.Max(0, initialCount - finalCount);
+            view.MaxCount = Mathf.Max(1, initialCount);
+            view.CurrentCount = finalCount;
+            view.Hp = final == null ? 0 : Mathf.Max(0, final.CurrentHp);
+            view.MaxHp = Mathf.Max(1, initial.MaxHp);
+            UpdateBattleStageLabel(view, initial.Name, view.Hp, view.MaxHp);
+            view.CurrentCount = finalCount;
+            view.UnitView?.SetCount(finalCount, view.MaxCount);
+
+            if (loss <= 0)
+            {
+                return;
+            }
+
+            AddFloatingText(
+                $"减损 -{loss}",
+                view.Rect.anchoredPosition + new Vector2(0f, 88f),
+                new Color32(255, 150, 110, 255),
+                24,
+                floatingTexts,
+                true);
+            SpawnEffectBurst(view.Rect.anchoredPosition, new Color32(255, 116, 84, 120), bursts);
+            RuntimeSfxPlayer.PlayHit();
+        }
+
+        private static BattleUnitSnapshot FindMatchingBattleResultUnit(BattleUnitSnapshot initial, IReadOnlyList<BattleUnitSnapshot> finals)
+        {
+            if (initial == null || finals == null)
+            {
+                return null;
+            }
+
+            return finals.FirstOrDefault(unit => unit != null && !string.IsNullOrWhiteSpace(initial.InstanceId) && unit.InstanceId == initial.InstanceId)
+                ?? finals.FirstOrDefault(unit => unit != null && !string.IsNullOrWhiteSpace(initial.SlotId) && unit.SlotId == initial.SlotId && unit.UnitId == initial.UnitId)
+                ?? finals.FirstOrDefault(unit => unit != null && unit.UnitId == initial.UnitId && unit.Name == initial.Name);
+        }
+
         private static string FormatBattleStageResult(BattleStubResult result)
         {
             if (result == null)
@@ -6905,16 +7061,16 @@ namespace ProphecyCentury.UI
             unitObject.transform.SetParent(root, false);
             unitObject.GetComponent<Image>().color = playerSide ? new Color32(38, 70, 96, 245) : new Color32(92, 44, 58, 245);
             var layout = unitObject.GetComponent<LayoutElement>();
-            layout.preferredWidth = 176f;
-            layout.preferredHeight = 214f;
+            layout.preferredWidth = 216f;
+            layout.preferredHeight = 260f;
 
             var iconObject = new GameObject("Icon", typeof(Image));
             iconObject.transform.SetParent(unitObject.transform, false);
             var iconRect = iconObject.GetComponent<RectTransform>();
             iconRect.anchorMin = new Vector2(0.5f, 0.5f);
             iconRect.anchorMax = new Vector2(0.5f, 0.5f);
-            iconRect.anchoredPosition = new Vector2(0f, 24f);
-            iconRect.sizeDelta = new Vector2(112f, 112f);
+            iconRect.anchoredPosition = new Vector2(0f, 38f);
+            iconRect.sizeDelta = new Vector2(154f, 154f);
             iconRect.localScale = playerSide ? Vector3.one : new Vector3(-1f, 1f, 1f);
             RuntimeUnitIconCache.ApplyTo(iconObject.GetComponent<Image>(), iconName);
 
@@ -6929,8 +7085,8 @@ namespace ProphecyCentury.UI
             healthBackRect.anchorMin = new Vector2(0.5f, 0f);
             healthBackRect.anchorMax = new Vector2(0.5f, 0f);
             healthBackRect.pivot = new Vector2(0.5f, 0.5f);
-            healthBackRect.anchoredPosition = new Vector2(0f, 64f);
-            healthBackRect.sizeDelta = new Vector2(108f, 10f);
+            healthBackRect.anchoredPosition = new Vector2(0f, 86f);
+            healthBackRect.sizeDelta = new Vector2(148f, 16f);
             healthBackObject.GetComponent<Image>().color = new Color32(24, 28, 28, 230);
 
             var healthFillObject = new GameObject("Fill", typeof(Image));
@@ -6941,7 +7097,7 @@ namespace ProphecyCentury.UI
             healthFillRect.offsetMin = Vector2.zero;
             healthFillRect.offsetMax = Vector2.zero;
             var healthFill = healthFillObject.GetComponent<Image>();
-            healthFill.color = new Color32(86, 218, 156, 255);
+            healthFill.color = playerSide ? new Color32(86, 218, 156, 255) : new Color32(226, 54, 64, 255);
             healthFill.fillAmount = 1f;
 
             var countBadgeObject = new GameObject("CountBadge", typeof(Image));
@@ -6950,8 +7106,8 @@ namespace ProphecyCentury.UI
             countBadgeRect.anchorMin = new Vector2(0.5f, 0f);
             countBadgeRect.anchorMax = new Vector2(0.5f, 0f);
             countBadgeRect.pivot = new Vector2(0.5f, 0.5f);
-            countBadgeRect.anchoredPosition = new Vector2(0f, 44f);
-            countBadgeRect.sizeDelta = new Vector2(58f, 28f);
+            countBadgeRect.anchoredPosition = new Vector2(0f, 60f);
+            countBadgeRect.sizeDelta = new Vector2(98f, 50f);
             countBadgeObject.GetComponent<Image>().color = new Color32(24, 16, 12, 230);
 
             var countBadgeFillObject = new GameObject("Fill", typeof(Image));
@@ -6963,7 +7119,7 @@ namespace ProphecyCentury.UI
             countBadgeFillRect.offsetMax = new Vector2(-4f, -3f);
             countBadgeFillObject.GetComponent<Image>().color = playerSide ? new Color32(24, 140, 168, 245) : new Color32(168, 86, 34, 245);
 
-            var countText = CreateChildText(countBadgeObject.transform, Mathf.Max(0, count).ToString(), 18, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
+            var countText = CreateChildText(countBadgeObject.transform, Mathf.Max(0, count).ToString(), 36, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
             countText.color = Color.white;
             countText.fontStyle = FontStyle.Bold;
 
@@ -7119,7 +7275,7 @@ namespace ProphecyCentury.UI
             var rect = unitObject.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(190f, 230f);
+            rect.sizeDelta = new Vector2(230f, 278f);
 
             var backing = unitObject.GetComponent<Image>();
             backing.color = new Color(1f, 1f, 1f, 0f);
@@ -7130,8 +7286,8 @@ namespace ProphecyCentury.UI
             var iconRect = iconObject.GetComponent<RectTransform>();
             iconRect.anchorMin = new Vector2(0.5f, 0.5f);
             iconRect.anchorMax = new Vector2(0.5f, 0.5f);
-            iconRect.anchoredPosition = new Vector2(0f, 36f);
-            iconRect.sizeDelta = new Vector2(128f, 128f);
+            iconRect.anchoredPosition = new Vector2(0f, 48f);
+            iconRect.sizeDelta = new Vector2(168f, 168f);
             iconRect.localScale = playerSide ? Vector3.one : new Vector3(-1f, 1f, 1f);
             RuntimeUnitIconCache.ApplyTo(iconObject.GetComponent<Image>(), iconName);
 
@@ -7147,8 +7303,8 @@ namespace ProphecyCentury.UI
             healthBackRect.anchorMin = new Vector2(0.5f, 0f);
             healthBackRect.anchorMax = new Vector2(0.5f, 0f);
             healthBackRect.pivot = new Vector2(0.5f, 0.5f);
-            healthBackRect.anchoredPosition = new Vector2(0f, 74f);
-            healthBackRect.sizeDelta = new Vector2(108f, 10f);
+            healthBackRect.anchoredPosition = new Vector2(0f, 98f);
+            healthBackRect.sizeDelta = new Vector2(148f, 16f);
             healthBackObject.GetComponent<Image>().color = new Color32(24, 28, 28, 230);
 
             var healthFillObject = new GameObject("Fill", typeof(Image));
@@ -7159,7 +7315,7 @@ namespace ProphecyCentury.UI
             healthFillRect.offsetMin = Vector2.zero;
             healthFillRect.offsetMax = Vector2.zero;
             var healthFill = healthFillObject.GetComponent<Image>();
-            healthFill.color = new Color32(86, 218, 156, 255);
+            healthFill.color = playerSide ? new Color32(86, 218, 156, 255) : new Color32(226, 54, 64, 255);
             healthFill.fillAmount = 1f;
 
             var scriptedView = unitObject.GetComponent<BattleUnitView>();
@@ -7211,43 +7367,43 @@ namespace ProphecyCentury.UI
             {
                 case "4-1":
                     column = 0;
-                    row = 0;
+                    row = 1;
                     break;
                 case "4-2":
                     column = 0;
-                    row = 1;
+                    row = 2;
                     break;
                 case "4-3":
                     column = 0;
-                    row = 2;
+                    row = 3;
                     break;
                 case "4-4":
                     column = 0;
-                    row = 3;
+                    row = 4;
                     break;
                 case "3-1":
                     column = 1;
-                    row = 0;
+                    row = 1;
                     break;
                 case "3-2":
                     column = 1;
-                    row = 1;
+                    row = 2;
                     break;
                 case "3-3":
                     column = 1;
-                    row = 2;
+                    row = 3;
                     break;
                 case "2-1":
                     column = 2;
-                    row = 1;
+                    row = 2;
                     break;
                 case "2-2":
                     column = 2;
-                    row = 2;
+                    row = 3;
                     break;
                 case "1-1":
                     column = 3;
-                    row = 1;
+                    row = 2;
                     break;
                 default:
                     return false;
@@ -7302,11 +7458,11 @@ namespace ProphecyCentury.UI
             var hexWidth = cellSize.x;
             var hexHeight = cellSize.y;
             var totalWidth = hexWidth + (BattleHexColumnCount - 1) * hexWidth * BattleHexHorizontalStep;
-            var totalHeight = hexHeight * 4f;
+            var totalHeight = hexHeight * BattleHexMaxRows;
             var left = -totalWidth * 0.5f + hexWidth * 0.5f;
             var top = totalHeight * 0.5f - hexHeight * 0.5f;
             var x = left + column * hexWidth * BattleHexHorizontalStep;
-            var yOffset = rows == 3 ? -hexHeight * 0.5f : 0f;
+            var yOffset = rows < BattleHexMaxRows ? -hexHeight * 0.5f : 0f;
             var y = top - row * hexHeight + yOffset;
             center = new Vector2(x, y);
             return true;
@@ -7315,15 +7471,15 @@ namespace ProphecyCentury.UI
         private static Vector2 CalculateBattleHexCellSize(Vector2 rootSize)
         {
             var widthLimit = Mathf.Max(1f, rootSize.x * 0.92f) / (1f + (BattleHexColumnCount - 1) * BattleHexHorizontalStep);
-            var heightLimit = Mathf.Max(1f, rootSize.y * 0.82f) / (4f * BattleHexHeightRatio);
-            var hexWidth = Mathf.Clamp(Mathf.Min(widthLimit, heightLimit), 76f, 280f);
+            var heightLimit = Mathf.Max(1f, rootSize.y * 0.9f) / (BattleHexMaxRows * BattleHexHeightRatio);
+            var hexWidth = Mathf.Clamp(Mathf.Min(widthLimit, heightLimit), 54f, 280f);
             return new Vector2(hexWidth, hexWidth * BattleHexHeightRatio);
         }
 
         private static float CalculateBattleUnitScale(Vector2 rootSize)
         {
             var cellSize = CalculateBattleHexCellSize(rootSize);
-            return Mathf.Clamp(Mathf.Min(cellSize.x / 260f, cellSize.y / 250f), 0.42f, 0.95f);
+            return Mathf.Clamp(Mathf.Min(cellSize.x / 210f, cellSize.y / 205f), 0.55f, 1.15f);
         }
 
         private static void ParseBattleSlot(string slotId, out int row, out int col)
@@ -7729,6 +7885,7 @@ namespace ProphecyCentury.UI
             var treasures = Run.inventoryItems?.Where(item => item != null && item.count > 0).ToList() ?? new List<InventoryItemState>();
             var boardCount = Run.boardUnits?.Count ?? 0;
             var handCount = Run.handCards?.Count ?? 0;
+            var cachedHandCount = Run.pendingHandCards?.Count ?? 0;
             var lastBattle = Run.battleHistory?.LastOrDefault();
             var resultLine = victory ? "结局：击败 Boss，探索完成" : "结局：战斗失败，本局结束";
             var lastBattleLine = lastBattle == null
@@ -7743,7 +7900,7 @@ namespace ProphecyCentury.UI
                 $"资源：生命 {Mathf.Max(0, Run.playerHp)}  金币 {Mathf.Max(0, Run.gold)}  商店等级 {Mathf.Max(1, Run.shopLevel)}",
                 $"战绩：胜 {Mathf.Max(0, Run.campaignWins)} / 败 {Mathf.Max(0, Run.campaignLosses)}",
                 $"地图：清除 {clearedNodes} 个节点，可见 {visibleNodes} 个节点，当前位置 {FormatCurrentNodeName()}",
-                $"阵容：上阵 {boardCount}，手牌 {handCount}，宝物 {treasures.Count}",
+                $"阵容：上阵 {boardCount}，手牌 {handCount}，缓存 {cachedHandCount}，宝物 {treasures.Count}",
                 lastBattleLine
             });
         }
@@ -8924,13 +9081,15 @@ namespace ProphecyCentury.UI
 
         private string FormatHand()
         {
+            var cachedHandCount = Run.pendingHandCards?.Count ?? 0;
+            var title = cachedHandCount > 0 ? $"手牌  缓存 {cachedHandCount}" : "手牌";
             if (Run.handCards.Count == 0)
             {
-                return "手牌\n（空）";
+                return $"{title}\n（空）";
             }
 
             var lines = Run.handCards.Select((card, index) => $"{index + 1}. {card.name}  {card.star}*{(card.isGolden ? " 金色" : string.Empty)}");
-            return "手牌\n" + string.Join("\n", lines);
+            return title + "\n" + string.Join("\n", lines);
         }
 
         private string FormatBoard()

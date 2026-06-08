@@ -11,6 +11,10 @@ namespace ProphecyCentury.Data
         public int playerStartHp;
         public int startGold;
         public int roundIncomeBase;
+        public int[] roundIncomeByRound;
+        public int goldCarryLimit;
+        public int[] worldMapExpectedPlayerScoreByDay;
+        public int[] worldMapMinEnemyUnitsByDay;
         public int[] shopUpgradeCost;
         public int[] shopSlots;
         public int[] shopMaxStar;

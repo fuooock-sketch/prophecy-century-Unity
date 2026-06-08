@@ -73,6 +73,7 @@ namespace ProphecyCentury.Systems
             if (isLegacySave) run.phase = ResolvePhase(run.state);
             if (run.boardUnits == null) run.boardUnits = new System.Collections.Generic.List<BoardUnitState>();
             if (run.handCards == null) run.handCards = new System.Collections.Generic.List<UnitCardState>();
+            if (run.pendingHandCards == null) run.pendingHandCards = new System.Collections.Generic.List<UnitCardState>();
             if (run.shopCards == null) run.shopCards = new System.Collections.Generic.List<UnitCardState>();
             if (run.shopPool == null) run.shopPool = new System.Collections.Generic.List<ShopPoolEntryState>();
             if (run.worldMapNodes == null) run.worldMapNodes = new System.Collections.Generic.List<WorldMapNodeState>();

@@ -45,6 +45,7 @@ namespace ProphecyCentury.Model
         public List<BattleHistoryEntryState> battleHistory = new List<BattleHistoryEntryState>();
         public List<BoardUnitState> boardUnits = new List<BoardUnitState>();
         public List<UnitCardState> handCards = new List<UnitCardState>();
+        public List<UnitCardState> pendingHandCards = new List<UnitCardState>();
         public List<UnitCardState> shopCards = new List<UnitCardState>();
         public List<ShopPoolEntryState> shopPool = new List<ShopPoolEntryState>();
         public List<WorldMapNodeState> worldMapNodes = new List<WorldMapNodeState>();
