@@ -108,6 +108,23 @@ namespace ProphecyCentury.Systems
                             }
                             AddEvent(events, elapsed, "skill", unit, null, 0, $"{unit.Name} shields the team");
                             break;
+                        case "battle_start_front_occupied_rows_shield":
+                            var frontRows = allies
+                                .Where(ally => ally.IsAlive)
+                                .Select(ally => ally.Row)
+                                .Distinct()
+                                .OrderBy(row => row)
+                                .Take(Math.Max(1, skill.count));
+                            var frontRowSet = new HashSet<int>(frontRows);
+                            foreach (var ally in allies.Where(ally => ally.IsAlive && frontRowSet.Contains(ally.Row)))
+                            {
+                                ally.ShieldLayers += Math.Max(1, skill.layers);
+                            }
+                            if (frontRowSet.Count > 0)
+                            {
+                                AddEvent(events, elapsed, "skill", unit, null, 0, $"{unit.Name} shields the front rows");
+                            }
+                            break;
                         case "battle_start_self_refreshing_shield":
                             unit.ShieldLayers += Math.Max(1, skill.layers);
                             unit.ShieldRefreshInterval = Math.Max(0.1f, SkillRefreshSeconds(skill, 5f));

@@ -13,28 +13,28 @@
         "power": 1,
         "speed": 3,
         "luck": 0,
-        "morale": 2,
+        "morale": 4,
         "attackInterval": 0.95,
         "range": 8.0,
         "size": 1,
         "tags": [],
         "talentText": "—",
         "goldTalentText": "—",
-        "battleText": "造成追击后，下回合开始时获得+1金币（每场战斗仅生效1次）",
-        "goldBattleText": "造成追击后，下回合开始时获得+2金币（每场战斗仅生效1次）",
+        "battleText": "造成追击后，下回合开始时获得+2金币（每场战斗仅生效1次）",
+        "goldBattleText": "造成追击后，下回合开始时获得+4金币（每场战斗仅生效1次）",
         "talents": [],
         "goldTalents": [],
         "battleSkills": [
             {
                 "kind": "on_extra_attack_once_next_round_gold",
-                "value": 1,
+                "value": 2,
                 "oncePerBattle": true
             }
         ],
         "goldBattleSkills": [
             {
                 "kind": "on_extra_attack_once_next_round_gold",
-                "value": 2,
+                "value": 4,
                 "oncePerBattle": true
             }
         ],
@@ -51,7 +51,7 @@
         "attackRange": 8.0,
         "firstPurchaseHp": 72,
         "firstPurchaseAverageDamage": 36,
-        "skillText": "—\n—\n造成追击后，下回合开始时获得+1金币（每场战斗仅生效1次）\n造成追击后，下回合开始时获得+2金币（每场战斗仅生效1次）",
+        "skillText": "—\n—\n造成追击后，下回合开始时获得+2金币（每场战斗仅生效1次）\n造成追击后，下回合开始时获得+4金币（每场战斗仅生效1次）",
         "designOnlyInitialBaseDamage": 36
     },
     {
@@ -321,13 +321,13 @@
         "range": 1.0,
         "size": 1,
         "tags": [],
-        "talentText": "回合开始时，如果场上至少有5支甘地部队，本部队临时数量+（5*回合数）。",
-        "goldTalentText": "回合开始时，如果场上至少有5支甘地部队，本部队临时数量+（10*回合数）。",
+        "talentText": "回合结束时，如果场上至少有5支甘地部队，本部队临时数量+（5*回合数）。",
+        "goldTalentText": "回合结束时，如果场上至少有5支甘地部队，本部队临时数量+（10*回合数）。",
         "battleText": "开战后，瞬间冲到最近的敌人，造成1次暴击伤害和1轮的眩晕",
         "goldBattleText": "开战后，瞬间冲到最近的敌人，连续造成2次暴击伤害和1轮的眩晕",
         "talents": [
             {
-                "kind": "round_start_if_race_count_temp_power",
+                "kind": "round_end_if_race_count_self_gain_round_count",
                 "race": "甘地",
                 "threshold": 5,
                 "roundOffset": 5
@@ -335,7 +335,7 @@
         ],
         "goldTalents": [
             {
-                "kind": "round_start_if_race_count_temp_power",
+                "kind": "round_end_if_race_count_self_gain_round_count",
                 "race": "甘地",
                 "threshold": 5,
                 "roundOffset": 10
@@ -371,7 +371,7 @@
         "attackRange": 1.0,
         "firstPurchaseHp": 112,
         "firstPurchaseAverageDamage": 70,
-        "skillText": "回合开始时，如果场上至少有5支甘地部队，本部队临时数量+（5*回合数）。\n回合开始时，如果场上至少有5支甘地部队，本部队临时数量+（10*回合数）。\n开战后，瞬间冲到最近的敌人，造成1次暴击伤害和1轮的眩晕\n开战后，瞬间冲到最近的敌人，连续造成2次暴击伤害和1轮的眩晕",
+        "skillText": "回合结束时，如果场上至少有5支甘地部队，本部队临时数量+（5*回合数）。\n回合结束时，如果场上至少有5支甘地部队，本部队临时数量+（10*回合数）。\n开战后，瞬间冲到最近的敌人，造成1次暴击伤害和1轮的眩晕\n开战后，瞬间冲到最近的敌人，连续造成2次暴击伤害和1轮的眩晕",
         "designOnlyInitialBaseDamage": 70
     },
     {
@@ -472,8 +472,8 @@
         "tags": [],
         "talentText": "每入场5支甘地部队，随机获得1支甘地部队",
         "goldTalentText": "每入场5支甘地部队，随机获得2支甘地部队",
-        "battleText": "开战后，随机给友方2支部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
-        "goldBattleText": "开战后，随机给友方4支部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
+        "battleText": "开战后，给队伍最前面存在友方部队的1排的所有友方部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
+        "goldBattleText": "开战后，给队伍最前面存在友方部队的2排的所有友方部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
         "talents": [
             {
                 "kind": "while_on_board_every_n_entry_race_add_random_unit_to_hand",
@@ -492,15 +492,15 @@
         ],
         "battleSkills": [
             {
-                "kind": "battle_start_team_shield",
-                "count": 2,
+                "kind": "battle_start_front_occupied_rows_shield",
+                "count": 1,
                 "layers": 1
             }
         ],
         "goldBattleSkills": [
             {
-                "kind": "battle_start_team_shield",
-                "count": 4,
+                "kind": "battle_start_front_occupied_rows_shield",
+                "count": 2,
                 "layers": 1
             }
         ],
@@ -517,7 +517,7 @@
         "attackRange": 4.0,
         "firstPurchaseHp": 72,
         "firstPurchaseAverageDamage": 45,
-        "skillText": "每入场5支甘地部队，随机获得1支甘地部队\n每入场5支甘地部队，随机获得2支甘地部队\n开战后，随机给友方2支部队增加一个护盾，护盾可以完全抵挡最多1次的伤害\n开战后，随机给友方4支部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
+        "skillText": "每入场5支甘地部队，随机获得1支甘地部队\n每入场5支甘地部队，随机获得2支甘地部队\n开战后，给队伍最前面存在友方部队的1排的所有友方部队增加一个护盾，护盾可以完全抵挡最多1次的伤害\n开战后，给队伍最前面存在友方部队的2排的所有友方部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
         "designOnlyInitialBaseDamage": 45
     },
     {
@@ -547,7 +547,7 @@
             {
                 "kind": "while_on_board_attack_gain_threshold_add_random_unit_to_hand",
                 "race": "甘地",
-                "threshold": 50,
+                "threshold": 10,
                 "count": 1,
                 "value": 10
             }
@@ -556,7 +556,7 @@
             {
                 "kind": "while_on_board_attack_gain_threshold_add_random_unit_to_hand",
                 "race": "甘地",
-                "threshold": 50,
+                "threshold": 10,
                 "count": 2,
                 "value": 10
             }
@@ -598,8 +598,8 @@
         "range": 1.0,
         "size": 1,
         "tags": [],
-        "talentText": "每获得1支甘地部队，本部队+2数量（购买、发现、随机获得均计入）。",
-        "goldTalentText": "每获得1支甘地部队，本部队+4数量（购买、发现、随机获得均计入）。",
+        "talentText": "每获得1支甘地部队，本部队+2数量（购买、发现、随机获得均计入）。回合结束时，同排战士获得+2数量。",
+        "goldTalentText": "每获得1支甘地部队，本部队+4数量（购买、发现、随机获得均计入）。回合结束时，同排战士获得+4数量。",
         "battleText": "每次攻击都会造成周围1距离内的范围伤害",
         "goldBattleText": "每次攻击都会造成周围2距离内的范围伤害",
         "talents": [
@@ -607,12 +607,22 @@
                 "kind": "on_gain_race_unit_self_gain_count",
                 "race": "甘地",
                 "value": 2
+            },
+            {
+                "kind": "round_end_same_row_tagged_units_gain_count",
+                "targetTag": "战士",
+                "value": 2
             }
         ],
         "goldTalents": [
             {
                 "kind": "on_gain_race_unit_self_gain_count",
                 "race": "甘地",
+                "value": 4
+            },
+            {
+                "kind": "round_end_same_row_tagged_units_gain_count",
+                "targetTag": "战士",
                 "value": 4
             }
         ],
@@ -643,7 +653,7 @@
         "attackRange": 1.0,
         "firstPurchaseHp": 91,
         "firstPurchaseAverageDamage": 59,
-        "skillText": "每获得1支甘地部队，本部队+2数量（购买、发现、随机获得均计入）。\n每获得1支甘地部队，本部队+4数量（购买、发现、随机获得均计入）。\n每次攻击都会造成周围1距离内的范围伤害\n每次攻击都会造成周围2距离内的范围伤害",
+        "skillText": "每获得1支甘地部队，本部队+2数量（购买、发现、随机获得均计入）。回合结束时，同排战士获得+2数量。\n每获得1支甘地部队，本部队+4数量（购买、发现、随机获得均计入）。回合结束时，同排战士获得+4数量。\n每次攻击都会造成周围1距离内的范围伤害\n每次攻击都会造成周围2距离内的范围伤害",
         "designOnlyInitialBaseDamage": 59
     },
     {
@@ -720,20 +730,24 @@
         "range": 1.0,
         "size": 1,
         "tags": [],
-        "talentText": "任意友军获得1次获得数量时，全军获得+1数量。",
-        "goldTalentText": "任意友军获得1次获得数量时，全军获得+2数量。",
+        "talentText": "回合结束时，当前所在的排以及身后的所有排的单位均获得+1数量，同时触发1次所有战士的回合结束效果",
+        "goldTalentText": "回合结束时，当前所在的排以及身后的所有排的单位均获得+2数量，同时触发2次所有战士的回合结束效果",
         "battleText": "我方任意部队产生1次暴击，本部队临时数量+10。",
         "goldBattleText": "我方任意部队产生1次暴击，本部队临时数量+20。",
         "talents": [
             {
-                "kind": "on_gain_defense_team_gain_attack",
-                "value": 1
+                "kind": "round_end_self_and_rear_rows_gain_count_retrigger_tag_round_end",
+                "targetTag": "战士",
+                "value": 1,
+                "times": 1
             }
         ],
         "goldTalents": [
             {
-                "kind": "on_gain_defense_team_gain_attack",
-                "value": 2
+                "kind": "round_end_self_and_rear_rows_gain_count_retrigger_tag_round_end",
+                "targetTag": "战士",
+                "value": 2,
+                "times": 2
             }
         ],
         "battleSkills": [
@@ -761,7 +775,7 @@
         "attackRange": 1.0,
         "firstPurchaseHp": 68,
         "firstPurchaseAverageDamage": 38,
-        "skillText": "任意友军获得1次获得数量时，全军获得+1数量。\n任意友军获得1次获得数量时，全军获得+2数量。\n我方任意部队产生1次暴击，本部队临时数量+10。\n我方任意部队产生1次暴击，本部队临时数量+20。",
+        "skillText": "回合结束时，当前所在的排以及身后的所有排的单位均获得+1数量，同时触发1次所有战士的回合结束效果\n回合结束时，当前所在的排以及身后的所有排的单位均获得+2数量，同时触发2次所有战士的回合结束效果\n我方任意部队产生1次暴击，本部队临时数量+10。\n我方任意部队产生1次暴击，本部队临时数量+20。",
         "designOnlyInitialBaseDamage": 38
     },
     {
@@ -840,26 +854,30 @@
         "range": 1.0,
         "size": 1,
         "tags": [],
-        "talentText": "回合结束时，全体战士+1数量。",
-        "goldTalentText": "回合结束时，全体战士+2数量。",
+        "talentText": "回合结束时，全体战士+1数量。与自己同一排的所有单位也可视为战士。",
+        "goldTalentText": "回合结束时，全体战士+2数量。与自己同一排的所有单位也可视为战士。",
         "battleText": "—",
         "goldBattleText": "—",
         "talents": [
             {
-                "kind": "round_end_tagged_units_gain_attack_and_defense",
+                "kind": "round_end_tagged_units_gain_count",
                 "targetTag": "战士",
-                "attackValue": 10,
-                "defenseValue": 1,
                 "value": 1
+            },
+            {
+                "kind": "same_row_units_count_as_tag",
+                "targetTag": "战士"
             }
         ],
         "goldTalents": [
             {
-                "kind": "round_end_tagged_units_gain_attack_and_defense",
+                "kind": "round_end_tagged_units_gain_count",
                 "targetTag": "战士",
-                "attackValue": 20,
-                "defenseValue": 2,
                 "value": 2
+            },
+            {
+                "kind": "same_row_units_count_as_tag",
+                "targetTag": "战士"
             }
         ],
         "battleSkills": [],
@@ -877,7 +895,7 @@
         "attackRange": 1.0,
         "firstPurchaseHp": 44,
         "firstPurchaseAverageDamage": 28,
-        "skillText": "回合结束时，全体战士+1数量。\n回合结束时，全体战士+2数量。\n—\n—",
+        "skillText": "回合结束时，全体战士+1数量。与自己同一排的所有单位也可视为战士。\n回合结束时，全体战士+2数量。与自己同一排的所有单位也可视为战士。\n—\n—",
         "designOnlyInitialBaseDamage": 28
     },
     {
@@ -1402,13 +1420,9 @@
                 "kind": "leave_board_tagged_units_gain_stats",
                 "power": 1,
                 "targetTags": [
-                    "元素"
+                    "元素",
+                    "艾瑞"
                 ],
-                "byFaith": {
-                    "艾瑞": {
-                        "power": 1
-                    }
-                },
                 "value": 5
             }
         ],
@@ -1417,13 +1431,9 @@
                 "kind": "leave_board_tagged_units_gain_stats",
                 "power": 2,
                 "targetTags": [
-                    "元素"
+                    "元素",
+                    "艾瑞"
                 ],
-                "byFaith": {
-                    "艾瑞": {
-                        "power": 2
-                    }
-                },
                 "value": 10
             }
         ],
@@ -1673,18 +1683,12 @@
         "talents": [
             {
                 "kind": "while_on_board_self_gain_stat_team_gain_power",
-                "allowEvents": [
-                    "on_gain_power"
-                ],
                 "value": 2
             }
         ],
         "goldTalents": [
             {
                 "kind": "while_on_board_self_gain_stat_team_gain_power",
-                "allowEvents": [
-                    "on_gain_power"
-                ],
                 "value": 4
             }
         ],
@@ -3600,8 +3604,8 @@
         "sizeTier": 1,
         "size": 1,
         "tags": [],
-        "talentText": "回合结束时，临时获得左右两侧部队中当前数量较高一方的数量。",
-        "goldTalentText": "回合结束时，临时获得本排和前一排部队中当前数量较高一方的数量。",
+        "talentText": "回合结束时，临时获得左右两侧部队中当前数量较高一方的数量的一半。",
+        "goldTalentText": "回合结束时，临时获得本排和前一排部队中当前数量较高一方的数量的一半。",
         "battleText": "—",
         "goldBattleText": "—",
         "talents": [
@@ -3630,7 +3634,7 @@
         "attackRange": 4.0,
         "firstPurchaseHp": 84,
         "firstPurchaseAverageDamage": 49,
-        "skillText": "回合结束时，临时获得左右两侧部队中当前数量较高一方的数量。\n回合结束时，临时获得本排和前一排部队中当前数量较高一方的数量。\n—\n—",
+        "skillText": "回合结束时，临时获得左右两侧部队中当前数量较高一方的数量的一半。\n回合结束时，临时获得本排和前一排部队中当前数量较高一方的数量的一半。\n—\n—",
         "designOnlyInitialBaseDamage": 49
     },
     {
@@ -3802,18 +3806,13 @@
         "talents": [
             {
                 "kind": "on_gain_stat_retrigger_side_adjacent_entry_effects",
-                "allowEvents": [
-                    "on_gain_attack"
-                ]
+                "count": 1
             }
         ],
         "goldTalents": [
             {
                 "kind": "on_gain_stat_retrigger_side_adjacent_entry_effects",
-                "allowEvents": [
-                    "on_gain_attack",
-                    "on_gain_defense"
-                ]
+                "count": 2
             }
         ],
         "battleSkills": [],

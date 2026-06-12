@@ -81,6 +81,13 @@ namespace ProphecyCentury.Core
 
         private int ResolveCampaignRoundLimit(string campaignId)
         {
+            switch (campaignId)
+            {
+                case "shadow_elemental_challenge":
+                case "shadow_light_challenge":
+                    return 20;
+            }
+
             var configuredVictoryRound = Data?.Config?.victoryRound ?? 0;
             if (configuredVictoryRound > 0)
             {

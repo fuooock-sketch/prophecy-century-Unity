@@ -41,6 +41,7 @@ namespace ProphecyCentury.Systems
                 unit.roundTempCount = 0;
                 unit.manageRoundEntryEffectTriggerCount = 0;
                 unit.manageRoundForestGemGiftBonusCount = 0;
+                unit.manageRoundStatRetriggerTriggered = false;
                 unit.manageAttackGainBucket = 0;
                 unit.manageRoundAttackRewardTriggered = false;
             }
@@ -335,7 +336,7 @@ namespace ProphecyCentury.Systems
                     }
                     break;
                 case "while_on_board_attack_gain_threshold_add_random_unit_to_hand":
-                    if (eventType == "on_gain_count" && target is BoardUnitState && eventValue > 0 && !owner.manageRoundAttackRewardTriggered)
+                    if (eventType == "on_gain_count" && target == owner && eventValue > 0 && !owner.manageRoundAttackRewardTriggered)
                     {
                         owner.manageAttackGainBucket += eventValue;
                         if (owner.manageAttackGainBucket >= Math.Max(1, talent.threshold))
@@ -358,7 +359,7 @@ namespace ProphecyCentury.Systems
                 case "while_on_board_self_gain_stat_team_gain_power":
                     if (eventType == "on_gain_count" && target == owner)
                     {
-                        foreach (var unit in runState.boardUnits)
+                        foreach (var unit in runState.boardUnits.Where(unit => unit != owner))
                         {
                             GainCount(runState, unit, Value(talent, owner, 1), owner, processed, depth);
                         }
@@ -372,9 +373,10 @@ namespace ProphecyCentury.Systems
                     }
                     break;
                 case "on_gain_stat_retrigger_side_adjacent_entry_effects":
-                    if ((eventType == "on_gain_attack" || eventType == "on_gain_defense") && target == owner)
+                    if (eventType == "on_gain_count" && target == owner && !owner.manageRoundStatRetriggerTriggered)
                     {
-                        foreach (var unit in SideAdjacent(runState, owner).Where(unit => HasEntryTalent(unit)).ToList())
+                        owner.manageRoundStatRetriggerTriggered = true;
+                        foreach (var unit in PickRandom(SideAdjacent(runState, owner).Where(unit => HasEntryTalent(unit)).ToList(), Count(talent, owner)))
                         {
                             Dispatch(runState, "on_entry", unit, "gain_stat_retrigger_adjacent_entry", owner, 0, processed, depth + 1);
                         }
@@ -390,6 +392,15 @@ namespace ProphecyCentury.Systems
                     if (eventType == "on_round_end")
                     {
                         foreach (var unit in runState.boardUnits.Where(unit => HasTag(unit, talent.targetTag)))
+                        {
+                            GainCount(runState, unit, Value(talent, owner, 1), owner, processed, depth);
+                        }
+                    }
+                    break;
+                case "round_end_tagged_units_gain_count":
+                    if (eventType == "on_round_end")
+                    {
+                        foreach (var unit in runState.boardUnits.Where(unit => HasTag(runState, unit, talent.targetTag)))
                         {
                             GainCount(runState, unit, Value(talent, owner, 1), owner, processed, depth);
                         }
@@ -477,6 +488,26 @@ namespace ProphecyCentury.Systems
                         GainCount(runState, owner, Value(talent, owner), owner, processed, depth);
                     }
                     break;
+                case "round_end_if_race_count_self_gain_round_count":
+                    if (eventType == "on_round_end" && CountRace(runState, talent.race, UnitDef(owner)?.race) >= Math.Max(1, talent.threshold))
+                    {
+                        var gain = ResolveRoundCountGain(talent, owner);
+                        if (gain > 0)
+                        {
+                            owner.roundTempCount += gain;
+                            AddCountGainFeedback(owner, owner, gain, "临时");
+                        }
+                    }
+                    break;
+                case "round_end_same_row_tagged_units_gain_count":
+                    if (eventType == "on_round_end")
+                    {
+                        foreach (var unit in SameRow(runState, owner).Where(unit => HasTag(runState, unit, talent.targetTag)))
+                        {
+                            GainCount(runState, unit, Value(talent, owner, 1), owner, processed, depth);
+                        }
+                    }
+                    break;
                 case "round_end_self_temp_morale_per_race_count":
                     if (eventType == "on_round_end")
                     {
@@ -552,6 +583,17 @@ namespace ProphecyCentury.Systems
                     if (eventType == "on_round_end")
                     {
                         GiftForestGem(runState, owner, owner, Value(talent, owner), processed, depth);
+                    }
+                    break;
+                case "round_end_self_and_rear_rows_gain_count_retrigger_tag_round_end":
+                    if (eventType == "on_round_end")
+                    {
+                        foreach (var unit in SelfAndRearRows(runState, owner))
+                        {
+                            GainCount(runState, unit, Value(talent, owner, 1), owner, processed, depth);
+                        }
+
+                        RetriggerTaggedRoundEndTalents(runState, owner, talent, processed, depth);
                     }
                     break;
                 case "on_gift_action_team_gain_attack_every_n":
@@ -808,6 +850,22 @@ namespace ProphecyCentury.Systems
             }
         }
 
+        private void RetriggerTaggedRoundEndTalents(RunState runState, BoardUnitState owner, SkillDefinition talent, HashSet<string> processed, int depth)
+        {
+            var times = Math.Max(1, owner.isGolden ? NonZero(talent.goldTimes, talent.times, 1) : NonZero(talent.times, 1));
+            var targets = runState.boardUnits.Where(unit => HasTag(runState, unit, talent.targetTag)).ToList();
+            for (var i = 0; i < times; i += 1)
+            {
+                foreach (var target in targets)
+                {
+                    foreach (var roundEndTalent in GetTalents(target).Where(item => Handles(item, "on_round_end") && item.kind != talent.kind))
+                    {
+                        HandleTalent(runState, target, roundEndTalent, "on_round_end", target, "round_end_retrigger_tagged", owner, 0, processed, depth + 1);
+                    }
+                }
+            }
+        }
+
         private void ApplyLeaveTaggedStats(RunState runState, BoardUnitState owner, SkillDefinition talent, HashSet<string> processed, int depth)
         {
             var tags = talent.targetTags ?? Array.Empty<string>();
@@ -916,7 +974,8 @@ namespace ProphecyCentury.Systems
                 forestGemsReceived = card.forestGemsReceived,
                 manageRoundEntryEffectTriggerCount = card.manageRoundEntryEffectTriggerCount,
                 manageFaithCountGainBucket = card.manageFaithCountGainBucket,
-                manageRoundForestGemGiftBonusCount = card.manageRoundForestGemGiftBonusCount
+                manageRoundForestGemGiftBonusCount = card.manageRoundForestGemGiftBonusCount,
+                manageRoundStatRetriggerTriggered = card.manageRoundStatRetriggerTriggered
             };
         }
 
@@ -1446,12 +1505,16 @@ namespace ProphecyCentury.Systems
                 case "round_end_if_adjacent_faith_self_gain_attack":
                 case "round_end_self_gain_attack_per_faith_count":
                 case "round_end_tagged_units_gain_attack_and_defense":
+                case "round_end_tagged_units_gain_count":
                 case "round_end_gain_forest_gem_self":
                 case "round_end_self_gain_attack":
                 case "round_end_if_race_count_self_gain_attack":
+                case "round_end_if_race_count_self_gain_round_count":
+                case "round_end_same_row_tagged_units_gain_count":
                 case "round_end_self_temp_morale_per_race_count":
                 case "round_end_forward_adjacent_units_gain_attack_and_gift":
                 case "round_end_self_gift_forest_gem":
+                case "round_end_self_and_rear_rows_gain_count_retrigger_tag_round_end":
                 case "round_end_temp_gain_adjacent_attack":
                 case "round_end_devour_shop_highest_attack_gain_attack":
                 case "round_end_tagged_units_devour_shop_gain_attack":
@@ -1475,7 +1538,7 @@ namespace ProphecyCentury.Systems
                 case "on_gain_defense_team_gain_attack":
                     return eventType == "on_gain_count";
                 case "on_gain_stat_retrigger_side_adjacent_entry_effects":
-                    return eventType == "on_gain_attack" || eventType == "on_gain_defense";
+                    return eventType == "on_gain_count";
                 case "while_on_board_any_ally_gain_stat_extra_defense":
                 case "while_on_board_attack_gain_threshold_add_random_unit_to_hand":
                 case "while_on_board_attack_gain_threshold_evolve":
@@ -1572,6 +1635,16 @@ namespace ProphecyCentury.Systems
                 && Math.Abs(targetCol - col) == 1);
         }
 
+        private static IEnumerable<BoardUnitState> SameRow(RunState runState, BoardUnitState owner)
+        {
+            if (!TryParseSlot(owner?.boardSlotId, out var row, out _))
+            {
+                return Enumerable.Empty<BoardUnitState>();
+            }
+
+            return runState.boardUnits.Where(unit => TryParseSlot(unit.boardSlotId, out var unitRow, out _) && unitRow == row);
+        }
+
         private static IEnumerable<BoardUnitState> ForwardAdjacent(RunState runState, BoardUnitState owner, string targetMode)
         {
             if (!TryParseSlot(owner?.boardSlotId, out var row, out var col))
@@ -1597,7 +1670,7 @@ namespace ProphecyCentury.Systems
                 .Select(CurrentCount)
                 .Where(count => count > 0)
                 .ToList();
-            return candidates.Count == 0 ? 0 : candidates.Max();
+            return candidates.Count == 0 ? 0 : Math.Max(1, candidates.Max() / 2);
         }
 
         private static IEnumerable<BoardUnitState> SameAndForwardRows(RunState runState, BoardUnitState owner)
@@ -1621,6 +1694,16 @@ namespace ProphecyCentury.Systems
 
             return runState.boardUnits.Where(unit =>
                 unit == owner || (TryParseSlot(unit.boardSlotId, out var unitRow, out _) && unitRow == row + 1));
+        }
+
+        private static IEnumerable<BoardUnitState> SelfAndRearRows(RunState runState, BoardUnitState owner)
+        {
+            if (!TryParseSlot(owner?.boardSlotId, out var row, out _))
+            {
+                return owner == null ? Enumerable.Empty<BoardUnitState>() : new[] { owner };
+            }
+
+            return runState.boardUnits.Where(unit => TryParseSlot(unit.boardSlotId, out var unitRow, out _) && unitRow >= row);
         }
 
         private static bool TryParseSlot(string slotId, out int row, out int col)
@@ -1689,18 +1772,44 @@ namespace ProphecyCentury.Systems
 
         private static bool HasTag(UnitCardState unit, string tag)
         {
+            return HasTag(null, unit, tag);
+        }
+
+        private static bool HasTag(RunState runState, UnitCardState unit, string tag)
+        {
             if (unit == null || string.IsNullOrWhiteSpace(tag))
             {
                 return false;
             }
 
             var definition = UnitDef(unit);
-            return definition != null
+            if (definition != null
                 && ((definition.tags != null && definition.tags.Contains(tag))
                     || definition.typeLabel == tag
                     || definition.type == tag
                     || definition.race == tag
-                    || definition.faith == tag);
+                    || definition.faith == tag))
+            {
+                return true;
+            }
+
+            return CountsAsTag(runState, unit, tag);
+        }
+
+        private static bool CountsAsTag(RunState runState, UnitCardState unit, string tag)
+        {
+            if (runState == null || !(unit is BoardUnitState boardUnit) || !TryParseSlot(boardUnit.boardSlotId, out var unitRow, out _))
+            {
+                return false;
+            }
+
+            return runState.boardUnits.Any(owner =>
+                owner != null
+                && TryParseSlot(owner.boardSlotId, out var ownerRow, out _)
+                && ownerRow == unitRow
+                && GetTalents(owner).Any(talent =>
+                    talent.kind == "same_row_units_count_as_tag"
+                    && (string.IsNullOrWhiteSpace(talent.targetTag) || talent.targetTag == tag)));
         }
 
         private static int EffectiveHp(UnitCardState unit) => (UnitDef(unit)?.hp ?? 0) + (unit?.shopBuffHp ?? 0);

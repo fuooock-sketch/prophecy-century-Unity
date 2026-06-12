@@ -88,6 +88,7 @@ namespace ProphecyCentury.Model
         public int manageRoundEntryEffectTriggerCount;
         public int manageFaithCountGainBucket;
         public int manageRoundForestGemGiftBonusCount;
+        public bool manageRoundStatRetriggerTriggered;
         public int manageGiftActionBucket;
         public int manageAttackGainBucket;
         public int manageReceiveGiftPowerBucket;

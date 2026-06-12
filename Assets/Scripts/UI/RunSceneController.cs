@@ -8692,6 +8692,7 @@ namespace ProphecyCentury.UI
                 case "round_start_if_race_count_temp_power":
                 case "while_on_board_race_threshold_team_speed":
                 case "round_end_if_race_count_self_gain_attack":
+                case "round_end_if_race_count_self_gain_round_count":
                 case "round_end_self_temp_morale_per_race_count":
                     var race = string.IsNullOrWhiteSpace(skill.race) ? definition.race : skill.race;
                     count = CountBoardRace(race);
@@ -8724,6 +8725,7 @@ namespace ProphecyCentury.UI
                     case "while_on_board_race_threshold_team_speed":
                     case "round_end_self_gain_attack_per_faith_count":
                     case "round_end_if_race_count_self_gain_attack":
+                    case "round_end_if_race_count_self_gain_round_count":
                     case "round_end_self_temp_morale_per_race_count":
                         return skill;
                 }

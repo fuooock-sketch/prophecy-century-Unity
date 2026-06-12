@@ -109,6 +109,7 @@ public sealed class SynthesisSystem
                 forestGemsAttached = sourceUnits.Sum(unit => Math.Max(0, unit.forestGemsAttached)),
                 forestGemsReceived = sourceUnits.Sum(unit => Math.Max(0, unit.forestGemsReceived)),
                 manageRoundEntryEffectTriggerCount = sourceUnits.Max(unit => unit.manageRoundEntryEffectTriggerCount),
+                manageRoundStatRetriggerTriggered = sourceUnits.Any(unit => unit.manageRoundStatRetriggerTriggered),
                 manageGiftActionBucket = sourceUnits.Max(unit => unit.manageGiftActionBucket),
                 manageAttackGainBucket = sourceUnits.Max(unit => unit.manageAttackGainBucket),
                 manageReceiveGiftPowerBucket = sourceUnits.Max(unit => unit.manageReceiveGiftPowerBucket),

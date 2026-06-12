@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>预言世纪 单位图鉴</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10131a;
+      --panel: #171c25;
+      --panel-2: #202733;
+      --line: #323b4b;
+      --text: #edf2f7;
+      --muted: #aeb8c7;
+      --accent: #e5b85a;
+      --good: #70d6a1;
+      --danger: #ee6b6e;
+      --blue: #79b8ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    button, input, select { font: inherit; }
+    .app {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 420px;
+      min-height: 100vh;
+    }
+    .main {
+      padding: 22px;
+      min-width: 0;
+    }
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) repeat(4, minmax(120px, 160px));
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .search, .select {
+      width: 100%;
+      height: 42px;
+      color: var(--text);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 12px;
+      outline: none;
+    }
+    .search:focus, .select:focus { border-color: var(--accent); }
+    .summary {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      height: 26px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.03);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      position: relative;
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr);
+      gap: 10px;
+      min-height: 118px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+    }
+    .card:hover, .card.active {
+      border-color: var(--accent);
+      background: #202638;
+    }
+    .portrait {
+      width: 72px;
+      height: 72px;
+      border-radius: 8px;
+      background: #0c0f15;
+      border: 1px solid var(--line);
+      object-fit: contain;
+    }
+    .placeholder {
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      color: var(--muted);
+    }
+    .name-row {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+      min-width: 0;
+    }
+    .name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .stars {
+      color: var(--accent);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .meta {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mini-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .mini-stats b { color: var(--text); font-weight: 600; }
+    .detail {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      border-left: 1px solid var(--line);
+      background: #111720;
+      padding: 22px;
+    }
+    .detail-head {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .detail .portrait {
+      width: 112px;
+      height: 112px;
+    }
+    .detail h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.15;
+    }
+    .segmented {
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      overflow: hidden;
+      margin: 4px 0 18px;
+    }
+    .segmented button {
+      height: 34px;
+      min-width: 82px;
+      border: 0;
+      color: var(--muted);
+      background: var(--panel);
+      cursor: pointer;
+    }
+    .segmented button.active {
+      color: #181203;
+      background: var(--accent);
+      font-weight: 700;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .stat {
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel);
+    }
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .stat b {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .section {
+      margin-top: 12px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    .section h2 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: var(--accent);
+    }
+    .section p {
+      margin: 0;
+      color: var(--text);
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .tag {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .empty {
+      padding: 48px 16px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+    }
+    @media (max-width: 1050px) {
+      .app { grid-template-columns: 1fr; }
+      .detail {
+        position: static;
+        height: auto;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+      .topbar { grid-template-columns: 1fr 1fr; }
+      .search { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <main class="main">
+      <div class="topbar">
+        <input id="search" class="search" placeholder="搜索名称、种族、信仰、技能..." autocomplete="off">
+        <select id="starFilter" class="select"></select>
+        <select id="raceFilter" class="select"></select>
+        <select id="faithFilter" class="select"></select>
+        <select id="typeFilter" class="select"></select>
+      </div>
+      <div class="summary">
+        <span class="pill" id="countPill"></span>
+        <span class="pill">点击卡片查看详情</span>
+      </div>
+      <section id="grid" class="grid"></section>
+    </main>
+    <aside id="detail" class="detail"></aside>
+  </div>
+  <script>
+    const UNITS = [{"id":"small_merchant","name":"小商人","star":1,"race":"甘地","faith":"无","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/small_merchant.png","stats":{"hpPerUnit":4,"attack":5,"defense":3,"power":1,"speed":3,"luck":0,"morale":4,"range":8.0,"damageMin":1,"damageMax":3,"startCount":18,"limit":2,"attackInterval":0.95},"texts":{"talent":"—","goldTalent":"—","battle":"造成追击后，下回合开始时获得+2金币（每场战斗仅生效1次）","goldBattle":"造成追击后，下回合开始时获得+4金币（每场战斗仅生效1次）"}},{"id":"bright_warrior","name":"光明武士","star":1,"race":"甘地","faith":"莱特","type":"melee","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/bright_warrior.png","stats":{"hpPerUnit":6,"attack":6,"defense":6,"power":1,"speed":5,"luck":0,"morale":1,"range":1.0,"damageMin":1,"damageMax":4,"startCount":23,"limit":12,"attackInterval":0.95},"texts":{"talent":"回合结束时，如果相邻格子中有莱特信仰者，本部队获得+3数量。","goldTalent":"回合结束时，如果相邻格子中有莱特信仰者，本部队获得+5数量。","battle":"—","goldBattle":"—"}},{"id":"elf","name":"精灵","star":1,"race":"甘地","faith":"莱特","type":"melee","typeLabel":"魔灵","tags":[],"icon":"assets/unit-icons/elf.png","stats":{"hpPerUnit":4,"attack":6,"defense":4,"power":1,"speed":6,"luck":1,"morale":1,"range":1.0,"damageMin":3,"damageMax":4,"startCount":21,"limit":12,"attackInterval":0.8499999999999999},"texts":{"talent":"每入场1支甘地部队，本部队获得+2数量，每回合最多触发3次。","goldTalent":"每入场1支甘地部队，本部队获得+3数量，每回合最多触发3次。","battle":"—","goldBattle":"—"}},{"id":"forest_guard","name":"林地卫兵","star":1,"race":"甘席","faith":"无","type":"melee","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/forest_guard.png","stats":{"hpPerUnit":6,"attack":6,"defense":7,"power":1,"speed":4,"luck":1,"morale":0,"range":1.0,"damageMin":3,"damageMax":4,"startCount":23,"limit":12,"attackInterval":0.8499999999999999},"texts":{"talent":"入场时，获得1颗【密林宝钻】。","goldTalent":"入场时，获得2颗【密林宝钻】。","battle":"—","goldBattle":"—"}},{"id":"ranger_rider","name":"游骑兵","star":1,"race":"甘席","faith":"无","type":"melee","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/ranger_rider.png","stats":{"hpPerUnit":6,"attack":6,"defense":7,"power":1,"speed":5,"luck":0,"morale":1,"range":1.0,"damageMin":1,"damageMax":4,"startCount":23,"limit":12,"attackInterval":0.7999999999999999},"texts":{"talent":"回合结束时，本部队获得+1数量；被赐予5颗【密林宝钻】则进阶为精锐游骑兵。","goldTalent":"回合结束时，本部队获得+2数量；被赐予5颗【密林宝钻】则进阶为精锐游骑兵。","battle":"—","goldBattle":"—"}},{"id":"frost_spirit","name":"冰霜魔灵","star":1,"race":"甘德","faith":"无","type":"range","typeLabel":"魔灵","tags":[],"icon":"assets/unit-icons/frost_spirit.png","stats":{"hpPerUnit":4,"attack":6,"defense":3,"power":1,"speed":2,"luck":1,"morale":0,"range":6.0,"damageMin":3,"damageMax":4,"startCount":21,"limit":12,"attackInterval":0.8999999999999999},"texts":{"talent":"离场时，获得+1金币，场上随机1支部队获得+1数量。","goldTalent":"离场时，获得+2金币，场上随机1支部队获得+2量。","battle":"—","goldBattle":"—"}},{"id":"fire_elemental","name":"火元素","star":1,"race":"甘德","faith":"无","type":"melee","typeLabel":"元素","tags":[],"icon":"assets/unit-icons/fire_elemental.png","stats":{"hpPerUnit":5,"attack":7,"defense":5,"power":1,"speed":6,"luck":2,"morale":1,"range":1.0,"damageMin":3,"damageMax":5,"startCount":22,"limit":12,"attackInterval":0.75},"texts":{"talent":"每获得1次数量，本部队额外获得+4数量。","goldTalent":"每获得1次数量，本部队额外获得+8数量。","battle":"每次攻击造成周围1距离范围伤害。","goldBattle":"每次攻击造成周围2距离范围伤害。"}},{"id":"stubborn_apprentice","name":"犟嘴学徒","star":1,"race":"甘德","faith":"艾瑞","type":"range","typeLabel":"法师","tags":[],"icon":"assets/unit-icons/stubborn_apprentice.png","stats":{"hpPerUnit":4,"attack":5,"defense":3,"power":2,"speed":2,"luck":0,"morale":1,"range":8.0,"damageMin":1,"damageMax":4,"startCount":20,"limit":12,"attackInterval":0.8999999999999999},"texts":{"talent":"入场时，场上随机1支甘德部队获得+1数量。","goldTalent":"入场时，场上随机2支甘德部队获得+1数量。","battle":"每次受到伤害会立刻进行1次反击。","goldBattle":"每次受到伤害会立刻进行连续2次反击。"}},{"id":"ger_infantry","name":"格尔步兵","star":1,"race":"甘格尔","faith":"克苏鲁","type":"range","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/ger_infantry.png","stats":{"hpPerUnit":6,"attack":7,"defense":7,"power":1,"speed":3,"luck":1,"morale":0,"range":1.0,"damageMin":3,"damageMax":5,"startCount":23,"limit":12,"attackInterval":0.8999999999999999},"texts":{"talent":"入场时，获得1张鱼人奴仆卡牌。","goldTalent":"入场时：获得2张鱼人奴仆卡牌。","battle":"—","goldBattle":"—"}},{"id":"laborer","name":"苦工","star":1,"race":"甘格尔","faith":"克苏鲁","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/laborer.png","stats":{"hpPerUnit":6,"attack":5,"defense":5,"power":2,"speed":3,"luck":2,"morale":1,"range":1.0,"damageMin":1,"damageMax":4,"startCount":23,"limit":12,"attackInterval":0.8999999999999999},"texts":{"talent":"回合结束时，本部队获得+1数量；出售时，如果数量≥30，则售价变为2金币。","goldTalent":"回合结束时，本部队获得+2数量；出售时，如果数量≥30，则售价变为3金币。","battle":"—","goldBattle":"—"}},{"id":"ger_beast","name":"格尔兽","star":1,"race":"甘格尔","faith":"无","type":"melee","typeLabel":"野兽","tags":[],"icon":"assets/unit-icons/ger_beast.png","stats":{"hpPerUnit":5,"attack":6,"defense":5,"power":1,"speed":5,"luck":0,"morale":0,"range":1.0,"damageMin":3,"damageMax":4,"startCount":21,"limit":12,"attackInterval":0.7999999999999999},"texts":{"talent":"入场时，随机吞噬商店中的1张卡牌，获得“该卡默认数量/10”的数量（至少为1）。","goldTalent":"入场时，随机吞噬商店中的1张卡牌，获得“该卡默认数量/5”的数量（至少为1）。","battle":"—","goldBattle":"—"}},{"id":"blacksmith","name":"铁匠","star":2,"race":"甘地","faith":"无","type":"melee","typeLabel":"melee","tags":[],"icon":"assets/unit-icons/blacksmith.png","stats":{"hpPerUnit":7,"attack":7,"defense":8,"power":2,"speed":3,"luck":2,"morale":1,"range":8.0,"damageMin":3,"damageMax":4,"startCount":15,"limit":12,"attackInterval":1.0499999999999998},"texts":{"talent":"—","goldTalent":"—","battle":"每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+1；自身数量少于等于1或场上没有其他友军时，技能失效。","goldBattle":"每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+2；自身数量少于等于1或场上没有其他友军时，技能失效。"}},{"id":"monk","name":"僧侣","star":2,"race":"甘地","faith":"莱特","type":"range","typeLabel":"法师","tags":[],"icon":"assets/unit-icons/monk.png","stats":{"hpPerUnit":6,"attack":6,"defense":5,"power":1,"speed":3,"luck":0,"morale":1,"range":8.0,"damageMin":3,"damageMax":5,"startCount":14,"limit":12,"attackInterval":1.0},"texts":{"talent":"与自己同一排的所有部队都视为甘地部队。","goldTalent":"同一排和前一排的所有部队都视为甘地部队。","battle":"己方每有1支莱特信仰者的部队，本部队临时+20%数量（至少为1）。","goldBattle":"己方每有1支莱特信仰者的部队，本部队临时+30%数量（至少为1）。"}},{"id":"knight","name":"骑士","star":2,"race":"甘地","faith":"莱特","type":"range","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/knight.png","stats":{"hpPerUnit":8,"attack":8,"defense":9,"power":2,"speed":7,"luck":1,"morale":2,"range":1.0,"damageMin":4,"damageMax":6,"startCount":14,"limit":12,"attackInterval":0.7999999999999999},"texts":{"talent":"回合结束时，如果场上至少有5支甘地部队，本部队临时数量+（5*回合数）。","goldTalent":"回合结束时，如果场上至少有5支甘地部队，本部队临时数量+（10*回合数）。","battle":"开战后，瞬间冲到最近的敌人，造成1次暴击伤害和1轮的眩晕","goldBattle":"开战后，瞬间冲到最近的敌人，连续造成2次暴击伤害和1轮的眩晕"}},{"id":"forest_scout","name":"林地密探","star":2,"race":"甘席","faith":"无","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/forest_scout.png","stats":{"hpPerUnit":6,"attack":8,"defense":5,"power":2,"speed":4,"luck":1,"morale":2,"range":8.0,"damageMin":3,"damageMax":6,"startCount":12,"limit":12,"attackInterval":0.7999999999999999},"texts":{"talent":"离场时，获得2颗【密林宝钻】。","goldTalent":"离场时，获得4颗【密林宝钻】。","battle":"—","goldBattle":"—"}},{"id":"ranger","name":"游侠","star":2,"race":"甘席","faith":"无","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/ranger.png","stats":{"hpPerUnit":6,"attack":8,"defense":6,"power":2,"speed":4,"luck":1,"morale":0,"range":1.0,"damageMin":4,"damageMax":6,"startCount":14,"limit":12,"attackInterval":0.8499999999999999},"texts":{"talent":"入场时，获得1颗【密林宝钻】\n场上部队累计获得10次数量时，进阶为神剑游侠","goldTalent":"入场时，获得2颗【密林宝钻】\n场上部队累计获得10次数量时，进阶为神剑游侠","battle":"—","goldBattle":"—"}},{"id":"water_elemental","name":"水元素","star":2,"race":"甘德","faith":"无","type":"range","typeLabel":"元素","tags":[],"icon":"assets/unit-icons/water_elemental.png","stats":{"hpPerUnit":6,"attack":10,"defense":7,"power":2,"speed":5,"luck":1,"morale":1,"range":1.0,"damageMin":4,"damageMax":7,"startCount":15,"limit":8,"attackInterval":0.7999999999999999},"texts":{"talent":"场上每有1支火元素部队，就使全体元素临时+2攻击。","goldTalent":"场上每有1支火元素部队，就使全体元素临时+4攻击。","battle":"—","goldBattle":"—"}},{"id":"novice_elementalist","name":"低级元素使","star":2,"race":"甘德","faith":"艾瑞","type":"melee","typeLabel":"法师","tags":[],"icon":"assets/unit-icons/novice_elementalist.png","stats":{"hpPerUnit":6,"attack":8,"defense":5,"power":2,"speed":3,"luck":1,"morale":2,"range":1.0,"damageMin":4,"damageMax":6,"startCount":13,"limit":8,"attackInterval":0.8999999999999999},"texts":{"talent":"每入场1支元素部队，使其与场上同名元素获得+1数量。","goldTalent":"每入场1支元素部队，使其与场上同名元素获得+2数量。","battle":"开战后，在最近的格子中召唤1支临时火元素部队，数量与场上数量最多的火元素一致，至少为10。","goldBattle":"开战后，在最近的两个格子中分别召唤1支临时火元素部队，数量与场上数量最多的火元素一致，至少为10。"}},{"id":"thug","name":"打手","star":2,"race":"甘格尔","faith":"克苏鲁","type":"range","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/thug.png","stats":{"hpPerUnit":8,"attack":9,"defense":10,"power":2,"speed":3,"luck":2,"morale":1,"range":1.0,"damageMin":4,"damageMax":6,"startCount":17,"limit":12,"attackInterval":0.8999999999999999},"texts":{"talent":"触发1次任意入场效果时，本部队获得+5数量。","goldTalent":"触发1次任意入场效果时，本部队获得+10数量。","battle":"—","goldBattle":"—"}},{"id":"caller","name":"叫唤者","star":2,"race":"甘格尔","faith":"无","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/caller.png","stats":{"hpPerUnit":6,"attack":9,"defense":6,"power":1,"speed":2,"luck":1,"morale":0,"range":6.0,"damageMin":4,"damageMax":6,"startCount":15,"limit":12,"attackInterval":0.8999999999999999},"texts":{"talent":"入场时，使商店中当前及将来出现的所有卡牌默认数量永久+1。","goldTalent":"入场时，使商店中当前及将来出现的所有卡牌默认数量永久+2。","battle":"—","goldBattle":"—"}},{"id":"mushroom_quaku","name":"蘑菇夸库","star":2,"race":"甘格尔","faith":"无","type":"range","typeLabel":"魔灵","tags":[],"icon":"assets/unit-icons/mushroom_quaku.png","stats":{"hpPerUnit":6,"attack":7,"defense":6,"power":2,"speed":2,"luck":1,"morale":0,"range":4.0,"damageMin":2,"damageMax":5,"startCount":14,"limit":12,"attackInterval":0.95},"texts":{"talent":"回合结束时，临时获得左右两侧部队中当前数量较高一方的数量的一半。","goldTalent":"回合结束时，临时获得本排和前一排部队中当前数量较高一方的数量的一半。","battle":"—","goldBattle":"—"}},{"id":"assassin","name":"刺客","star":3,"race":"甘地","faith":"无","type":"melee","typeLabel":"melee","tags":[],"icon":"assets/unit-icons/assassin.png","stats":{"hpPerUnit":8,"attack":11,"defense":7,"power":2,"speed":6,"luck":3,"morale":1,"range":1.0,"damageMin":5,"damageMax":8,"startCount":10,"limit":8,"attackInterval":0.75},"texts":{"talent":"回合结束时，如果场上甘地部队达到5支，本部队+10数量。","goldTalent":"回合结束时，如果场上甘地部队达到5支，本部队+15数量。","battle":"潜行。第1次造成的伤害必定暴击；如果当前数量超过初始数量2倍，则为3倍暴击。","goldBattle":"潜行。前2次造成的伤害必定暴击；如果当前数量超过初始数量2倍，则为6倍暴击。"}},{"id":"wanderer","name":"流浪者","star":3,"race":"甘地","faith":"无","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/wanderer.png","stats":{"hpPerUnit":8,"attack":11,"defense":10,"power":3,"speed":4,"luck":3,"morale":2,"range":6.0,"damageMin":5,"damageMax":8,"startCount":10,"limit":8,"attackInterval":0.7999999999999999},"texts":{"talent":"本部队累计+10数量，随机获得1张甘地卡牌（每回合限1次）。","goldTalent":"本部队累计+10数量，随机获得2张甘地卡牌（每回合限1次）。","battle":"—","goldBattle":"—"}},{"id":"priest","name":"牧师","star":3,"race":"甘地","faith":"莱特","type":"range","typeLabel":"法师","tags":[],"icon":"assets/unit-icons/priest.png","stats":{"hpPerUnit":8,"attack":9,"defense":7,"power":3,"speed":3,"luck":2,"morale":1,"range":4.0,"damageMin":4,"damageMax":6,"startCount":9,"limit":8,"attackInterval":1.0},"texts":{"talent":"每入场5支甘地部队，随机获得1支甘地部队","goldTalent":"每入场5支甘地部队，随机获得2支甘地部队","battle":"开战后，给队伍最前面存在友方部队的1排的所有友方部队增加一个护盾，护盾可以完全抵挡最多1次的伤害","goldBattle":"开战后，给队伍最前面存在友方部队的2排的所有友方部队增加一个护盾，护盾可以完全抵挡最多1次的伤害"}},{"id":"archer","name":"弓箭手","star":3,"race":"甘席","faith":"无","type":"range","typeLabel":"射手","tags":[],"icon":"assets/unit-icons/archer.png","stats":{"hpPerUnit":7,"attack":11,"defense":7,"power":2,"speed":3,"luck":1,"morale":1,"range":6.0,"damageMin":4,"damageMax":8,"startCount":7,"limit":8,"attackInterval":0.7999999999999999},"texts":{"talent":"每被赐予1颗【密林宝钻】，本部队额外获得+1数量；被赐予5颗则进阶为幻影射手。","goldTalent":"每被赐予1颗【密林宝钻】，本部队额外获得+2数量；被赐予5颗则进阶为幻影射手。","battle":"—","goldBattle":"—"}},{"id":"watchful_support","name":"机警后援","star":3,"race":"甘席","faith":"无","type":"melee","typeLabel":"melee","tags":[],"icon":"assets/unit-icons/watchful_support.png","stats":{"hpPerUnit":9,"attack":8,"defense":10,"power":3,"speed":3,"luck":2,"morale":1,"range":1.0,"damageMin":3,"damageMax":6,"startCount":10,"limit":8,"attackInterval":0.8999999999999999},"texts":{"talent":"回合结束时，前一排所有部队各被赐予1颗【密林宝钻】。","goldTalent":"回合结束时，前一排所有部队各被赐予2颗【密林宝钻】。","battle":"—","goldBattle":"—"}},{"id":"river_captain","name":"河边队长","star":3,"race":"甘席","faith":"无","type":"melee","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/river_captain.png","stats":{"hpPerUnit":11,"attack":13,"defense":13,"power":3,"speed":3,"luck":1,"morale":3,"range":1.0,"damageMin":6,"damageMax":8,"startCount":11,"limit":8,"attackInterval":0.8999999999999999},"texts":{"talent":"入场时，左右两侧的部队被赐予1颗【密林宝钻】。","goldTalent":"入场时，左右两侧的部队被赐予2颗【密林宝钻】。","battle":"—","goldBattle":"—"}},{"id":"sky_watcher","name":"高翎守望者","star":3,"race":"甘席","faith":"无","type":"range","typeLabel":"魔灵","tags":[],"icon":"assets/unit-icons/sky_watcher.png","stats":{"hpPerUnit":8,"attack":10,"defense":8,"power":3,"speed":2,"luck":1,"morale":2,"range":6.0,"damageMin":4,"damageMax":7,"startCount":9,"limit":8,"attackInterval":0.8499999999999999},"texts":{"talent":"任意部队上阵时，获得1颗【密林宝钻】。","goldTalent":"任意部队上阵时，获得2颗【密林宝钻】。","battle":"攻击时，有额外25%概率产生暴击","goldBattle":"攻击时，有额外35%概率产生暴击"}},{"id":"puppet_spirit","name":"傀儡魔灵","star":3,"race":"甘德","faith":"无","type":"range","typeLabel":"魔灵","tags":[],"icon":"assets/unit-icons/puppet_spirit.png","stats":{"hpPerUnit":9,"attack":12,"defense":10,"power":3,"speed":3,"luck":1,"morale":3,"range":4.0,"damageMin":5,"damageMax":8,"startCount":10,"limit":5,"attackInterval":0.8499999999999999},"texts":{"talent":"离场时，元素和艾瑞信仰者获得+5数量。","goldTalent":"离场时，元素和艾瑞信仰者获得+10数量。","battle":"—","goldBattle":"—"}},{"id":"null_mage","name":"无魔者","star":3,"race":"甘德","faith":"无","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/null_mage.png","stats":{"hpPerUnit":8,"attack":13,"defense":9,"power":1,"speed":6,"luck":1,"morale":0,"range":1.0,"damageMin":6,"damageMax":9,"startCount":10,"limit":5,"attackInterval":0.7999999999999999},"texts":{"talent":"—","goldTalent":"—","battle":"开战后，每有一支友方部队行动，则临时获得+4数量。","goldBattle":"开战后，每有一支友方部队行动，则临时获得+8数量。"}},{"id":"carpet_mage","name":"飞毯法师","star":3,"race":"甘德","faith":"艾瑞","type":"melee","typeLabel":"法师","tags":[],"icon":"assets/unit-icons/carpet_mage.png","stats":{"hpPerUnit":7,"attack":9,"defense":7,"power":3,"speed":7,"luck":2,"morale":1,"range":1.0,"damageMin":5,"damageMax":7,"startCount":10,"limit":5,"attackInterval":0.7999999999999999},"texts":{"talent":"入场时，祝福一支指定部队，使其获得相当于其自身10%的数量（至少为1）。","goldTalent":"入场时，祝福一支指定部队，使其获得相当于其自身20%的数量（至少为1）。","battle":"—","goldBattle":"—"}},{"id":"beast_tamer","name":"驯兽师","star":3,"race":"甘格尔","faith":"克苏鲁","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/beast_tamer.png","stats":{"hpPerUnit":8,"attack":12,"defense":9,"power":3,"speed":3,"luck":1,"morale":1,"range":1.0,"damageMin":5,"damageMax":8,"startCount":10,"limit":8,"attackInterval":0.8999999999999999},"texts":{"talent":"场上累计触发10次任意入场效果，变为兽骑兵。","goldTalent":"场上累计触发5次任意入场效果，变为兽骑兵。","battle":"开战后，在最近的1个格子中召唤1支临时格尔兽部队（数量为格尔兽默认数量）参加战斗。","goldBattle":"开战后，在最近的2个格子中分别召唤1支临时格尔兽部队（每支数量为格尔兽默认数量）参加战斗。"}},{"id":"scoundrel","name":"劣徒","star":3,"race":"甘格尔","faith":"无","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/scoundrel.png","stats":{"hpPerUnit":11,"attack":12,"defense":13,"power":2,"speed":2,"luck":2,"morale":2,"range":1.0,"damageMin":5,"damageMax":8,"startCount":12,"limit":8,"attackInterval":0.95},"texts":{"talent":"获得数量时，使相邻1支部队重新触发1次入场效果（每回合限1次）。","goldTalent":"获得数量时，使相邻2支部队重新触发1次入场效果（每回合限1次）。","battle":"—","goldBattle":"—"}},{"id":"snow_lion","name":"雪狮","star":3,"race":"甘格尔","faith":"无","type":"melee","typeLabel":"野兽","tags":[],"icon":"assets/unit-icons/snow_lion.png","stats":{"hpPerUnit":10,"attack":13,"defense":12,"power":2,"speed":7,"luck":0,"morale":1,"range":1.0,"damageMin":6,"damageMax":9,"startCount":10,"limit":8,"attackInterval":0.75},"texts":{"talent":"入场时，使场上的野兽获得+1数量。","goldTalent":"入场时，使场上的野兽获得+2数量。","battle":"首次攻击改为瞬间猛扑到最近的敌人，并造成3倍的伤害","goldBattle":"首次攻击改为瞬间猛扑到最近的敌人，并造成6倍的伤害"}},{"id":"martial_master","name":"武学大师","star":4,"race":"甘地","faith":"无","type":"melee","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/martial_master.png","stats":{"hpPerUnit":13,"attack":14,"defense":14,"power":4,"speed":5,"luck":3,"morale":3,"range":1.0,"damageMin":7,"damageMax":10,"startCount":7,"limit":5,"attackInterval":0.8499999999999999},"texts":{"talent":"每获得1支甘地部队，本部队+2数量（购买、发现、随机获得均计入）。回合结束时，同排战士获得+2数量。","goldTalent":"每获得1支甘地部队，本部队+4数量（购买、发现、随机获得均计入）。回合结束时，同排战士获得+4数量。","battle":"每次攻击都会造成周围1距离内的范围伤害","goldBattle":"每次攻击都会造成周围2距离内的范围伤害"}},{"id":"light_mentor","name":"光明导师","star":4,"race":"甘地","faith":"莱特","type":"range","typeLabel":"法师","tags":[],"icon":"assets/unit-icons/light_mentor.png","stats":{"hpPerUnit":10,"attack":12,"defense":10,"power":4,"speed":3,"luck":2,"morale":1,"range":8.0,"damageMin":6,"damageMax":9,"startCount":6,"limit":5,"attackInterval":1.0},"texts":{"talent":"—","goldTalent":"—","battle":"开战后，在最近的2个格子中分别召唤出1支数量为1、单体血量10不会攻击和移动的幻影部队，幻影也算作莱特信仰者","goldBattle":"开战后，在最近的3个格子中分别召唤出1支数量为1、单体血量10不会攻击和移动的幻影部队，幻影也算作莱特信仰者"}},{"id":"mercenary_captain","name":"佣兵队长","star":4,"race":"甘席","faith":"无","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/mercenary_captain.png","stats":{"hpPerUnit":10,"attack":16,"defense":11,"power":4,"speed":4,"luck":4,"morale":3,"range":4.0,"damageMin":8,"damageMax":13,"startCount":6,"limit":5,"attackInterval":0.8499999999999999},"texts":{"talent":"场上任意部队获得数量时，【密林宝钻】提供的数量额外+1；每回合最多触发3次。","goldTalent":"场上任意部队获得数量时，【密林宝钻】提供的数量额外+2；每回合最多触发3次。","battle":"每次攻击都会对额外的1支部队产生伤害，无论那支部队有多远。","goldBattle":"每次攻击都会对额外的2支部队产生伤害，无论那2支部队有多远。"}},{"id":"burrow_mole","name":"掘地鼠","star":4,"race":"甘席","faith":"无","type":"melee","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/burrow_mole.png","stats":{"hpPerUnit":14,"attack":16,"defense":15,"power":3,"speed":6,"luck":3,"morale":2,"range":1.0,"damageMin":8,"damageMax":12,"startCount":7,"limit":5,"attackInterval":0.7999999999999999},"texts":{"talent":"任意部队进阶时，本部队被赐予1颗【密林宝钻】并获得1颗【密林宝钻】。","goldTalent":"任意部队进阶时，本部队被赐予2颗【密林宝钻】并获得2颗【密林宝钻】。","battle":"—","goldBattle":"开战后，进入潜行状态，首次攻击造成5倍单体伤害结算，然后退出潜行状态"}},{"id":"feather_guard","name":"羽卫","star":4,"race":"甘席","faith":"无","type":"range","typeLabel":"射手","tags":[],"icon":"assets/unit-icons/feather_guard.png","stats":{"hpPerUnit":10,"attack":14,"defense":10,"power":2,"speed":4,"luck":5,"morale":4,"range":8.0,"damageMin":6,"damageMax":11,"startCount":5,"limit":5,"attackInterval":0.7},"texts":{"talent":"回合结束时，如果手牌中没有【密林宝钻】，本部队获得+2数量。","goldTalent":"回合结束时，如果手牌中没有【密林宝钻】，本部队获得+4数量。","battle":"每次攻击都会对额外的2支部队产生伤害，无论那支部队有多远；被精锐羽林卫攻击过的部队如果死亡，下回合开始获得1颗【密林宝钻】。","goldBattle":"每次攻击都会对额外的3支部队产生伤害，无论那支部队有多远；被精锐羽林卫攻击过的部队如果死亡，下回合开始获得1颗【密林宝钻】。"}},{"id":"earth_elemental","name":"土元素","star":4,"race":"甘德","faith":"无","type":"range","typeLabel":"元素","tags":[],"icon":"assets/unit-icons/earth_elemental.png","stats":{"hpPerUnit":14,"attack":12,"defense":17,"power":1,"speed":2,"luck":1,"morale":1,"range":6.0,"damageMin":6,"damageMax":8,"startCount":6,"limit":5,"attackInterval":1.0999999999999999},"texts":{"talent":"每离场4支魔灵部队，全体元素获得+4数量。","goldTalent":"每离场2支魔灵部队，全体元素获得+4数量。","battle":"开战后，当前数量最低的友方部队临时获得固定数量+3。","goldBattle":"开战后，当前数量最低的友方部队临时获得固定数量+6。"}},{"id":"wind_elemental","name":"风元素","star":4,"race":"甘德","faith":"无","type":"range","typeLabel":"元素","tags":[],"icon":"assets/unit-icons/wind_elemental.png","stats":{"hpPerUnit":11,"attack":14,"defense":10,"power":2,"speed":7,"luck":1,"morale":2,"range":5.0,"damageMin":6,"damageMax":10,"startCount":6,"limit":5,"attackInterval":0.75},"texts":{"talent":"场上至少有4支甘德部队，给所有部队临时+1先机。","goldTalent":"场上至少有4支甘德部队，给所有部队临时+2先机。","battle":"开战后，全体元素可以连续攻击2次。","goldBattle":"开战后，全体元素可以连续攻击3次。"}},{"id":"academy_gardener","name":"学院园丁","star":4,"race":"甘德","faith":"艾瑞","type":"melee","typeLabel":"melee","tags":[],"icon":"assets/unit-icons/academy_gardener.png","stats":{"hpPerUnit":14,"attack":11,"defense":16,"power":2,"speed":3,"luck":2,"morale":1,"range":1.0,"damageMin":4,"damageMax":8,"startCount":7,"limit":5,"attackInterval":0.8999999999999999},"texts":{"talent":"—","goldTalent":"—","battle":"每有1支元素部队在战斗中阵亡，剩下的元素临时获得+10数量。","goldBattle":"每有1支元素部队在战斗中阵亡，剩下的元素临时获得+20数量。"}},{"id":"exorcist_mount","name":"驱魔师坐骑","star":4,"race":"甘格尔","faith":"克苏鲁","type":"range","typeLabel":"野兽","tags":[],"icon":"assets/unit-icons/exorcist_mount.png","stats":{"hpPerUnit":15,"attack":15,"defense":16,"power":2,"speed":6,"luck":0,"morale":0,"range":1.0,"damageMin":7,"damageMax":12,"startCount":8,"limit":5,"attackInterval":0.75},"texts":{"talent":"回合结束时，吞噬商店中数量最高的部队，获得其数量。","goldTalent":"回合结束时，吞噬商店中数量最高的部队，获得其2倍数量。","battle":"每次攻击，选取攻击距离内最近敌人的位置召唤一阵范围半径为2的火雨，对其中的每个敌人造成1次伤害。","goldBattle":"每次攻击，选取攻击距离内最近敌人的位置召唤一阵范围半径为3的火雨，对其中的每个敌人造成1次伤害。"}},{"id":"pain_flame","name":"痛苦火苗","star":4,"race":"甘格尔","faith":"无","type":"range","typeLabel":"元素","tags":[],"icon":"assets/unit-icons/pain_flame.png","stats":{"hpPerUnit":10,"attack":16,"defense":11,"power":1,"speed":6,"luck":1,"morale":1,"range":1.0,"damageMin":8,"damageMax":12,"startCount":6,"limit":5,"attackInterval":0.7999999999999999},"texts":{"talent":"—","goldTalent":"—","battle":"阵亡时产生半径3格爆炸；若波及至少3个敌人，则下回合开始全军获得+2数量。","goldBattle":"阵亡时产生半径3格爆炸；若波及至少3个敌人，则下回合开始全军获得+4数量。"}},{"id":"garrison_guard","name":"卫戍协兵","star":5,"race":"甘地","faith":"无","type":"melee","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/garrison_guard.png","stats":{"hpPerUnit":17,"attack":16,"defense":21,"power":2,"speed":3,"luck":3,"morale":3,"range":1.0,"damageMin":8,"damageMax":11,"startCount":4,"limit":3,"attackInterval":1.0},"texts":{"talent":"回合结束时，当前所在的排以及身后的所有排的单位均获得+1数量，同时触发1次所有战士的回合结束效果","goldTalent":"回合结束时，当前所在的排以及身后的所有排的单位均获得+2数量，同时触发2次所有战士的回合结束效果","battle":"我方任意部队产生1次暴击，本部队临时数量+10。","goldBattle":"我方任意部队产生1次暴击，本部队临时数量+20。"}},{"id":"light_envoy","name":"莱特使者","star":5,"race":"甘地","faith":"莱特","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/light_envoy.png","stats":{"hpPerUnit":15,"attack":14,"defense":15,"power":3,"speed":3,"luck":1,"morale":1,"range":5.0,"damageMin":7,"damageMax":11,"startCount":4,"limit":3,"attackInterval":1.0},"texts":{"talent":"回合开始时，如果场上至少有6支莱特信仰者部队，则随机发现1支莱特信仰者部队。","goldTalent":"回合开始时，如果场上至少有6支莱特信仰者部队，则随机发现2支莱特信仰者部队。","battle":"—","goldBattle":"—"}},{"id":"forest_general","name":"林地将军","star":5,"race":"甘席","faith":"无","type":"melee","typeLabel":"melee","tags":[],"icon":"assets/unit-icons/forest_general.png","stats":{"hpPerUnit":15,"attack":16,"defense":16,"power":3,"speed":5,"luck":1,"morale":1,"range":1.0,"damageMin":8,"damageMax":13,"startCount":4,"limit":3,"attackInterval":0.7999999999999999},"texts":{"talent":"阵上每发生赐予【密林宝钻】的行为累计5次，所有阵上部队获得+1数量。","goldTalent":"阵上每发生赐予【密林宝钻】的行为累计5次，所有阵上部队获得+2数量。","battle":"—","goldBattle":"—"}},{"id":"cheetah","name":"猎豹","star":5,"race":"甘席","faith":"无","type":"range","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/cheetah.png","stats":{"hpPerUnit":16,"attack":18,"defense":15,"power":3,"speed":8,"luck":1,"morale":1,"range":5.0,"damageMin":10,"damageMax":15,"startCount":4,"limit":3,"attackInterval":0.7},"texts":{"talent":"阵上每发生赐予【密林宝钻】的行为累计5次，本部队获得+4数量。","goldTalent":"阵上每发生赐予【密林宝钻】的行为累计5次，本部队获得+8数量。","battle":"如果阵亡，下回合开始时获得1颗【密林宝钻】。","goldBattle":"如果阵亡，下回合开始时获得2颗【密林宝钻】。"}},{"id":"element_master","name":"元素大师","star":5,"race":"甘德","faith":"艾瑞","type":"melee","typeLabel":"法师","tags":[],"icon":"assets/unit-icons/element_master.png","stats":{"hpPerUnit":13,"attack":14,"defense":13,"power":3,"speed":3,"luck":1,"morale":1,"range":1.0,"damageMin":6,"damageMax":11,"startCount":2,"limit":3,"attackInterval":0.8999999999999999},"texts":{"talent":"—","goldTalent":"—","battle":"每次攻击后，在最近的格子中召唤1支临时火元素部队（数量为10），这支火元素阵亡后，此技能才会再次生效。","goldBattle":"每次攻击后，在最近的2个格子中各召唤1支临时火元素部队（每支数量为10），这两支火元素都阵亡后，此技能才会再次生效。"}},{"id":"archmage","name":"魔导师","star":5,"race":"甘德","faith":"艾瑞","type":"range","typeLabel":"法师","tags":[],"icon":"assets/unit-icons/archmage.png","stats":{"hpPerUnit":13,"attack":17,"defense":13,"power":4,"speed":2,"luck":3,"morale":2,"range":8.0,"damageMin":9,"damageMax":15,"startCount":1,"limit":3,"attackInterval":0.95},"texts":{"talent":"每次获得数量时，其他所有部队各获得+2数量。","goldTalent":"每次获得数量时，其他所有部队各获得+4数量。","battle":"—","goldBattle":"—"}},{"id":"shadow_butcher","name":"阴暗屠夫","star":5,"race":"甘格尔","faith":"克苏鲁","type":"range","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/shadow_butcher.png","stats":{"hpPerUnit":19,"attack":20,"defense":21,"power":3,"speed":4,"luck":1,"morale":2,"range":1.0,"damageMin":11,"damageMax":17,"startCount":5,"limit":3,"attackInterval":0.8499999999999999},"texts":{"talent":"每入场1支甘格尔部队，本部队随机吞噬1张商店卡牌，获得其数量。","goldTalent":"每入场1支甘格尔部队，本部队随机吞噬1张商店卡牌，获得其2倍的数量。","battle":"攻击时，有15%概率给自己制造一个护盾，可完全抵挡下一次的伤害，护盾不能叠加。","goldBattle":"攻击时，有25%概率给自己制造一个护盾，可完全抵挡下一次的伤害，护盾不能叠加。"}},{"id":"royal_swordsman","name":"皇家剑士","star":6,"race":"甘地","faith":"无","type":"melee","typeLabel":"战士","tags":[],"icon":"assets/unit-icons/royal_swordsman.png","stats":{"hpPerUnit":22,"attack":21,"defense":21,"power":5,"speed":3,"luck":2,"morale":2,"range":1.0,"damageMin":11,"damageMax":17,"startCount":2,"limit":3,"attackInterval":0.95},"texts":{"talent":"回合结束时，全体战士+1数量。与自己同一排的所有单位也可视为战士。","goldTalent":"回合结束时，全体战士+2数量。与自己同一排的所有单位也可视为战士。","battle":"—","goldBattle":"—"}},{"id":"echo_of_light","name":"莱特的回响","star":6,"race":"甘地","faith":"莱特","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/echo_of_light.png","stats":{"hpPerUnit":19,"attack":22,"defense":18,"power":6,"speed":6,"luck":2,"morale":3,"range":1.0,"damageMin":12,"damageMax":18,"startCount":2,"limit":3,"attackInterval":0.7999999999999999},"texts":{"talent":"莱特信仰者每累计获得数量5次，本部队获得+1数量。","goldTalent":"莱特信仰者每累计获得数量5次，本部队获得+2数量。","battle":"开战后，己方每有1名莱特信仰者，全军临时获得+10数量。","goldBattle":"开战后，己方每有1名莱特信仰者，全军临时获得+15数量。"}},{"id":"twin_tower_mage","name":"双塔术士","star":6,"race":"甘席","faith":"无","type":"melee","typeLabel":"射手","tags":[],"icon":"assets/unit-icons/twin_tower_mage.png","stats":{"hpPerUnit":16,"attack":18,"defense":16,"power":6,"speed":3,"luck":1,"morale":1,"range":1.0,"damageMin":8,"damageMax":15,"startCount":1,"limit":3,"attackInterval":0.8499999999999999},"texts":{"talent":"回合结束时，获得2颗【密林宝钻】。","goldTalent":"回合结束时，获得4颗【密林宝钻】。","battle":"每次攻击都会自损5%数量（至少为1），对周围2格范围内的所有敌方部队造成伤害。","goldBattle":"每次攻击都会自损5%数量（至少为1），对周围4格范围内的所有敌方部队造成伤害。"}},{"id":"xilinding","name":"席林迪翁","star":6,"race":"甘席","faith":"无","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/xilinding.png","stats":{"hpPerUnit":17,"attack":20,"defense":17,"power":3,"speed":2,"luck":3,"morale":1,"range":8.0,"damageMin":10,"damageMax":18,"startCount":1,"limit":3,"attackInterval":0.8999999999999999},"texts":{"talent":"获得【密林宝钻】时，自动赐予本部队，然后所有阵上部队获得+1数量。","goldTalent":"获得【密林宝钻】时，自动赐予本部队，然后所有阵上部队获得+2数量。","battle":"—","goldBattle":"—"}},{"id":"mire_fiend","name":"淤魔","star":6,"race":"甘席","faith":"无","type":"melee","typeLabel":"元素","tags":[],"icon":"assets/unit-icons/mire_fiend.png","stats":{"hpPerUnit":24,"attack":23,"defense":25,"power":3,"speed":2,"luck":4,"morale":2,"range":1.0,"damageMin":13,"damageMax":20,"startCount":2,"limit":3,"attackInterval":1.0999999999999999},"texts":{"talent":"回合结束时，本部队被赐予3颗【密林宝钻】；被赐予10颗【密林宝钻】则进阶为血淤魔","goldTalent":"回合结束时，本部队被赐予4颗【密林宝钻】；被赐予10颗【密林宝钻】则进阶为血淤魔","battle":"—","goldBattle":"—"}},{"id":"elder_spirit","name":"大魔灵","star":6,"race":"甘德","faith":"无","type":"melee","typeLabel":"魔灵","tags":[],"icon":"assets/unit-icons/elder_spirit.png","stats":{"hpPerUnit":17,"attack":22,"defense":16,"power":4,"speed":3,"luck":1,"morale":1,"range":1.0,"damageMin":11,"damageMax":20,"startCount":1,"limit":3,"attackInterval":0.8499999999999999},"texts":{"talent":"离场时，场上的元素和法师均获得+2数量。","goldTalent":"离场时，场上的元素和法师均获得+4数量。","battle":"—","goldBattle":"—"}},{"id":"magic_dragon","name":"魔法龙","star":6,"race":"甘德","faith":"无","type":"range","typeLabel":"元素","tags":[],"icon":"assets/unit-icons/magic_dragon.png","stats":{"hpPerUnit":20,"attack":22,"defense":20,"power":5,"speed":6,"luck":3,"morale":1,"range":1.0,"damageMin":10,"damageMax":19,"startCount":2,"limit":3,"attackInterval":0.7999999999999999},"texts":{"talent":"—","goldTalent":"—","battle":"开战后，在最近3个格子分别召唤1支临时火元素部队，每支固定数量为22。","goldBattle":"开战后，在最近3个格子分别召唤1支临时火元素部队，每支固定数量为26。"}},{"id":"demon_lord","name":"魔尊","star":6,"race":"甘德","faith":"艾瑞","type":"range","typeLabel":"range","tags":[],"icon":"assets/unit-icons/demon_lord.png","stats":{"hpPerUnit":20,"attack":17,"defense":20,"power":5,"speed":3,"luck":1,"morale":1,"range":1.0,"damageMin":8,"damageMax":14,"startCount":2,"limit":3,"attackInterval":0.8999999999999999},"texts":{"talent":"获得数量时，将获得的数量随机转移给场上的任意1支友方部队。","goldTalent":"获得数量时，将获得的数量随机转移给场上的任意2支友方部队。","battle":"每次行动时，如果自身没有护盾，则获得1个护盾，能够完全抵挡1次伤害。","goldBattle":"每次行动时，如果自身没有护盾，则获得1个护盾，能够完全抵挡2次伤害。"}}];
+    let selectedId = UNITS[0]?.id || null;
+    let mode = "normal";
+
+    const search = document.getElementById("search");
+    const filters = {
+      star: document.getElementById("starFilter"),
+      race: document.getElementById("raceFilter"),
+      faith: document.getElementById("faithFilter"),
+      type: document.getElementById("typeFilter"),
+    };
+    const grid = document.getElementById("grid");
+    const detail = document.getElementById("detail");
+    const countPill = document.getElementById("countPill");
+
+    function unique(key) {
+      return [...new Set(UNITS.map(unit => unit[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), "zh-Hans-CN"));
+    }
+
+    function setupFilter(select, label, values) {
+      select.innerHTML = `<option value="">${label}</option>` + values.map(value => `<option value="${escapeAttr(value)}">${escapeHtml(value)}</option>`).join("");
+      select.addEventListener("change", render);
+    }
+
+    function init() {
+      setupFilter(filters.star, "全部星级", unique("star").map(value => `${value} 星`));
+      setupFilter(filters.race, "全部种族", unique("race"));
+      setupFilter(filters.faith, "全部信仰", unique("faith"));
+      setupFilter(filters.type, "全部类型", unique("type").map(formatType));
+      search.addEventListener("input", render);
+      render();
+    }
+
+    function filteredUnits() {
+      const q = search.value.trim().toLowerCase();
+      return UNITS.filter(unit => {
+        if (filters.star.value && `${unit.star} 星` !== filters.star.value) return false;
+        if (filters.race.value && unit.race !== filters.race.value) return false;
+        if (filters.faith.value && unit.faith !== filters.faith.value) return false;
+        if (filters.type.value && formatType(unit.type) !== filters.type.value) return false;
+        if (!q) return true;
+        const haystack = [
+          unit.name, unit.id, unit.race, unit.faith, unit.typeLabel, unit.type,
+          unit.texts.talent, unit.texts.goldTalent, unit.texts.battle, unit.texts.goldBattle,
+          ...(unit.tags || [])
+        ].join(" ").toLowerCase();
+        return haystack.includes(q);
+      });
+    }
+
+    function render() {
+      const units = filteredUnits();
+      if (!units.some(unit => unit.id === selectedId)) selectedId = units[0]?.id || UNITS[0]?.id || null;
+      countPill.textContent = `显示 ${units.length} / ${UNITS.length} 个单位`;
+      grid.innerHTML = units.length ? units.map(renderCard).join("") : `<div class="empty">没有匹配的单位</div>`;
+      grid.querySelectorAll(".card").forEach(card => {
+        card.addEventListener("click", () => {
+          selectedId = card.dataset.id;
+          render();
+        });
+      });
+      renderDetail(UNITS.find(unit => unit.id === selectedId) || units[0] || UNITS[0]);
+    }
+
+    function renderCard(unit) {
+      const stats = unit.stats;
+      const active = unit.id === selectedId ? " active" : "";
+      return `<button class="card${active}" data-id="${escapeAttr(unit.id)}">
+        ${renderPortrait(unit, "portrait")}
+        <div>
+          <div class="name-row">
+            <span class="name">${escapeHtml(unit.name)}</span>
+            <span class="stars">${"★".repeat(Number(unit.star) || 1)}</span>
+          </div>
+          <div class="meta">${escapeHtml(unit.race)} / ${escapeHtml(unit.faith)} / ${escapeHtml(unit.typeLabel || formatType(unit.type))}</div>
+          <div class="mini-stats">
+            <span>数量 <b>${stats.startCount}</b></span>
+            <span>血量 <b>${stats.hpPerUnit}</b></span>
+            <span>攻击 <b>${stats.attack}</b></span>
+            <span>防御 <b>${stats.defense}</b></span>
+            <span>速度 <b>${stats.speed}</b></span>
+            <span>射程 <b>${stats.range}</b></span>
+          </div>
+        </div>
+      </button>`;
+    }
+
+    function renderDetail(unit) {
+      if (!unit) {
+        detail.innerHTML = `<div class="empty">没有单位数据</div>`;
+        return;
+      }
+      const stats = unit.stats;
+      const talent = mode === "gold" ? unit.texts.goldTalent : unit.texts.talent;
+      const battle = mode === "gold" ? unit.texts.goldBattle : unit.texts.battle;
+      detail.innerHTML = `
+        <div class="detail-head">
+          ${renderPortrait(unit, "portrait")}
+          <div>
+            <h1>${escapeHtml(unit.name)}</h1>
+            <div class="stars">${"★".repeat(Number(unit.star) || 1)}</div>
+            <div class="meta">${escapeHtml(unit.race)} / ${escapeHtml(unit.faith)} / ${escapeHtml(unit.typeLabel || formatType(unit.type))}</div>
+            ${renderTags(unit)}
+          </div>
+        </div>
+        <div class="segmented">
+          <button class="${mode === "normal" ? "active" : ""}" data-mode="normal">普通</button>
+          <button class="${mode === "gold" ? "active" : ""}" data-mode="gold">金色</button>
+        </div>
+        <div class="stat-grid">
+          ${stat("初始数量", stats.startCount)}
+          ${stat("单体血量", stats.hpPerUnit)}
+          ${stat("攻击", stats.attack)}
+          ${stat("防御", stats.defense)}
+          ${stat("力量", stats.power)}
+          ${stat("速度", stats.speed)}
+          ${stat("幸运", stats.luck)}
+          ${stat("士气", stats.morale)}
+          ${stat("射程", stats.range)}
+          ${stat("伤害", `${stats.damageMin}-${stats.damageMax}`)}
+          ${stat("攻速", stats.attackInterval)}
+          ${stat("上限", stats.limit || "—")}
+        </div>
+        <div class="section">
+          <h2>${mode === "gold" ? "金色经营技能" : "经营技能"}</h2>
+          <p>${escapeHtml(cleanText(talent))}</p>
+        </div>
+        <div class="section">
+          <h2>${mode === "gold" ? "金色战斗技能" : "战斗技能"}</h2>
+          <p>${escapeHtml(cleanText(battle))}</p>
+        </div>`;
+      detail.querySelectorAll("[data-mode]").forEach(button => {
+        button.addEventListener("click", () => {
+          mode = button.dataset.mode;
+          renderDetail(unit);
+        });
+      });
+    }
+
+    function renderPortrait(unit, className) {
+      if (unit.icon) return `<img class="${className}" src="${escapeAttr(unit.icon)}" alt="${escapeAttr(unit.name)}">`;
+      return `<div class="${className} placeholder">${escapeHtml((unit.name || "?").slice(0, 1))}</div>`;
+    }
+
+    function renderTags(unit) {
+      const tags = unit.tags || [];
+      if (!tags.length) return "";
+      return `<div class="tags">${tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>`;
+    }
+
+    function stat(label, value) {
+      return `<div class="stat"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`;
+    }
+
+    function cleanText(text) {
+      const value = String(text || "—").trim();
+      return value && value !== "—" ? value : "—";
+    }
+
+    function formatType(type) {
+      if (type === "melee") return "近战";
+      if (type === "range") return "远程";
+      return type || "无";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value);
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -842,9 +842,21 @@ namespace ProphecyCentury.Systems
                 }
             }
 
-            FillWorldMapPresetLineup(enemies, usedSlots, runState);
-            ApplyWorldMapPresetScaling(enemies, runState);
+            if (!IsFixedShadowPreset(preset))
+            {
+                FillWorldMapPresetLineup(enemies, usedSlots, runState);
+                ApplyWorldMapPresetScaling(enemies, runState);
+            }
+
             return enemies;
+        }
+
+        private static bool IsFixedShadowPreset(EnemyPresetDefinition preset)
+        {
+            return preset != null
+                && !string.IsNullOrWhiteSpace(preset.id)
+                && (preset.id.StartsWith("shadow_elemental_", StringComparison.Ordinal)
+                    || preset.id.StartsWith("shadow_light_", StringComparison.Ordinal));
         }
 
         private static void FillWorldMapPresetLineup(List<BattleRuntimeUnit> enemies, HashSet<string> usedSlots, RunState runState)
@@ -1223,6 +1235,20 @@ namespace ProphecyCentury.Systems
                                 ally.ShieldLayers += Math.Max(1, skill.layers);
                             }
                             unit.SkillTriggers += 1;
+                            break;
+                        case "battle_start_front_occupied_rows_shield":
+                            var frontRows = allies
+                                .Where(ally => ally.IsAlive)
+                                .Select(ally => ally.Row)
+                                .Distinct()
+                                .OrderBy(row => row)
+                                .Take(Math.Max(1, skill.count));
+                            var frontRowSet = new HashSet<int>(frontRows);
+                            foreach (var ally in allies.Where(ally => ally.IsAlive && frontRowSet.Contains(ally.Row)))
+                            {
+                                ally.ShieldLayers += Math.Max(1, skill.layers);
+                            }
+                            unit.SkillTriggers += frontRowSet.Count > 0 ? 1 : 0;
                             break;
                         case "battle_start_self_refreshing_shield":
                             unit.ShieldLayers += Math.Max(1, skill.layers);

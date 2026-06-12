@@ -16,5 +16,17 @@
     "name": "Song of Sang City",
     "desc": "Reserved campaign branch for future Godot parity work.",
     "mapId": "abyss_wilds"
+  },
+  {
+    "id": "shadow_elemental_challenge",
+    "name": "Shadow Challenge: Elemental",
+    "desc": "A 20-round challenge built from the latest captured elemental player board.",
+    "mapId": "shadow_elemental_map"
+  },
+  {
+    "id": "shadow_light_challenge",
+    "name": "Shadow Challenge: Light",
+    "desc": "A 20-round challenge built from the submitted Light and warrior board curve.",
+    "mapId": "shadow_light_map"
   }
 ]
