@@ -28,5 +28,11 @@
     "name": "Shadow Challenge: Light",
     "desc": "A 20-round challenge built from the submitted Light and warrior board curve.",
     "mapId": "shadow_light_map"
+  },
+  {
+    "id": "shadow_elemental_battle_challenge",
+    "name": "Shadow Challenge: Elemental Battle",
+    "desc": "A 20-round challenge built from the latest complete captured elemental battle snapshots.",
+    "mapId": "shadow_elemental_battle_map"
   }
 ]

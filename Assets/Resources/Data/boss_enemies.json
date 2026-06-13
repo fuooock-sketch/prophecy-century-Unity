@@ -2663,5 +2663,1153 @@
         "star": 6
       }
     ]
+  },
+  {
+    "id": "shadow_elemental_battle_r01",
+    "name": "Elemental Battle Shadow R01",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "stubborn_apprentice",
+        "count": 20,
+        "star": 1
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r02",
+    "name": "Elemental Battle Shadow R02",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "2-1",
+        "unitId": "stubborn_apprentice",
+        "count": 20,
+        "star": 1
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "caller",
+        "count": 15,
+        "star": 2
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r03",
+    "name": "Elemental Battle Shadow R03",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "2-2",
+        "unitId": "puppet_spirit",
+        "count": 10,
+        "star": 3
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "stubborn_apprentice",
+        "count": 20,
+        "star": 1
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "caller",
+        "count": 15,
+        "star": 2
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r04",
+    "name": "Elemental Battle Shadow R04",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "fire_elemental",
+        "count": 23,
+        "star": 1
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "novice_elementalist",
+        "count": 14,
+        "star": 2
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "puppet_spirit",
+        "count": 10,
+        "star": 3
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "stubborn_apprentice",
+        "count": 20,
+        "star": 1
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "caller",
+        "count": 15,
+        "star": 2
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 6,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r05",
+    "name": "Elemental Battle Shadow R05",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "puppet_spirit",
+        "count": 10,
+        "star": 3
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "fire_elemental",
+        "count": 30,
+        "star": 1
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 30,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 14,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "stubborn_apprentice",
+        "count": 20,
+        "star": 1
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "caller",
+        "count": 15,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "frost_spirit",
+        "count": 22,
+        "star": 1
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "feather_guard",
+        "count": 8,
+        "star": 4
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 6,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r06",
+    "name": "Elemental Battle Shadow R06",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "2-1",
+        "unitId": "fire_elemental",
+        "count": 41,
+        "star": 1
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 41,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 20,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "stubborn_apprentice",
+        "count": 26,
+        "star": 1
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "caller",
+        "count": 15,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "frost_spirit",
+        "count": 22,
+        "star": 1
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "earth_elemental",
+        "count": 14,
+        "star": 4
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "feather_guard",
+        "count": 11,
+        "star": 4
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 14,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r07",
+    "name": "Elemental Battle Shadow R07",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "2-1",
+        "unitId": "fire_elemental",
+        "count": 41,
+        "star": 1
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 41,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 20,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "stubborn_apprentice",
+        "count": 26,
+        "star": 1
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "caller",
+        "count": 15,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "frost_spirit",
+        "count": 22,
+        "star": 1
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "earth_elemental",
+        "count": 14,
+        "star": 4
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "feather_guard",
+        "count": 14,
+        "star": 4
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 14,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r08",
+    "name": "Elemental Battle Shadow R08",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 9,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "element_master",
+        "count": 7,
+        "star": 5
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 129,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 52,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "stubborn_apprentice",
+        "count": 31,
+        "star": 1
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "caller",
+        "count": 20,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 3,
+        "star": 5
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "earth_elemental",
+        "count": 21,
+        "star": 4
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "feather_guard",
+        "count": 22,
+        "star": 4
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 21,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r09",
+    "name": "Elemental Battle Shadow R09",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 14,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "element_master",
+        "count": 12,
+        "star": 5
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 143,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 57,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "stubborn_apprentice",
+        "count": 36,
+        "star": 1
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "water_elemental",
+        "count": 25,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 5,
+        "star": 5
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "earth_elemental",
+        "count": 43,
+        "star": 4
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "feather_guard",
+        "count": 30,
+        "star": 4
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 26,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r10",
+    "name": "Elemental Battle Shadow R10",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 29,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "element_master",
+        "count": 20,
+        "star": 5
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 160,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 65,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "stubborn_apprentice",
+        "count": 44,
+        "star": 1
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "water_elemental",
+        "count": 33,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 9,
+        "star": 5
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "earth_elemental",
+        "count": 51,
+        "star": 4
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "feather_guard",
+        "count": 41,
+        "star": 4
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 52,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r11",
+    "name": "Elemental Battle Shadow R11",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 45,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "element_master",
+        "count": 36,
+        "star": 5
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 194,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 81,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "stubborn_apprentice",
+        "count": 60,
+        "star": 1
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "water_elemental",
+        "count": 92,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 17,
+        "star": 5
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "earth_elemental",
+        "count": 67,
+        "star": 4
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "archmage",
+        "count": 9,
+        "star": 5
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 68,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r12",
+    "name": "Elemental Battle Shadow R12",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 56,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "element_master",
+        "count": 50,
+        "star": 5
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 214,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 92,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "stubborn_apprentice",
+        "count": 71,
+        "star": 1
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "water_elemental",
+        "count": 103,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 23,
+        "star": 5
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "earth_elemental",
+        "count": 78,
+        "star": 4
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "archmage",
+        "count": 17,
+        "star": 5
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 79,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r13",
+    "name": "Elemental Battle Shadow R13",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 75,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "demon_lord",
+        "count": 13,
+        "star": 6
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 251,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 113,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "element_master",
+        "count": 69,
+        "star": 5
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "water_elemental",
+        "count": 122,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 32,
+        "star": 5
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "earth_elemental",
+        "count": 128,
+        "star": 4
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "archmage",
+        "count": 32,
+        "star": 5
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 98,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r14",
+    "name": "Elemental Battle Shadow R14",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 94,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "element_master",
+        "count": 15,
+        "star": 5
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 317,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 135,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "element_master",
+        "count": 91,
+        "star": 5
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "water_elemental",
+        "count": 161,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 44,
+        "star": 5
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "earth_elemental",
+        "count": 170,
+        "star": 4
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "archmage",
+        "count": 48,
+        "star": 5
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 140,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r15",
+    "name": "Elemental Battle Shadow R15",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 119,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "wind_elemental",
+        "count": 159,
+        "star": 4
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 354,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 154,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "element_master",
+        "count": 110,
+        "star": 5
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "water_elemental",
+        "count": 186,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 59,
+        "star": 5
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "earth_elemental",
+        "count": 197,
+        "star": 4
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "archmage",
+        "count": 69,
+        "star": 5
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "royal_swordsman",
+        "count": 19,
+        "star": 6
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r16",
+    "name": "Elemental Battle Shadow R16",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 143,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "wind_elemental",
+        "count": 194,
+        "star": 4
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 416,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 172,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "element_master",
+        "count": 128,
+        "star": 5
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "water_elemental",
+        "count": 221,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 75,
+        "star": 5
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "earth_elemental",
+        "count": 241,
+        "star": 4
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "archmage",
+        "count": 90,
+        "star": 5
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "royal_swordsman",
+        "count": 45,
+        "star": 6
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r17",
+    "name": "Elemental Battle Shadow R17",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 185,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "wind_elemental",
+        "count": 230,
+        "star": 4
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 491,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 210,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "element_master",
+        "count": 164,
+        "star": 5
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "water_elemental",
+        "count": 257,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 105,
+        "star": 5
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "earth_elemental",
+        "count": 286,
+        "star": 4
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "archmage",
+        "count": 122,
+        "star": 5
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "royal_swordsman",
+        "count": 71,
+        "star": 6
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r18",
+    "name": "Elemental Battle Shadow R18",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 218,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "magic_dragon",
+        "count": 23,
+        "star": 6
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 579,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 249,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "element_master",
+        "count": 203,
+        "star": 5
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "water_elemental",
+        "count": 309,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 129,
+        "star": 5
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "carpet_mage",
+        "count": 51,
+        "star": 3
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "archmage",
+        "count": 148,
+        "star": 5
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 282,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r19",
+    "name": "Elemental Battle Shadow R19",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 241,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "magic_dragon",
+        "count": 52,
+        "star": 6
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 626,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 278,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "element_master",
+        "count": 232,
+        "star": 5
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "water_elemental",
+        "count": 338,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 148,
+        "star": 5
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "archmage",
+        "count": 167,
+        "star": 5
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 311,
+        "star": 4
+      }
+    ]
+  },
+  {
+    "id": "shadow_elemental_battle_r20",
+    "name": "Elemental Battle Shadow R20",
+    "type": "boss",
+    "units": [
+      {
+        "slotId": "1-1",
+        "unitId": "garrison_guard",
+        "count": 294,
+        "star": 5
+      },
+      {
+        "slotId": "2-1",
+        "unitId": "magic_dragon",
+        "count": 137,
+        "star": 6
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "fire_elemental",
+        "count": 739,
+        "star": 1
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "novice_elementalist",
+        "count": 346,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "element_master",
+        "count": 302,
+        "star": 5
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "water_elemental",
+        "count": 406,
+        "star": 2
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "archmage",
+        "count": 193,
+        "star": 5
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "twin_tower_mage",
+        "count": 14,
+        "star": 6
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "archmage",
+        "count": 210,
+        "star": 5
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "wind_elemental",
+        "count": 379,
+        "star": 4
+      }
+    ]
   }
 ]

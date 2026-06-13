@@ -12,6 +12,7 @@ namespace ProphecyCentury.UI
         public const string RuntimeUiPrefabAssetPath = "Assets/Resources/Prefabs/RuntimeCanvas.prefab";
         private const string RuntimeUiPrefabResourcePath = "Prefabs/RuntimeCanvas";
         private const string BattleStagePanelPrefabResourcePath = "Prefabs/UI/BattleStagePanel";
+        private const string ElementalBattleChallengeButtonName = "ElementalBattleChallengeButton";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureRunSceneUi()
@@ -93,8 +94,10 @@ namespace ProphecyCentury.UI
 
             TryInstallBattleStagePanelPrefab(root.transform, controller);
             HideTitleSelectionControls(root.transform);
+            EnsureTitleShortcutChallengeButton(root.transform, controller);
 
             WireButton(root.transform, "StartSelectedRunButton", controller.OpenHeroSelection);
+            WireButton(root.transform, ElementalBattleChallengeButtonName, controller.OpenElementalBattleChallenge);
             WireButton(root.transform, "RefreshShopButton", controller.RefreshShop);
             WireButton(root.transform, "UpgradeShopButton", controller.UpgradeShop);
             WireButton(root.transform, "LockShopButton", controller.ToggleShopLock);
@@ -116,6 +119,24 @@ namespace ProphecyCentury.UI
             }
         }
 
+        private static void EnsureTitleShortcutChallengeButton(Transform root, RunSceneController controller)
+        {
+            if (root == null || controller == null || FindDeepChild(root, ElementalBattleChallengeButtonName) != null)
+            {
+                return;
+            }
+
+            var titlePanel = FindDeepChild(root, "TitlePanel");
+            if (titlePanel == null)
+            {
+                return;
+            }
+
+            CreateButton(ElementalBattleChallengeButtonName, titlePanel, "元素实战挑战", new Vector2(1150f, -526f), new Vector2(260f, 48f), controller.OpenElementalBattleChallenge);
+            SetPixelRectTopLeft(titlePanel.Find(ElementalBattleChallengeButtonName)?.GetComponent<RectTransform>(), 1090f, 946f, 380f, 56f);
+            StyleTitleButton(titlePanel.Find(ElementalBattleChallengeButtonName), false);
+        }
+
         private static void HideTitleSelectionControls(Transform root)
         {
             if (root == null)
@@ -123,7 +144,7 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            var names = new[] { "CampaignSelectionPanel", "HeroSelectionPanel", "ChaseTestButton" };
+            var names = new[] { "HeroSelectionPanel", "ChaseTestButton" };
             foreach (var name in names)
             {
                 var item = FindDeepChild(root, name);
@@ -261,7 +282,7 @@ namespace ProphecyCentury.UI
             CreateTitleText(titlePanel.transform);
 
             var campaignPanel = CreateTitleSelectionPanel("CampaignSelectionPanel", titlePanel.transform, "战役", "选择这次预言指向的大陆与试炼", 222f, 438f);
-            campaignPanel.gameObject.SetActive(false);
+            campaignPanel.gameObject.SetActive(true);
             var campaignDropdown = CreateDropdown("CampaignDropdown", campaignPanel.transform, new Vector2(0.5f, 0.5f), new Vector2(520f, 58f));
             SetPixelRectTopLeft(campaignDropdown.GetComponent<RectTransform>(), 42f, 106f, 520f, 58f);
             StyleTitleDropdown(campaignDropdown);
@@ -281,6 +302,9 @@ namespace ProphecyCentury.UI
             CreateButton("StartSelectedRunButton", titlePanel.transform, "开始游戏", new Vector2(1150f, -438f), new Vector2(260f, 64f), controller.OpenHeroSelection);
             SetPixelRectTopLeft(titlePanel.transform.Find("StartSelectedRunButton")?.GetComponent<RectTransform>(), 1090f, 846f, 380f, 86f);
             StyleTitleButton(titlePanel.transform.Find("StartSelectedRunButton"), true);
+            CreateButton(ElementalBattleChallengeButtonName, titlePanel.transform, "元素实战挑战", new Vector2(1150f, -526f), new Vector2(260f, 48f), controller.OpenElementalBattleChallenge);
+            SetPixelRectTopLeft(titlePanel.transform.Find(ElementalBattleChallengeButtonName)?.GetComponent<RectTransform>(), 1090f, 946f, 380f, 56f);
+            StyleTitleButton(titlePanel.transform.Find(ElementalBattleChallengeButtonName), false);
             CreateButton("ChaseTestButton", titlePanel.transform, "追击测试", new Vector2(900f, 220f), new Vector2(260f, 56f), controller.StartSmallMerchantChaseTest);
             SetPixelRectTopLeft(titlePanel.transform.Find("ChaseTestButton")?.GetComponent<RectTransform>(), 1170f, 954f, 220f, 46f);
             StyleTitleButton(titlePanel.transform.Find("ChaseTestButton"), false);

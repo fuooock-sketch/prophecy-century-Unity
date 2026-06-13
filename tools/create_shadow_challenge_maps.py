@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,10 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "Assets" / "Resources" / "Data"
-LOG_PATH = Path(r"C:\Users\huawe\AppData\LocalLow\DefaultCompany\prophecy_century\player_state_log.jsonl")
+LOG_PATH = Path(os.environ.get(
+    "PROPHECY_PLAYER_STATE_LOG",
+    Path.home() / "AppData" / "LocalLow" / "DefaultCompany" / "prophecy_century" / "player_state_log.jsonl",
+))
 
 
 LIGHT_NAME_TO_ID = {
@@ -79,18 +83,79 @@ def extract_latest_logged_states() -> list[list[dict[str, Any]]]:
         if event.get("type") in {"state", "battle"}:
             events.append(event)
 
-    start_index = 0
-    for index in range(1, len(events)):
-        previous_round = int(events[index - 1].get("round") or 0)
-        current_round = int(events[index].get("round") or 0)
-        if current_round == 1 and previous_round > 1:
-            start_index = index
+    runs: list[list[dict[str, Any]]] = []
+    current_run: list[dict[str, Any]] = []
+    for event in events:
+        if event.get("type") == "battle" and int(event.get("round") or 0) == 1 and current_run:
+            runs.append(current_run)
+            current_run = []
+        current_run.append(event)
+    if current_run:
+        runs.append(current_run)
 
-    states = [event for event in events[start_index:] if event.get("type") == "state" and event.get("board")]
-    by_round: dict[int, list[dict[str, Any]]] = {}
-    for state in states:
-        round_number = int(state.get("round") or 0)
-        if 1 <= round_number <= 20:
+    for run in reversed(runs):
+        states = [event for event in run if event.get("type") == "state" and event.get("board")]
+        by_round: dict[int, list[dict[str, Any]]] = {}
+        for state in states:
+            round_number = int(state.get("round") or 0)
+            if 1 <= round_number <= 20:
+                by_round[round_number] = [
+                    {
+                        "slotId": card["slot"],
+                        "unitId": card["id"],
+                        "count": int(card["count"]),
+                        "star": int(card.get("star") or 1),
+                    }
+                    for card in sorted(state.get("board") or [], key=lambda item: item.get("slot") or "")
+                ]
+
+        if 1 not in by_round:
+            first_battle = next((event for event in run if event.get("type") == "battle" and int(event.get("round") or 0) == 1), None)
+            first_units = first_battle.get("playerUnits") if first_battle else None
+            if first_units:
+                by_round[1] = [
+                    {
+                        "slotId": card["slot"],
+                        "unitId": card["id"],
+                        "count": int(card["count"]),
+                        "star": int(card.get("star") or 1),
+                    }
+                    for card in sorted(first_units, key=lambda item: item.get("slot") or "")
+                ]
+
+        if all(round_number in by_round for round_number in range(1, 21)):
+            return [by_round[round_number] for round_number in range(1, 21)]
+
+    raise RuntimeError("No complete 20-round logged state run found")
+
+
+def extract_latest_logged_battle_units() -> list[list[dict[str, Any]]]:
+    events: list[dict[str, Any]] = []
+    for line in LOG_PATH.read_text(encoding="utf-8", errors="replace").splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") == "battle":
+            events.append(event)
+
+    runs: list[list[dict[str, Any]]] = []
+    current_run: list[dict[str, Any]] = []
+    for event in events:
+        if int(event.get("round") or 0) == 1 and current_run:
+            runs.append(current_run)
+            current_run = []
+        current_run.append(event)
+    if current_run:
+        runs.append(current_run)
+
+    for run in reversed(runs):
+        by_round: dict[int, list[dict[str, Any]]] = {}
+        for battle in run:
+            round_number = int(battle.get("round") or 0)
+            if not 1 <= round_number <= 20:
+                continue
+            units = battle.get("playerUnits") or []
             by_round[round_number] = [
                 {
                     "slotId": card["slot"],
@@ -98,24 +163,13 @@ def extract_latest_logged_states() -> list[list[dict[str, Any]]]:
                     "count": int(card["count"]),
                     "star": int(card.get("star") or 1),
                 }
-                for card in sorted(state.get("board") or [], key=lambda item: item.get("slot") or "")
+                for card in sorted(units, key=lambda item: item.get("slot") or "")
             ]
 
-    if 1 not in by_round:
-        by_round[1] = [
-            {
-                "slotId": "4-4",
-                "unitId": "frost_spirit",
-                "count": 21,
-                "star": 1,
-            }
-        ]
+        if all(round_number in by_round for round_number in range(1, 21)):
+            return [by_round[round_number] for round_number in range(1, 21)]
 
-    missing = [round_number for round_number in range(1, 21) if round_number not in by_round]
-    if missing:
-        raise RuntimeError(f"Latest logged run is missing state rounds: {missing}")
-
-    return [by_round[round_number] for round_number in range(1, 21)]
+    raise RuntimeError("No complete 20-round logged battle run found")
 
 
 def parse_light_states(unit_stars: dict[str, int]) -> list[list[dict[str, Any]]]:
@@ -202,6 +256,7 @@ def build_map(map_id: str, map_name: str, preset_prefix: str) -> dict[str, Any]:
 def main() -> None:
     unit_stars = load_unit_stars()
     elemental_states = extract_latest_logged_states()
+    elemental_battle_states = extract_latest_logged_battle_units()
     light_states = parse_light_states(unit_stars)
 
     campaigns = load_json(DATA_DIR / "campaigns.json")
@@ -221,14 +276,22 @@ def main() -> None:
             "desc": "A 20-round challenge built from the submitted Light and warrior board curve.",
             "mapId": "shadow_light_map",
         },
+        {
+            "id": "shadow_elemental_battle_challenge",
+            "name": "Shadow Challenge: Elemental Battle",
+            "desc": "A 20-round challenge built from the latest captured elemental battle snapshots.",
+            "mapId": "shadow_elemental_battle_map",
+        },
     ]
     challenge_maps = [
         build_map("shadow_elemental_map", "Shadow Challenge: Elemental", "shadow_elemental"),
         build_map("shadow_light_map", "Shadow Challenge: Light", "shadow_light"),
+        build_map("shadow_elemental_battle_map", "Shadow Challenge: Elemental Battle", "shadow_elemental_battle"),
     ]
     challenge_presets = [
         *(preset("shadow_elemental", "Elemental Shadow", index, units) for index, units in enumerate(elemental_states, start=1)),
         *(preset("shadow_light", "Light Shadow", index, units) for index, units in enumerate(light_states, start=1)),
+        *(preset("shadow_elemental_battle", "Elemental Battle Shadow", index, units) for index, units in enumerate(elemental_battle_states, start=1)),
     ]
 
     shadow_campaign_ids = {item["id"] for item in challenge_campaigns}
@@ -255,6 +318,7 @@ def main() -> None:
     print("Created shadow challenge campaigns:")
     print("  - shadow_elemental_challenge -> shadow_elemental_map")
     print("  - shadow_light_challenge -> shadow_light_map")
+    print("  - shadow_elemental_battle_challenge -> shadow_elemental_battle_map")
     print(f"Generated presets: {len(challenge_presets)}")
 
 

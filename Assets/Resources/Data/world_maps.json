@@ -1567,5 +1567,368 @@
         "toNodeId": "shadow_light_map_r20"
       }
     ]
+  },
+  {
+    "id": "shadow_elemental_battle_map",
+    "name": "Shadow Challenge: Elemental Battle",
+    "startNodeId": "shadow_elemental_battle_map_start",
+    "layers": [
+      {
+        "index": 0,
+        "name": "Start"
+      },
+      {
+        "index": 1,
+        "name": "R01"
+      },
+      {
+        "index": 2,
+        "name": "R02"
+      },
+      {
+        "index": 3,
+        "name": "R03"
+      },
+      {
+        "index": 4,
+        "name": "R04"
+      },
+      {
+        "index": 5,
+        "name": "R05"
+      },
+      {
+        "index": 6,
+        "name": "R06"
+      },
+      {
+        "index": 7,
+        "name": "R07"
+      },
+      {
+        "index": 8,
+        "name": "R08"
+      },
+      {
+        "index": 9,
+        "name": "R09"
+      },
+      {
+        "index": 10,
+        "name": "R10"
+      },
+      {
+        "index": 11,
+        "name": "R11"
+      },
+      {
+        "index": 12,
+        "name": "R12"
+      },
+      {
+        "index": 13,
+        "name": "R13"
+      },
+      {
+        "index": 14,
+        "name": "R14"
+      },
+      {
+        "index": 15,
+        "name": "R15"
+      },
+      {
+        "index": 16,
+        "name": "R16"
+      },
+      {
+        "index": 17,
+        "name": "R17"
+      },
+      {
+        "index": 18,
+        "name": "R18"
+      },
+      {
+        "index": 19,
+        "name": "R19"
+      },
+      {
+        "index": 20,
+        "name": "R20"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "shadow_elemental_battle_map_start",
+        "name": "Start",
+        "layer": 0,
+        "type": "start",
+        "x": 0.5,
+        "y": 0.03
+      },
+      {
+        "id": "shadow_elemental_battle_map_r01",
+        "name": "Round 01",
+        "layer": 1,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.076,
+        "enemyPresetId": "shadow_elemental_battle_r01"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r02",
+        "name": "Round 02",
+        "layer": 2,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.122,
+        "enemyPresetId": "shadow_elemental_battle_r02"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r03",
+        "name": "Round 03",
+        "layer": 3,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.168,
+        "enemyPresetId": "shadow_elemental_battle_r03"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r04",
+        "name": "Round 04",
+        "layer": 4,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.214,
+        "enemyPresetId": "shadow_elemental_battle_r04"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r05",
+        "name": "Round 05",
+        "layer": 5,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.26,
+        "enemyPresetId": "shadow_elemental_battle_r05"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r06",
+        "name": "Round 06",
+        "layer": 6,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.306,
+        "enemyPresetId": "shadow_elemental_battle_r06"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r07",
+        "name": "Round 07",
+        "layer": 7,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.352,
+        "enemyPresetId": "shadow_elemental_battle_r07"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r08",
+        "name": "Round 08",
+        "layer": 8,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.398,
+        "enemyPresetId": "shadow_elemental_battle_r08"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r09",
+        "name": "Round 09",
+        "layer": 9,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.444,
+        "enemyPresetId": "shadow_elemental_battle_r09"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r10",
+        "name": "Round 10",
+        "layer": 10,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.49,
+        "enemyPresetId": "shadow_elemental_battle_r10"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r11",
+        "name": "Round 11",
+        "layer": 11,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.536,
+        "enemyPresetId": "shadow_elemental_battle_r11"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r12",
+        "name": "Round 12",
+        "layer": 12,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.582,
+        "enemyPresetId": "shadow_elemental_battle_r12"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r13",
+        "name": "Round 13",
+        "layer": 13,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.628,
+        "enemyPresetId": "shadow_elemental_battle_r13"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r14",
+        "name": "Round 14",
+        "layer": 14,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.674,
+        "enemyPresetId": "shadow_elemental_battle_r14"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r15",
+        "name": "Round 15",
+        "layer": 15,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.72,
+        "enemyPresetId": "shadow_elemental_battle_r15"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r16",
+        "name": "Round 16",
+        "layer": 16,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.766,
+        "enemyPresetId": "shadow_elemental_battle_r16"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r17",
+        "name": "Round 17",
+        "layer": 17,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.812,
+        "enemyPresetId": "shadow_elemental_battle_r17"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r18",
+        "name": "Round 18",
+        "layer": 18,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.858,
+        "enemyPresetId": "shadow_elemental_battle_r18"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r19",
+        "name": "Round 19",
+        "layer": 19,
+        "type": "boss_guard",
+        "x": 0.5,
+        "y": 0.904,
+        "enemyPresetId": "shadow_elemental_battle_r19"
+      },
+      {
+        "id": "shadow_elemental_battle_map_r20",
+        "name": "Round 20",
+        "layer": 20,
+        "type": "boss",
+        "x": 0.5,
+        "y": 0.95,
+        "enemyPresetId": "shadow_elemental_battle_r20"
+      }
+    ],
+    "connections": [
+      {
+        "fromNodeId": "shadow_elemental_battle_map_start",
+        "toNodeId": "shadow_elemental_battle_map_r01"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r01",
+        "toNodeId": "shadow_elemental_battle_map_r02"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r02",
+        "toNodeId": "shadow_elemental_battle_map_r03"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r03",
+        "toNodeId": "shadow_elemental_battle_map_r04"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r04",
+        "toNodeId": "shadow_elemental_battle_map_r05"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r05",
+        "toNodeId": "shadow_elemental_battle_map_r06"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r06",
+        "toNodeId": "shadow_elemental_battle_map_r07"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r07",
+        "toNodeId": "shadow_elemental_battle_map_r08"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r08",
+        "toNodeId": "shadow_elemental_battle_map_r09"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r09",
+        "toNodeId": "shadow_elemental_battle_map_r10"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r10",
+        "toNodeId": "shadow_elemental_battle_map_r11"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r11",
+        "toNodeId": "shadow_elemental_battle_map_r12"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r12",
+        "toNodeId": "shadow_elemental_battle_map_r13"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r13",
+        "toNodeId": "shadow_elemental_battle_map_r14"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r14",
+        "toNodeId": "shadow_elemental_battle_map_r15"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r15",
+        "toNodeId": "shadow_elemental_battle_map_r16"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r16",
+        "toNodeId": "shadow_elemental_battle_map_r17"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r17",
+        "toNodeId": "shadow_elemental_battle_map_r18"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r18",
+        "toNodeId": "shadow_elemental_battle_map_r19"
+      },
+      {
+        "fromNodeId": "shadow_elemental_battle_map_r19",
+        "toNodeId": "shadow_elemental_battle_map_r20"
+      }
+    ]
   }
 ]
