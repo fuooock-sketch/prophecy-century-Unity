@@ -54,7 +54,8 @@ namespace ProphecyCentury.Systems
                 ApplyContinuousAuras(enemies);
                 var turnOrder = players.Concat(enemies)
                     .Where(unit => unit.IsAlive)
-                    .OrderByDescending(unit => unit.Speed)
+                    .OrderByDescending(unit => unit.Initiative)
+                    .ThenByDescending(unit => unit.Speed)
                     .ThenByDescending(unit => unit.Attack)
                     .ThenByDescending(unit => unit.CurrentHp)
                     .ThenBy(unit => unit.PlayerSide ? 0 : 1)
@@ -685,6 +686,7 @@ namespace ProphecyCentury.Systems
                 Power = unit.Power,
                 DamageMin = unit.DamageMin,
                 DamageMax = unit.DamageMax,
+                Initiative = unit.Initiative,
                 Speed = unit.Speed,
                 Luck = unit.Luck,
                 Morale = unit.Morale,
@@ -1142,6 +1144,7 @@ namespace ProphecyCentury.Systems
             var attack = Scale(definition.attack + (state?.shopBuffAttack ?? 0) + (state?.roundTempAttack ?? 0) + (state?.boardAuraAttack ?? 0), multiplier);
             var defense = Scale(definition.defense + (state?.shopBuffDefense ?? 0), multiplier);
             var power = Math.Max(0, definition.power + (state?.shopBuffPower ?? 0) + (state?.roundTempPower ?? 0));
+            var initiative = Math.Max(0, definition.initiative);
             var speed = Math.Max(0, definition.speed + (state?.shopBuffSpeed ?? 0));
             var morale = Math.Max(0, definition.morale + (state?.shopBuffMorale ?? 0) + (state?.roundTempMorale ?? 0));
             var luck = Math.Max(0, definition.luck + (state?.shopBuffLuck ?? 0));
@@ -1179,6 +1182,7 @@ namespace ProphecyCentury.Systems
                 Power = power,
                 DamageMin = Math.Max(1, definition.damageMin),
                 DamageMax = Math.Max(Math.Max(1, definition.damageMin), definition.damageMax),
+                Initiative = initiative,
                 Speed = speed,
                 Luck = luck,
                 Morale = morale,
@@ -1207,6 +1211,7 @@ namespace ProphecyCentury.Systems
             unit.Attack += Math.Max(0, definition.attack / 2);
             unit.Defense += Math.Max(0, definition.defense / 2);
             unit.Power += Math.Max(0, definition.power);
+            unit.Initiative = Math.Max(unit.Initiative, definition.initiative);
             unit.Speed = Math.Max(unit.Speed, definition.speed);
             unit.AttackInterval = definition.attackInterval > 0 ? Math.Max(0.2f, definition.attackInterval) : unit.AttackInterval;
         }
@@ -2858,6 +2863,7 @@ namespace ProphecyCentury.Systems
         public int Power;
         public int DamageMin;
         public int DamageMax;
+        public int Initiative;
         public int Speed;
         public int Luck;
         public int Morale;
@@ -2912,6 +2918,7 @@ namespace ProphecyCentury.Systems
         public int Power;
         public int DamageMin;
         public int DamageMax;
+        public int Initiative;
         public int Speed;
         public int Luck;
         public int Morale;

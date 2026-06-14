@@ -857,6 +857,7 @@ namespace ProphecyCentury.Systems
                     Power = Math.Max(1, definition.power),
                     DamageMin = Math.Max(1, definition.damageMin),
                     DamageMax = Math.Max(Math.Max(1, definition.damageMin), definition.damageMax),
+                    Initiative = Math.Max(0, definition.initiative),
                     Speed = Math.Max(1, definition.speed),
                     Luck = Math.Max(0, definition.luck),
                     Morale = Math.Max(0, definition.morale),
@@ -945,6 +946,7 @@ namespace ProphecyCentury.Systems
                 Power = unit.Power,
                 DamageMin = unit.DamageMin,
                 DamageMax = unit.DamageMax,
+                Initiative = unit.Initiative,
                 Speed = unit.Speed,
                 Luck = unit.Luck,
                 Morale = unit.Morale,
@@ -1187,6 +1189,7 @@ namespace ProphecyCentury.Systems
                 Power = Math.Max(1, snapshot.Power);
                 DamageMin = Math.Max(1, snapshot.DamageMin > 0 ? snapshot.DamageMin : Definition?.damageMin ?? 1);
                 DamageMax = Math.Max(DamageMin, snapshot.DamageMax > 0 ? snapshot.DamageMax : Definition?.damageMax ?? DamageMin);
+                Initiative = Math.Max(0, snapshot.Initiative > 0 ? snapshot.Initiative : Definition?.initiative ?? 0);
                 Speed = Math.Max(1, snapshot.Speed);
                 Luck = Math.Max(0, snapshot.Luck);
                 Morale = Math.Max(0, snapshot.Morale);
@@ -1223,6 +1226,7 @@ namespace ProphecyCentury.Systems
             public int Power;
             public int DamageMin;
             public int DamageMax;
+            public int Initiative;
             public int Speed;
             public int Luck;
             public int Morale;
