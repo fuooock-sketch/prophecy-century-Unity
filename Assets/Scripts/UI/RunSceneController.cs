@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -26,14 +26,9 @@ namespace ProphecyCentury.UI
         [Header("Meta")]
         [SerializeField] private GameObject titlePanel;
         [SerializeField] private GameObject runPanel;
-        [SerializeField] private Dropdown campaignDropdown;
-        [SerializeField] private Dropdown heroDropdown;
-        [SerializeField] private Text campaignDescriptionLabel;
-        [SerializeField] private Text heroDescriptionLabel;
-        [SerializeField] private Text campaignLabel;
-        [SerializeField] private Text heroLabel;
-        [SerializeField] private Text logLabel;
-        [SerializeField] private Text shopMetaLabel;
+        [SerializeField] private GameObject campaignSelectionScreen;
+        [SerializeField] private GameObject heroSelectionScreen;
+        [SerializeField] private string selectedCampaignId;
 
         [Header("Panels")]
         [SerializeField] private Transform shopCardRoot;
@@ -302,7 +297,6 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            InitializeTitleSelectors();
             ShowTitle();
         }
 
@@ -312,9 +306,8 @@ namespace ProphecyCentury.UI
             if (titlePanel != null)
             {
                 titlePanel.SetActive(true);
+                titlePanel.transform.SetAsLastSibling();
             }
-
-            EnsureCampaignSelectorVisible();
 
             if (runPanel != null)
             {
@@ -330,6 +323,16 @@ namespace ProphecyCentury.UI
                 titlePanel.SetActive(false);
             }
 
+            if (campaignSelectionScreen != null)
+            {
+                campaignSelectionScreen.SetActive(false);
+            }
+
+            if (heroSelectionScreen != null)
+            {
+                heroSelectionScreen.SetActive(false);
+            }
+
             if (runPanel != null)
             {
                 runPanel.SetActive(true);
@@ -338,6 +341,86 @@ namespace ProphecyCentury.UI
             if (battleStagePanel != null)
             {
                 battleStagePanel.SetActive(false);
+            }
+        }
+
+        public void SetSelectionScreens(GameObject titlePanel, GameObject campaignScreen, GameObject heroScreen)
+        {
+            this.titlePanel = titlePanel;
+            this.campaignSelectionScreen = campaignScreen;
+            this.heroSelectionScreen = heroScreen;
+        }
+
+        public void OpenCampaignSelection()
+        {
+            if (titlePanel != null)
+            {
+                titlePanel.SetActive(false);
+            }
+
+            if (campaignSelectionScreen != null)
+            {
+                campaignSelectionScreen.SetActive(true);
+                campaignSelectionScreen.transform.SetAsLastSibling();
+            }
+        }
+
+        public void SelectCampaignAndOpenHeroSelection(string campaignId)
+        {
+            selectedCampaignId = campaignId;
+
+            if (campaignSelectionScreen != null)
+            {
+                campaignSelectionScreen.SetActive(false);
+            }
+
+            if (heroSelectionScreen != null)
+            {
+                heroSelectionScreen.SetActive(true);
+                heroSelectionScreen.transform.SetAsLastSibling();
+            }
+        }
+
+        public void StartRunWithHero(string heroId)
+        {
+            if (string.IsNullOrEmpty(selectedCampaignId))
+            {
+                Debug.LogError("No campaign selected.");
+                return;
+            }
+
+            _flow.PrepareNewRun(selectedCampaignId, heroId);
+            EnsureShopInitialized();
+            ShowRun();
+            WriteLog("已开始所选战役。");
+            RefreshView();
+        }
+
+        public void ReturnToTitleFromCampaign()
+        {
+            if (campaignSelectionScreen != null)
+            {
+                campaignSelectionScreen.SetActive(false);
+            }
+
+            if (titlePanel != null)
+            {
+                titlePanel.SetActive(true);
+                titlePanel.transform.SetAsLastSibling();
+            }
+        }
+
+        public void ReturnToCampaignFromHero()
+        {
+            if (heroSelectionScreen != null)
+            {
+                heroSelectionScreen.SetActive(false);
+            }
+
+            if (campaignSelectionScreen != null)
+            {
+                campaignSelectionScreen.SetActive(true);
+                campaignSelectionScreen.transform.SetAsLastSibling();
             }
         }
 
@@ -359,17 +442,27 @@ namespace ProphecyCentury.UI
 
         public void OpenHeroSelection()
         {
-            EnsureHeroSelectionModal();
-            _heroSelectionStarting = false;
-            RebuildHeroSelectionOptions();
-            if (_heroSelectionSubtitleLabel != null)
+            if (string.IsNullOrWhiteSpace(selectedCampaignId))
             {
-                _heroSelectionSubtitleLabel.text = "每局只能选择一次，点击英雄后进入第 1 回合经营阶段";
-                _heroSelectionSubtitleLabel.color = new Color32(214, 220, 232, 255);
+                OpenCampaignSelection();
+                return;
             }
 
-            _heroSelectionModal.SetActive(true);
-            _heroSelectionModal.transform.SetAsLastSibling();
+            if (titlePanel != null)
+            {
+                titlePanel.SetActive(false);
+            }
+
+            if (campaignSelectionScreen != null)
+            {
+                campaignSelectionScreen.SetActive(false);
+            }
+
+            if (heroSelectionScreen != null)
+            {
+                heroSelectionScreen.SetActive(true);
+                heroSelectionScreen.transform.SetAsLastSibling();
+            }
         }
 
         public void OpenElementalBattleChallenge()
@@ -386,60 +479,12 @@ namespace ProphecyCentury.UI
 
         public void StartSelectedRun()
         {
-            var data = ProphecyGameSession.Instance.Data;
-            var campaignId = ResolveSelectedCampaignId(data);
-            var heroId = data.Heroes.Count > 0
-                ? data.Heroes[Mathf.Clamp(heroDropdown != null ? heroDropdown.value : 0, 0, data.Heroes.Count - 1)].id
-                : null;
-
-            _flow.PrepareNewRun(campaignId, heroId);
-            EnsureShopInitialized();
-            if (titlePanel != null)
-            {
-                titlePanel.SetActive(false);
-            }
-
-            if (runPanel != null)
-            {
-                runPanel.SetActive(true);
-            }
-
-            WriteLog("已开始所选战役。");
-            RefreshView();
+            OpenCampaignSelection();
         }
 
         private void StartSelectedRunWithHero(string heroId)
         {
-            if (_heroSelectionStarting)
-            {
-                return;
-            }
-
-            var data = ProphecyGameSession.Instance.Data;
-            if (data.FindHero(heroId) == null)
-            {
-                RuntimeSfxPlayer.PlayError();
-                if (_heroSelectionSubtitleLabel != null)
-                {
-                    _heroSelectionSubtitleLabel.text = "英雄数据缺失，无法开始。";
-                    _heroSelectionSubtitleLabel.color = new Color32(255, 126, 126, 255);
-                }
-
-                return;
-            }
-
-            _heroSelectionStarting = true;
-            var campaignId = ResolveSelectedCampaignId(data);
-            _flow.PrepareNewRun(campaignId, heroId);
-            EnsureShopInitialized();
-            if (_heroSelectionModal != null)
-            {
-                _heroSelectionModal.SetActive(false);
-            }
-
-            ShowRun();
-            WriteLog($"已选择英雄：{FormatHeroName(heroId)}。");
-            RefreshView();
+            StartRunWithHero(heroId);
         }
 
         private string ResolveSelectedCampaignId(ProphecyCentury.Data.GameDataRepository data)
@@ -465,60 +510,10 @@ namespace ProphecyCentury.UI
 
         private void InitializeTitleSelectors()
         {
-            var data = ProphecyGameSession.Instance.Data;
-            if (campaignDropdown != null)
-            {
-                campaignDropdown.ClearOptions();
-                campaignDropdown.AddOptions(data.Campaigns.Select(item => item.name).ToList());
-                campaignDropdown.onValueChanged.AddListener(value =>
-                {
-                    _selectedCampaignIndex = Mathf.Clamp(value, 0, Mathf.Max(0, data.Campaigns.Count - 1));
-                    RefreshTitlePreview();
-                    RefreshCampaignButtonStates();
-                });
-            }
-
-            if (heroDropdown != null)
-            {
-                heroDropdown.ClearOptions();
-                heroDropdown.AddOptions(data.Heroes.Select(item => item.name).ToList());
-                heroDropdown.onValueChanged.AddListener(_ => RefreshTitlePreview());
-            }
-
-            _selectedCampaignIndex = Mathf.Clamp(campaignDropdown != null ? campaignDropdown.value : 0, 0, Mathf.Max(0, data.Campaigns.Count - 1));
-            RebuildCampaignButtons();
-            RefreshTitlePreview();
-            EnsureCampaignSelectorVisible();
         }
 
         private void EnsureCampaignSelectorVisible()
         {
-            if (campaignDropdown == null)
-            {
-                return;
-            }
-
-            RebuildCampaignButtons();
-            campaignDropdown.gameObject.SetActive(false);
-
-            var parent = campaignDropdown.transform.parent;
-            if (parent != null && parent.name == "CampaignSelectionPanel")
-            {
-                parent.gameObject.SetActive(true);
-                parent.SetAsLastSibling();
-            }
-
-            if (campaignDescriptionLabel != null)
-            {
-                campaignDescriptionLabel.gameObject.SetActive(true);
-                campaignDescriptionLabel.transform.SetAsLastSibling();
-            }
-
-            if (_campaignButtonRoot != null)
-            {
-                _campaignButtonRoot.gameObject.SetActive(true);
-                _campaignButtonRoot.SetAsLastSibling();
-            }
         }
 
         private void RebuildCampaignButtons()
@@ -585,17 +580,13 @@ namespace ProphecyCentury.UI
             var data = ProphecyGameSession.Instance?.Data;
             if (data == null || data.Campaigns.Count == 0)
             {
+                selectedCampaignId = null;
                 return;
             }
 
             _selectedCampaignIndex = Mathf.Clamp(index, 0, data.Campaigns.Count - 1);
-            if (campaignDropdown != null)
-            {
-                campaignDropdown.SetValueWithoutNotify(_selectedCampaignIndex);
-            }
-
+            selectedCampaignId = data.Campaigns[_selectedCampaignIndex]?.id;
             RefreshCampaignButtonStates();
-            RefreshTitlePreview();
         }
 
         private bool SelectCampaignById(string campaignId)
@@ -647,26 +638,6 @@ namespace ProphecyCentury.UI
 
         private void RefreshTitlePreview()
         {
-            var data = ProphecyGameSession.Instance.Data;
-            if (campaignDescriptionLabel != null)
-            {
-                var campaign = data.Campaigns.Count > 0
-                    ? data.Campaigns[Mathf.Clamp(_selectedCampaignIndex, 0, data.Campaigns.Count - 1)]
-                    : null;
-                campaignDescriptionLabel.text = campaign == null
-                    ? "未加载战役数据。"
-                    : $"{campaign.name}\n{campaign.desc}";
-            }
-
-            if (heroDescriptionLabel != null)
-            {
-                var hero = data.Heroes.Count > 0
-                    ? data.Heroes[Mathf.Clamp(heroDropdown != null ? heroDropdown.value : 0, 0, data.Heroes.Count - 1)]
-                    : null;
-                heroDescriptionLabel.text = hero == null
-                    ? "未加载英雄数据。"
-                    : $"{hero.name}  {hero.title}\n{hero.short_text}\n{hero.passive_text}\n{hero.active_text}";
-            }
         }
 
         private void EnsureHeroSelectionModal()
@@ -7759,11 +7730,6 @@ namespace ProphecyCentury.UI
             RefreshShopMetaStars();
             RefreshShopActionLabels();
 
-            var campaign = data.Campaigns.FirstOrDefault(item => item.id == Run.campaignId);
-            var hero = data.Heroes.FirstOrDefault(item => item.id == Run.heroId);
-            campaignLabel.text = $"战役：{(campaign != null ? campaign.name : Run.campaignId)}";
-            heroLabel.text = $"英雄：{(hero != null ? hero.name : Run.heroId)}{FormatHeroRuntimeLabel()}";
-
             if (shopText != null)
             {
                 shopText.text = FormatShop();
@@ -8257,11 +8223,6 @@ namespace ProphecyCentury.UI
             {
                 battlePreviewText.gameObject.SetActive(false);
             }
-
-            if (logLabel != null && logLabel.name.Contains("V2"))
-            {
-                logLabel.gameObject.SetActive(false);
-            }
         }
 
         private void EnsureShopInitialized()
@@ -8468,11 +8429,6 @@ namespace ProphecyCentury.UI
 
         private void WriteLog(string message)
         {
-            if (logLabel == null)
-            {
-                return;
-            }
-
             if (!string.IsNullOrWhiteSpace(message))
             {
                 _recentLogs.Insert(0, message);
@@ -8482,8 +8438,6 @@ namespace ProphecyCentury.UI
             {
                 _recentLogs.RemoveAt(_recentLogs.Count - 1);
             }
-
-            logLabel.text = "日志：\n" + string.Join("\n", _recentLogs);
         }
 
         private void RefreshCardLists()

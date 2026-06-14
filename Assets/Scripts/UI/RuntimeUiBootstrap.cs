@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using ProphecyCentury.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -18,17 +18,21 @@ namespace ProphecyCentury.UI
         private static void EnsureRunSceneUi()
         {
             EnsureSession();
+            EnsureEventSystem();
 
             var existingController = Object.FindObjectOfType<RunSceneController>();
             if (existingController != null)
             {
-                EnsureEventSystem();
+                Debug.Log("Found existing controller, disabling old canvas");
                 var canvas = existingController.GetComponentInParent<Canvas>();
-                WirePrefabButtons(canvas != null ? canvas.gameObject : existingController.gameObject);
+                if (canvas != null)
+                {
+                    canvas.gameObject.SetActive(false);
+                }
+                CreateGeneratedUi();
                 return;
             }
 
-            EnsureEventSystem();
             BuildUi();
         }
 
@@ -55,7 +59,6 @@ namespace ProphecyCentury.UI
             {
                 return;
             }
-
             CreateGeneratedUi();
         }
 
@@ -95,8 +98,10 @@ namespace ProphecyCentury.UI
             TryInstallBattleStagePanelPrefab(root.transform, controller);
             HideTitleSelectionControls(root.transform);
             EnsureTitleShortcutChallengeButton(root.transform, controller);
+            EnsureSelectionScreens(root.transform, controller);
 
-            WireButton(root.transform, "StartSelectedRunButton", controller.OpenHeroSelection);
+            WireButton(root.transform, "StartSelectedRunButton", controller.OpenCampaignSelection);
+            WireButton(root.transform, "StartGameButton", controller.OpenCampaignSelection);
             WireButton(root.transform, ElementalBattleChallengeButtonName, controller.OpenElementalBattleChallenge);
             WireButton(root.transform, "RefreshShopButton", controller.RefreshShop);
             WireButton(root.transform, "UpgradeShopButton", controller.UpgradeShop);
@@ -121,20 +126,32 @@ namespace ProphecyCentury.UI
 
         private static void EnsureTitleShortcutChallengeButton(Transform root, RunSceneController controller)
         {
-            if (root == null || controller == null || FindDeepChild(root, ElementalBattleChallengeButtonName) != null)
+        }
+
+        private static void EnsureSelectionScreens(Transform root, RunSceneController controller)
+        {
+            if (root == null || controller == null)
             {
                 return;
             }
 
-            var titlePanel = FindDeepChild(root, "TitlePanel");
-            if (titlePanel == null)
+            var titlePanel = FindDeepChild(root, "TitlePanel")?.gameObject;
+            var campaignScreen = FindDeepChild(root, "CampaignSelectionScreen")?.gameObject;
+            var heroScreen = FindDeepChild(root, "HeroSelectionScreen")?.gameObject;
+
+            if (campaignScreen == null)
             {
-                return;
+                campaignScreen = CreateCampaignSelectionScreen(root, controller);
             }
 
-            CreateButton(ElementalBattleChallengeButtonName, titlePanel, "元素实战挑战", new Vector2(1150f, -526f), new Vector2(260f, 48f), controller.OpenElementalBattleChallenge);
-            SetPixelRectTopLeft(titlePanel.Find(ElementalBattleChallengeButtonName)?.GetComponent<RectTransform>(), 1090f, 946f, 380f, 56f);
-            StyleTitleButton(titlePanel.Find(ElementalBattleChallengeButtonName), false);
+            if (heroScreen == null)
+            {
+                heroScreen = CreateHeroSelectionScreen(root, controller);
+            }
+
+            campaignScreen.SetActive(false);
+            heroScreen.SetActive(false);
+            controller.SetSelectionScreens(titlePanel, campaignScreen, heroScreen);
         }
 
         private static void HideTitleSelectionControls(Transform root)
@@ -281,34 +298,24 @@ namespace ProphecyCentury.UI
             CreateTitleAstrolabe(titlePanel.transform);
             CreateTitleText(titlePanel.transform);
 
-            var campaignPanel = CreateTitleSelectionPanel("CampaignSelectionPanel", titlePanel.transform, "战役", "选择这次预言指向的大陆与试炼", 222f, 438f);
-            campaignPanel.gameObject.SetActive(true);
-            var campaignDropdown = CreateDropdown("CampaignDropdown", campaignPanel.transform, new Vector2(0.5f, 0.5f), new Vector2(520f, 58f));
-            SetPixelRectTopLeft(campaignDropdown.GetComponent<RectTransform>(), 42f, 106f, 520f, 58f);
-            StyleTitleDropdown(campaignDropdown);
-            var campaignDescription = CreateText("CampaignDescription", campaignPanel.transform, string.Empty, 21, TextAnchor.UpperLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            SetPixelRectTopLeft(campaignDescription.GetComponent<RectTransform>(), 42f, 188f, 520f, 238f);
-            StyleTitleBodyText(campaignDescription);
+            CreateButton("StartGameButton", titlePanel.transform, "开始游戏", new Vector2(1280f, -380f), new Vector2(320f, 72f), controller.OpenCampaignSelection);
+            StylePrimaryButton(titlePanel.transform.Find("StartGameButton"));
+            Debug.Log("StartGameButton created, finding: " + titlePanel.transform.Find("StartGameButton"));
+            CreateButton("SettingsButton", titlePanel.transform, "设置", new Vector2(1280f, -480f), new Vector2(320f, 56f), () => ShowSettingsModal(canvasObject.transform));
+            StyleSecondaryButton(titlePanel.transform.Find("SettingsButton"));
+            CreateButton("QuitGameButton", titlePanel.transform, "退出游戏", new Vector2(1280f, -560f), new Vector2(320f, 56f), QuitGame);
+            StyleSecondaryButton(titlePanel.transform.Find("QuitGameButton"));
 
-            var heroPanel = CreateTitleSelectionPanel("HeroSelectionPanel", titlePanel.transform, "英雄", "选择将要解读预言的人", 1738f, 438f);
-            heroPanel.gameObject.SetActive(false);
-            var heroDropdown = CreateDropdown("HeroDropdown", heroPanel.transform, new Vector2(0.5f, 0.5f), new Vector2(520f, 58f));
-            SetPixelRectTopLeft(heroDropdown.GetComponent<RectTransform>(), 42f, 106f, 520f, 58f);
-            StyleTitleDropdown(heroDropdown);
-            var heroDescription = CreateText("HeroDescription", heroPanel.transform, string.Empty, 20, TextAnchor.UpperLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            SetPixelRectTopLeft(heroDescription.GetComponent<RectTransform>(), 42f, 188f, 520f, 238f);
-            StyleTitleBodyText(heroDescription);
+            var campaignSelectionScreen = CreateCampaignSelectionScreen(canvasObject.transform, controller);
+            var heroSelectionScreen = CreateHeroSelectionScreen(canvasObject.transform, controller);
+            campaignSelectionScreen.SetActive(false);
+            heroSelectionScreen.SetActive(false);
 
-            CreateButton("StartSelectedRunButton", titlePanel.transform, "开始游戏", new Vector2(1150f, -438f), new Vector2(260f, 64f), controller.OpenHeroSelection);
-            SetPixelRectTopLeft(titlePanel.transform.Find("StartSelectedRunButton")?.GetComponent<RectTransform>(), 1090f, 846f, 380f, 86f);
-            StyleTitleButton(titlePanel.transform.Find("StartSelectedRunButton"), true);
-            CreateButton(ElementalBattleChallengeButtonName, titlePanel.transform, "元素实战挑战", new Vector2(1150f, -526f), new Vector2(260f, 48f), controller.OpenElementalBattleChallenge);
-            SetPixelRectTopLeft(titlePanel.transform.Find(ElementalBattleChallengeButtonName)?.GetComponent<RectTransform>(), 1090f, 946f, 380f, 56f);
-            StyleTitleButton(titlePanel.transform.Find(ElementalBattleChallengeButtonName), false);
-            CreateButton("ChaseTestButton", titlePanel.transform, "追击测试", new Vector2(900f, 220f), new Vector2(260f, 56f), controller.StartSmallMerchantChaseTest);
-            SetPixelRectTopLeft(titlePanel.transform.Find("ChaseTestButton")?.GetComponent<RectTransform>(), 1170f, 954f, 220f, 46f);
-            StyleTitleButton(titlePanel.transform.Find("ChaseTestButton"), false);
-            titlePanel.transform.Find("ChaseTestButton")?.gameObject.SetActive(false);
+            AssignField(controller, "titlePanel", titlePanel);
+            controller.SetSelectionScreens(titlePanel, campaignSelectionScreen, heroSelectionScreen);
+
+            var settingsModal = CreateSettingsModal(canvasObject.transform);
+            settingsModal.SetActive(false);
 
             var runPanel = CreatePanel("RunPanel", canvasObject.transform, new Color32(18, 24, 31, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var topBar = CreatePanel("TopBar", runPanel.transform, new Color32(25, 34, 44, 255), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -72f), Vector2.zero);
@@ -489,12 +496,6 @@ namespace ProphecyCentury.UI
             AssignField(controller, "hpFillImage", hpFillImage);
             AssignField(controller, "titlePanel", titlePanel);
             AssignField(controller, "runPanel", runPanel);
-            AssignField(controller, "campaignDropdown", campaignDropdown);
-            AssignField(controller, "heroDropdown", heroDropdown);
-            AssignField(controller, "campaignDescriptionLabel", campaignDescription);
-            AssignField(controller, "heroDescriptionLabel", heroDescription);
-            AssignField(controller, "campaignLabel", campaignTextV2);
-            AssignField(controller, "heroLabel", heroTextV2);
             AssignField(controller, "logLabel", logTextV2);
             AssignField(controller, "shopMetaLabel", null);
             AssignField(controller, "shopCardRoot", shopCardRootV2);
@@ -1058,6 +1059,257 @@ namespace ProphecyCentury.UI
             image.type = Image.Type.Simple;
             image.preserveAspect = false;
             image.color = Color.white;
+        }
+
+        private static void StylePrimaryButton(Transform buttonTransform)
+        {
+            if (buttonTransform == null)
+            {
+                return;
+            }
+
+            var image = buttonTransform.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = new Color32(187, 129, 42, 255);
+            }
+
+            var label = buttonTransform.Find("Label")?.GetComponent<Text>();
+            if (label != null)
+            {
+                label.color = new Color32(255, 243, 200, 255);
+                label.fontSize = 26;
+                label.resizeTextForBestFit = true;
+                label.resizeTextMinSize = 18;
+                label.resizeTextMaxSize = 26;
+            }
+
+            CreateTitleLine(buttonTransform, "ButtonTopGleam", new Vector2(160f, -12f), new Vector2(300f, 2f), 0f, new Color32(255, 229, 154, 150));
+            CreateTitleLine(buttonTransform, "ButtonBottomGleam", new Vector2(160f, -60f), new Vector2(300f, 2f), 0f, new Color32(90, 40, 16, 100));
+        }
+
+        private static void StyleSecondaryButton(Transform buttonTransform)
+        {
+            if (buttonTransform == null)
+            {
+                return;
+            }
+
+            var image = buttonTransform.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = new Color32(27, 51, 67, 214);
+            }
+
+            var label = buttonTransform.Find("Label")?.GetComponent<Text>();
+            if (label != null)
+            {
+                label.color = new Color32(183, 220, 217, 205);
+                label.fontSize = 20;
+                label.resizeTextForBestFit = true;
+                label.resizeTextMinSize = 14;
+                label.resizeTextMaxSize = 20;
+            }
+        }
+
+        private static GameObject CreateCampaignSelectionScreen(Transform parent, RunSceneController controller)
+        {
+            var screen = CreatePanel("CampaignSelectionScreen", parent, new Color32(5, 9, 18, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            CreateTitleLine(screen.transform, "TopLine", new Vector2(1280f, -80f), new Vector2(2200f, 2f), 0f, new Color32(92, 188, 200, 86));
+
+            CreateButton("BackButton", screen.transform, "返回", new Vector2(120f, -40f), new Vector2(140f, 48f), () => controller.ReturnToTitleFromCampaign());
+            StyleSecondaryButton(screen.transform.Find("BackButton"));
+
+            var titleText = CreateText("ScreenTitle", screen.transform, "选择命运的入口", 42, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetTitleCenteredRect(titleText.GetComponent<RectTransform>(), new Vector2(1280f, -40f), new Vector2(600f, 60f));
+            titleText.color = new Color32(239, 204, 126, 255);
+
+            var cardContainer = new GameObject("CampaignCards", typeof(GridLayoutGroup));
+            cardContainer.transform.SetParent(screen.transform, false);
+            var cardRect = cardContainer.GetComponent<RectTransform>();
+            cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+            cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+            cardRect.pivot = new Vector2(0.5f, 0.5f);
+            cardRect.anchoredPosition = Vector2.zero;
+            cardRect.sizeDelta = new Vector2(2200f, 600f);
+
+            var layout = cardContainer.GetComponent<GridLayoutGroup>();
+            layout.cellSize = new Vector2(640f, 480f);
+            layout.spacing = new Vector2(60f, 40f);
+            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            layout.constraintCount = 3;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+
+            var campaigns = new[]
+            {
+                ("south_town_adventure", "South Town Adventure", "level 1"),
+                ("snow_peak_defense", "Snow Peak Defense", "level 2"),
+                ("song_of_sang_city", "Song of Sang City", "level 3"),
+            };
+
+            foreach (var (id, name, mapName) in campaigns)
+            {
+                CreateCampaignCard(cardContainer.transform, id, name, mapName, controller);
+            }
+
+            return screen;
+        }
+
+        private static void CreateCampaignCard(Transform parent, string campaignId, string campaignName, string mapName, RunSceneController controller)
+        {
+            var card = CreatePanel("CampaignCard_" + campaignId, parent, new Color32(16, 28, 45, 245), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            var rim = CreatePanel("CardRim", card.transform, new Color32(204, 169, 94, 72), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            rim.GetComponent<Image>().raycastTarget = false;
+
+            var mapImage = CreatePanel("MapImage", card.transform, Color.white, Vector2.zero, Vector2.one, new Vector2(8f, 8f), new Vector2(-8f, -8f));
+            ApplySpriteFromProjectPath(mapImage.GetComponent<Image>(), "Art/maps_image/" + mapName + ".png");
+
+            var nameText = CreateText("CampaignName", card.transform, campaignName, 24, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(12f, -70f), new Vector2(-12f, -110f));
+            nameText.color = new Color32(239, 204, 126, 255);
+
+            CreateButton("SelectButton", card.transform, "选择此战役", new Vector2(0f, -180f), new Vector2(200f, 50f), () => controller.SelectCampaignAndOpenHeroSelection(campaignId));
+            StylePrimaryButton(card.transform.Find("SelectButton"));
+        }
+
+        private static GameObject CreateHeroSelectionScreen(Transform parent, RunSceneController controller)
+        {
+            var screen = CreatePanel("HeroSelectionScreen", parent, new Color32(5, 9, 18, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            CreateTitleLine(screen.transform, "TopLine", new Vector2(1280f, -80f), new Vector2(2200f, 2f), 0f, new Color32(92, 188, 200, 86));
+
+            CreateButton("BackButton", screen.transform, "返回", new Vector2(120f, -40f), new Vector2(140f, 48f), () => controller.ReturnToCampaignFromHero());
+            StyleSecondaryButton(screen.transform.Find("BackButton"));
+
+            var titleText = CreateText("ScreenTitle", screen.transform, "选择解读预言的人", 42, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetTitleCenteredRect(titleText.GetComponent<RectTransform>(), new Vector2(1280f, -40f), new Vector2(600f, 60f));
+            titleText.color = new Color32(239, 204, 126, 255);
+
+            var cardContainer = new GameObject("HeroCards", typeof(GridLayoutGroup));
+            cardContainer.transform.SetParent(screen.transform, false);
+            var cardRect = cardContainer.GetComponent<RectTransform>();
+            cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+            cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+            cardRect.pivot = new Vector2(0.5f, 0.5f);
+            cardRect.anchoredPosition = Vector2.zero;
+            cardRect.sizeDelta = new Vector2(2200f, 600f);
+
+            var layout = cardContainer.GetComponent<GridLayoutGroup>();
+            layout.cellSize = new Vector2(640f, 480f);
+            layout.spacing = new Vector2(60f, 40f);
+            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            layout.constraintCount = 3;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+
+            var heroes = new[]
+            {
+                ("james", "詹姆士", "增援统帅", "Art/hero/James.jpg", "让每一次补员更有效率", "经营阶段，我方任意已上阵部队获得数量时，额外获得+1数量。"),
+                ("magic", "马吉克", "离阵术士", "Art/hero/Magic.jpg", "把退场转化为新的战力", "经营阶段，我方已上阵部队出售并离场时，场上随机3个我方部队获得+1数量。"),
+                ("shalame", "夏拉美", "征募财务官", "Art/hero/Shirmmy.jpg", "从扩军中整理出预算", "经营阶段，我方已上阵部队每累计获得20数量，额外获得+1金币。"),
+            };
+
+            foreach (var (id, name, title, portraitPath, epithet, passiveText) in heroes)
+            {
+                CreateHeroCard(cardContainer.transform, id, name, title, portraitPath, epithet, passiveText, controller);
+            }
+
+            return screen;
+        }
+
+        private static void CreateHeroCard(Transform parent, string heroId, string heroName, string heroTitle, string portraitPath, string epithet, string passiveText, RunSceneController controller)
+        {
+            var card = CreatePanel("HeroCard_" + heroId, parent, new Color32(16, 28, 45, 245), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            var rim = CreatePanel("CardRim", card.transform, new Color32(204, 169, 94, 72), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            rim.GetComponent<Image>().raycastTarget = false;
+
+            var portrait = CreatePanel("Portrait", card.transform, Color.white, new Vector2(0.5f, 0.7f), new Vector2(0.5f, 0.7f), new Vector2(-100f, -100f), new Vector2(-100f, -100f));
+            ApplySpriteFromProjectPath(portrait.GetComponent<Image>(), portraitPath);
+
+            var nameText = CreateText("HeroName", card.transform, heroName, 28, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(12f, -120f), new Vector2(-12f, -155f));
+            nameText.color = new Color32(239, 204, 126, 255);
+
+            var titleText = CreateText("HeroTitle", card.transform, heroTitle, 18, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(12f, -155f), new Vector2(-12f, -185f));
+            titleText.color = new Color32(183, 220, 217, 205);
+
+            var epithetText = CreateText("Epithet", card.transform, epithet, 16, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(12f, -185f), new Vector2(-12f, -230f));
+            epithetText.color = new Color32(166, 207, 205, 150);
+            epithetText.fontStyle = FontStyle.Italic;
+
+            CreateButton("SelectButton", card.transform, "选择此英雄", new Vector2(0f, -300f), new Vector2(200f, 50f), () => controller.StartRunWithHero(heroId));
+            StylePrimaryButton(card.transform.Find("SelectButton"));
+        }
+
+        private static GameObject CreateSettingsModal(Transform parent)
+        {
+            var modal = CreatePanel("SettingsModal", parent, new Color32(5, 9, 18, 240), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-400f, -300f), new Vector2(400f, 300f));
+
+            var inner = CreatePanel("ModalInner", modal.transform, new Color32(12, 28, 45, 245), Vector2.zero, Vector2.one, new Vector2(8f, 8f), new Vector2(-8f, -8f));
+
+            var titleText = CreateText("ModalTitle", modal.transform, "设置", 36, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(0f, -40f), new Vector2(0f, -90f));
+            titleText.color = new Color32(239, 204, 126, 255);
+
+            var volumeLabel = CreateText("VolumeLabel", modal.transform, "音量", 24, TextAnchor.MiddleLeft, Vector2.zero, Vector2.one, new Vector2(-280f, -100f), new Vector2(-80f, -160f));
+            volumeLabel.color = new Color32(214, 225, 215, 224);
+
+            var volumeSlider = CreateSlider("VolumeSlider", modal.transform, new Vector2(0.5f, 0.5f), new Vector2(400f, 40f));
+            SetPixelRectTopLeft(volumeSlider.GetComponent<RectTransform>(), -180f, 230f, 400f, 40f);
+
+            CreateButton("ConfirmButton", modal.transform, "确定", new Vector2(0f, -220f), new Vector2(180f, 56f), () => modal.SetActive(false));
+            StylePrimaryButton(modal.transform.Find("ConfirmButton"));
+
+            modal.SetActive(false);
+            return modal;
+        }
+
+        private static GameObject CreateSlider(string name, Transform parent, Vector2 anchorPosition, Vector2 size)
+        {
+            var sliderObject = new GameObject(name, typeof(Slider));
+            sliderObject.transform.SetParent(parent, false);
+            var rect = sliderObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = size;
+            rect.anchoredPosition = new Vector2((anchorPosition.x - 0.5f) * 2560f, (anchorPosition.y - 0.5f) * 1280f);
+
+            var background = CreatePanel("Background", sliderObject.transform, new Color32(42, 58, 74, 255), new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, -10f), new Vector2(0f, 10f));
+
+            var fillArea = CreatePanel("Fill Area", sliderObject.transform, Color.clear, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, -8f), new Vector2(0f, 8f));
+            var fill = CreatePanel("Fill", fillArea.transform, new Color32(187, 129, 42, 255), Vector2.zero, new Vector2(0.5f, 1f), Vector2.zero, Vector2.zero);
+
+            var handleArea = CreatePanel("Handle Slide Area", sliderObject.transform, Color.clear, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(20f, -12f), new Vector2(-20f, 12f));
+            var handle = CreatePanel("Handle", handleArea.transform, new Color32(239, 204, 126, 255), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-16f, -16f), new Vector2(16f, 16f));
+
+            var slider = sliderObject.GetComponent<Slider>();
+            slider.targetGraphic = handle.GetComponent<Image>();
+            slider.fillRect = fill.GetComponent<RectTransform>();
+            slider.handleRect = handle.GetComponent<RectTransform>();
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.value = 0.8f;
+
+            return sliderObject;
+        }
+
+        private static void ShowSettingsModal(Transform parent)
+        {
+            var modal = parent.Find("SettingsModal");
+            if (modal != null)
+            {
+                modal.gameObject.SetActive(true);
+                modal.SetAsLastSibling();
+            }
+        }
+
+        private static void QuitGame()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
     }
 }

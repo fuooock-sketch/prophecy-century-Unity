@@ -48,7 +48,7 @@ public sealed class SynthesisSystem
             for (var i = 0; i < runState.handCards.Count; i += 1)
             {
                 var card = runState.handCards[i];
-                if (card != null && !card.isGolden)
+                if (IsSynthesizable(card))
                 {
                     candidates.Add(new SynthesisCandidate(card, false, i, null));
                 }
@@ -57,13 +57,18 @@ public sealed class SynthesisSystem
             for (var i = 0; i < runState.boardUnits.Count; i += 1)
             {
                 var unit = runState.boardUnits[i];
-                if (unit != null && !unit.isGolden)
+                if (IsSynthesizable(unit))
                 {
                     candidates.Add(new SynthesisCandidate(unit, true, i, unit.boardSlotId));
                 }
             }
 
             return candidates;
+        }
+
+        private static bool IsSynthesizable(UnitCardState card)
+        {
+            return card != null && !card.isGolden && !ManageEventResolver.IsForestGemCard(card);
         }
 
         private static void RemovePicked(RunState runState, IReadOnlyList<SynthesisCandidate> picked)
