@@ -1571,21 +1571,9 @@
     "type": "normal",
     "units": [
       {
-        "slotId": "2-1",
-        "unitId": "wanderer",
-        "count": 20,
-        "star": 3
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "wanderer",
-        "count": 18,
-        "star": 3
-      },
-      {
-        "slotId": "4-2",
+        "slotId": "4-4",
         "unitId": "elf",
-        "count": 16,
+        "count": 21,
         "star": 1
       }
     ]
@@ -1596,28 +1584,16 @@
     "type": "normal",
     "units": [
       {
-        "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 30,
-        "star": 5
+        "slotId": "4-3",
+        "unitId": "bright_warrior",
+        "count": 23,
+        "star": 1
       },
       {
-        "slotId": "2-1",
-        "unitId": "knight",
-        "count": 22,
-        "star": 2
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "wanderer",
-        "count": 20,
-        "star": 3
-      },
-      {
-        "slotId": "4-2",
-        "unitId": "priest",
-        "count": 14,
-        "star": 3
+        "slotId": "4-4",
+        "unitId": "elf",
+        "count": 21,
+        "star": 1
       }
     ]
   },
@@ -1628,32 +1604,32 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 38,
-        "star": 5
+        "unitId": "bright_warrior",
+        "count": 23,
+        "star": 1
       },
       {
         "slotId": "2-1",
-        "unitId": "knight",
-        "count": 30,
+        "unitId": "monk",
+        "count": 14,
         "star": 2
       },
       {
         "slotId": "2-2",
-        "unitId": "bright_warrior",
-        "count": 25,
-        "star": 1
+        "unitId": "blacksmith",
+        "count": 15,
+        "star": 2
       },
       {
         "slotId": "3-2",
-        "unitId": "wanderer",
-        "count": 28,
-        "star": 3
+        "unitId": "elf",
+        "count": 24,
+        "star": 1
       },
       {
-        "slotId": "4-2",
-        "unitId": "priest",
-        "count": 17,
+        "slotId": "3-3",
+        "unitId": "wanderer",
+        "count": 10,
         "star": 3
       }
     ]
@@ -1665,38 +1641,44 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 44,
-        "star": 5
-      },
-      {
-        "slotId": "2-1",
         "unitId": "bright_warrior",
-        "count": 36,
+        "count": 28,
         "star": 1
       },
       {
+        "slotId": "2-1",
+        "unitId": "monk",
+        "count": 14,
+        "star": 2
+      },
+      {
         "slotId": "2-2",
-        "unitId": "knight",
-        "count": 30,
+        "unitId": "blacksmith",
+        "count": 15,
         "star": 2
       },
       {
         "slotId": "3-1",
-        "unitId": "blacksmith",
-        "count": 25,
+        "unitId": "knight",
+        "count": 14,
         "star": 2
       },
       {
         "slotId": "3-2",
+        "unitId": "elf",
+        "count": 27,
+        "star": 1
+      },
+      {
+        "slotId": "3-3",
         "unitId": "wanderer",
-        "count": 24,
+        "count": 10,
         "star": 3
       },
       {
-        "slotId": "4-2",
+        "slotId": "4-4",
         "unitId": "priest",
-        "count": 15,
+        "count": 9,
         "star": 3
       }
     ]
@@ -1708,45 +1690,63 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 60,
-        "star": 5
+        "unitId": "bright_warrior",
+        "count": 33,
+        "star": 1
       },
       {
         "slotId": "2-1",
-        "unitId": "knight",
-        "count": 50,
+        "unitId": "monk",
+        "count": 20,
         "star": 2
       },
       {
         "slotId": "2-2",
-        "unitId": "bright_warrior",
+        "unitId": "blacksmith",
+        "count": 18,
+        "star": 2
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "knight",
+        "count": 14,
+        "star": 2
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "priest",
+        "count": 12,
+        "star": 3
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "wanderer",
+        "count": 18,
+        "star": 3
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "elf",
         "count": 35,
         "star": 1
       },
       {
-        "slotId": "3-1",
-        "unitId": "assassin",
-        "count": 48,
-        "star": 3
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "blacksmith",
-        "count": 35,
+        "slotId": "4-2",
+        "unitId": "monk",
+        "count": 14,
         "star": 2
       },
       {
-        "slotId": "4-2",
-        "unitId": "wanderer",
-        "count": 40,
-        "star": 3
+        "slotId": "4-3",
+        "unitId": "elf",
+        "count": 30,
+        "star": 1
       },
       {
-        "slotId": "4-3",
-        "unitId": "priest",
-        "count": 20,
-        "star": 3
+        "slotId": "4-4",
+        "unitId": "blacksmith",
+        "count": 18,
+        "star": 2
       }
     ]
   },
@@ -1756,51 +1756,51 @@
     "type": "normal",
     "units": [
       {
-        "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 60,
-        "star": 5
-      },
-      {
         "slotId": "2-1",
         "unitId": "knight",
-        "count": 48,
+        "count": 19,
         "star": 2
       },
       {
         "slotId": "2-2",
-        "unitId": "bright_warrior",
-        "count": 30,
-        "star": 1
+        "unitId": "knight",
+        "count": 19,
+        "star": 2
       },
       {
         "slotId": "3-1",
-        "unitId": "assassin",
-        "count": 50,
-        "star": 3
+        "unitId": "monk",
+        "count": 55,
+        "star": 2
       },
       {
         "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 38,
-        "star": 4
+        "unitId": "bright_warrior",
+        "count": 42,
+        "star": 1
       },
       {
         "slotId": "3-3",
         "unitId": "blacksmith",
-        "count": 36,
+        "count": 24,
         "star": 2
       },
       {
         "slotId": "4-1",
-        "unitId": "wanderer",
-        "count": 44,
+        "unitId": "assassin",
+        "count": 12,
         "star": 3
       },
       {
-        "slotId": "4-2",
+        "slotId": "4-3",
+        "unitId": "elf",
+        "count": 70,
+        "star": 1
+      },
+      {
+        "slotId": "4-4",
         "unitId": "priest",
-        "count": 30,
+        "count": 22,
         "star": 3
       }
     ]
@@ -1812,57 +1812,63 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 80,
-        "star": 5
+        "unitId": "bright_warrior",
+        "count": 55,
+        "star": 1
       },
       {
         "slotId": "2-1",
         "unitId": "knight",
-        "count": 65,
+        "count": 22,
         "star": 2
       },
       {
         "slotId": "2-2",
-        "unitId": "bright_warrior",
-        "count": 50,
-        "star": 1
+        "unitId": "knight",
+        "count": 20,
+        "star": 2
       },
       {
         "slotId": "3-1",
-        "unitId": "assassin",
-        "count": 45,
-        "star": 3
+        "unitId": "monk",
+        "count": 65,
+        "star": 2
       },
       {
         "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 40,
-        "star": 4
+        "unitId": "priest",
+        "count": 26,
+        "star": 3
       },
       {
         "slotId": "3-3",
         "unitId": "blacksmith",
-        "count": 40,
+        "count": 28,
         "star": 2
       },
       {
         "slotId": "4-1",
-        "unitId": "wanderer",
-        "count": 42,
+        "unitId": "assassin",
+        "count": 18,
         "star": 3
       },
       {
         "slotId": "4-2",
-        "unitId": "priest",
-        "count": 35,
+        "unitId": "wanderer",
+        "count": 24,
         "star": 3
       },
       {
         "slotId": "4-3",
-        "unitId": "light_envoy",
-        "count": 35,
-        "star": 5
+        "unitId": "elf",
+        "count": 75,
+        "star": 1
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "priest",
+        "count": 28,
+        "star": 3
       }
     ]
   },
@@ -1873,57 +1879,63 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 85,
-        "star": 5
+        "unitId": "bright_warrior",
+        "count": 65,
+        "star": 1
       },
       {
         "slotId": "2-1",
         "unitId": "knight",
-        "count": 70,
+        "count": 24,
         "star": 2
       },
       {
         "slotId": "2-2",
-        "unitId": "bright_warrior",
-        "count": 60,
-        "star": 1
+        "unitId": "knight",
+        "count": 22,
+        "star": 2
       },
       {
         "slotId": "3-1",
-        "unitId": "blacksmith",
-        "count": 45,
+        "unitId": "monk",
+        "count": 70,
         "star": 2
       },
       {
         "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 45,
-        "star": 4
-      },
-      {
-        "slotId": "3-3",
-        "unitId": "wanderer",
-        "count": 50,
+        "unitId": "assassin",
+        "count": 38,
         "star": 3
       },
       {
+        "slotId": "3-3",
+        "unitId": "blacksmith",
+        "count": 32,
+        "star": 2
+      },
+      {
         "slotId": "4-1",
-        "unitId": "light_envoy",
-        "count": 40,
-        "star": 5
+        "unitId": "martial_master",
+        "count": 12,
+        "star": 4
       },
       {
         "slotId": "4-2",
-        "unitId": "priest",
-        "count": 45,
+        "unitId": "wanderer",
+        "count": 28,
         "star": 3
       },
       {
         "slotId": "4-3",
-        "unitId": "light_mentor",
-        "count": 28,
-        "star": 4
+        "unitId": "elf",
+        "count": 80,
+        "star": 1
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "priest",
+        "count": 30,
+        "star": 3
       }
     ]
   },
@@ -1934,62 +1946,62 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 130,
-        "star": 5
+        "unitId": "bright_warrior",
+        "count": 95,
+        "star": 1
       },
       {
         "slotId": "2-1",
-        "unitId": "knight",
+        "unitId": "monk",
         "count": 90,
         "star": 2
       },
       {
         "slotId": "2-2",
-        "unitId": "bright_warrior",
-        "count": 80,
-        "star": 1
-      },
-      {
-        "slotId": "3-1",
-        "unitId": "royal_swordsman",
+        "unitId": "knight",
         "count": 60,
-        "star": 6
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 60,
-        "star": 4
-      },
-      {
-        "slotId": "3-3",
-        "unitId": "blacksmith",
-        "count": 55,
         "star": 2
       },
       {
-        "slotId": "4-1",
+        "slotId": "3-1",
         "unitId": "wanderer",
-        "count": 60,
+        "count": 42,
         "star": 3
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "assassin",
+        "count": 65,
+        "star": 3
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "martial_master",
+        "count": 28,
+        "star": 4
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "blacksmith",
+        "count": 42,
+        "star": 2
       },
       {
         "slotId": "4-2",
-        "unitId": "light_envoy",
-        "count": 50,
-        "star": 5
+        "unitId": "priest",
+        "count": 48,
+        "star": 3
       },
       {
         "slotId": "4-3",
-        "unitId": "priest",
-        "count": 55,
-        "star": 3
+        "unitId": "elf",
+        "count": 95,
+        "star": 1
       },
       {
         "slotId": "4-4",
         "unitId": "light_mentor",
-        "count": 32,
+        "count": 18,
         "star": 4
       }
     ]
@@ -2001,63 +2013,63 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 140,
-        "star": 5
+        "unitId": "bright_warrior",
+        "count": 105,
+        "star": 1
       },
       {
         "slotId": "2-1",
-        "unitId": "knight",
+        "unitId": "monk",
         "count": 95,
         "star": 2
       },
       {
         "slotId": "2-2",
-        "unitId": "bright_warrior",
-        "count": 85,
-        "star": 1
+        "unitId": "knight",
+        "count": 62,
+        "star": 2
       },
       {
         "slotId": "3-1",
-        "unitId": "royal_swordsman",
-        "count": 75,
-        "star": 6
+        "unitId": "wanderer",
+        "count": 50,
+        "star": 3
       },
       {
         "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 70,
-        "star": 4
+        "unitId": "assassin",
+        "count": 72,
+        "star": 3
       },
       {
         "slotId": "3-3",
-        "unitId": "assassin",
-        "count": 60,
-        "star": 3
-      },
-      {
-        "slotId": "4-1",
-        "unitId": "light_envoy",
-        "count": 65,
-        "star": 5
-      },
-      {
-        "slotId": "4-2",
-        "unitId": "priest",
-        "count": 70,
-        "star": 3
-      },
-      {
-        "slotId": "4-3",
-        "unitId": "light_mentor",
-        "count": 44,
+        "unitId": "martial_master",
+        "count": 32,
         "star": 4
       },
       {
+        "slotId": "4-1",
+        "unitId": "priest",
+        "count": 55,
+        "star": 3
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "light_envoy",
+        "count": 18,
+        "star": 5
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "elf",
+        "count": 100,
+        "star": 1
+      },
+      {
         "slotId": "4-4",
-        "unitId": "blacksmith",
-        "count": 40,
-        "star": 2
+        "unitId": "light_mentor",
+        "count": 22,
+        "star": 4
       }
     ]
   },
@@ -2069,62 +2081,62 @@
       {
         "slotId": "1-1",
         "unitId": "garrison_guard",
-        "count": 145,
+        "count": 28,
         "star": 5
       },
       {
         "slotId": "2-1",
-        "unitId": "knight",
-        "count": 105,
-        "star": 2
+        "unitId": "bright_warrior",
+        "count": 95,
+        "star": 1
       },
       {
         "slotId": "2-2",
-        "unitId": "royal_swordsman",
-        "count": 95,
-        "star": 6
+        "unitId": "knight",
+        "count": 70,
+        "star": 2
       },
       {
         "slotId": "3-1",
         "unitId": "assassin",
-        "count": 105,
+        "count": 88,
         "star": 3
       },
       {
         "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 85,
-        "star": 4
+        "unitId": "monk",
+        "count": 120,
+        "star": 2
       },
       {
         "slotId": "3-3",
-        "unitId": "assassin",
-        "count": 90,
-        "star": 3
+        "unitId": "martial_master",
+        "count": 45,
+        "star": 4
       },
       {
         "slotId": "4-1",
-        "unitId": "wanderer",
-        "count": 80,
-        "star": 3
-      },
-      {
-        "slotId": "4-2",
         "unitId": "priest",
         "count": 70,
         "star": 3
       },
       {
-        "slotId": "4-3",
+        "slotId": "4-2",
         "unitId": "light_envoy",
-        "count": 65,
+        "count": 28,
         "star": 5
       },
       {
-        "slotId": "4-4",
+        "slotId": "4-3",
         "unitId": "light_mentor",
-        "count": 72,
+        "count": 35,
         "star": 4
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "echo_of_light",
+        "count": 4,
+        "star": 6
       }
     ]
   },
@@ -2136,62 +2148,62 @@
       {
         "slotId": "1-1",
         "unitId": "garrison_guard",
-        "count": 210,
+        "count": 45,
         "star": 5
       },
       {
         "slotId": "2-1",
-        "unitId": "royal_swordsman",
-        "count": 145,
-        "star": 6
-      },
-      {
-        "slotId": "2-2",
         "unitId": "bright_warrior",
         "count": 130,
         "star": 1
       },
       {
-        "slotId": "3-1",
-        "unitId": "knight",
-        "count": 110,
-        "star": 2
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 105,
-        "star": 4
-      },
-      {
-        "slotId": "3-3",
-        "unitId": "assassin",
-        "count": 95,
-        "star": 3
-      },
-      {
-        "slotId": "4-1",
-        "unitId": "light_envoy",
-        "count": 90,
+        "slotId": "2-2",
+        "unitId": "garrison_guard",
+        "count": 26,
         "star": 5
       },
       {
-        "slotId": "4-2",
-        "unitId": "priest",
-        "count": 95,
+        "slotId": "3-1",
+        "unitId": "assassin",
+        "count": 130,
         "star": 3
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "monk",
+        "count": 135,
+        "star": 2
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "martial_master",
+        "count": 70,
+        "star": 4
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "priest",
+        "count": 75,
+        "star": 3
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "light_envoy",
+        "count": 35,
+        "star": 5
       },
       {
         "slotId": "4-3",
         "unitId": "light_mentor",
-        "count": 50,
+        "count": 60,
         "star": 4
       },
       {
         "slotId": "4-4",
-        "unitId": "blacksmith",
-        "count": 26,
-        "star": 2
+        "unitId": "echo_of_light",
+        "count": 6,
+        "star": 6
       }
     ]
   },
@@ -2203,62 +2215,62 @@
       {
         "slotId": "1-1",
         "unitId": "garrison_guard",
-        "count": 200,
+        "count": 55,
         "star": 5
       },
       {
         "slotId": "2-1",
-        "unitId": "knight",
-        "count": 135,
-        "star": 2
-      },
-      {
-        "slotId": "2-2",
-        "unitId": "royal_swordsman",
-        "count": 125,
-        "star": 6
-      },
-      {
-        "slotId": "3-1",
         "unitId": "bright_warrior",
-        "count": 115,
+        "count": 145,
         "star": 1
       },
       {
-        "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 110,
-        "star": 4
-      },
-      {
-        "slotId": "3-3",
-        "unitId": "assassin",
-        "count": 100,
-        "star": 3
-      },
-      {
-        "slotId": "4-1",
-        "unitId": "light_envoy",
-        "count": 105,
+        "slotId": "2-2",
+        "unitId": "garrison_guard",
+        "count": 32,
         "star": 5
       },
       {
-        "slotId": "4-2",
-        "unitId": "priest",
-        "count": 110,
+        "slotId": "3-1",
+        "unitId": "assassin",
+        "count": 145,
         "star": 3
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "monk",
+        "count": 145,
+        "star": 2
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "martial_master",
+        "count": 78,
+        "star": 4
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "priest",
+        "count": 85,
+        "star": 3
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "light_envoy",
+        "count": 40,
+        "star": 5
       },
       {
         "slotId": "4-3",
         "unitId": "light_mentor",
-        "count": 85,
+        "count": 70,
         "star": 4
       },
       {
         "slotId": "4-4",
-        "unitId": "monk",
-        "count": 91,
-        "star": 2
+        "unitId": "echo_of_light",
+        "count": 8,
+        "star": 6
       }
     ]
   },
@@ -2270,62 +2282,62 @@
       {
         "slotId": "1-1",
         "unitId": "garrison_guard",
-        "count": 310,
+        "count": 70,
         "star": 5
       },
       {
         "slotId": "2-1",
-        "unitId": "royal_swordsman",
-        "count": 220,
-        "star": 6
-      },
-      {
-        "slotId": "2-2",
         "unitId": "bright_warrior",
-        "count": 190,
+        "count": 160,
         "star": 1
       },
       {
-        "slotId": "3-1",
-        "unitId": "knight",
-        "count": 170,
-        "star": 2
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 150,
-        "star": 4
-      },
-      {
-        "slotId": "3-3",
-        "unitId": "assassin",
-        "count": 140,
-        "star": 3
-      },
-      {
-        "slotId": "4-1",
-        "unitId": "light_envoy",
-        "count": 140,
+        "slotId": "2-2",
+        "unitId": "garrison_guard",
+        "count": 40,
         "star": 5
       },
       {
-        "slotId": "4-2",
-        "unitId": "priest",
-        "count": 150,
+        "slotId": "3-1",
+        "unitId": "assassin",
+        "count": 160,
         "star": 3
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "monk",
+        "count": 155,
+        "star": 2
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "royal_swordsman",
+        "count": 38,
+        "star": 6
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "martial_master",
+        "count": 90,
+        "star": 4
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "light_envoy",
+        "count": 46,
+        "star": 5
       },
       {
         "slotId": "4-3",
         "unitId": "light_mentor",
-        "count": 130,
+        "count": 85,
         "star": 4
       },
       {
         "slotId": "4-4",
-        "unitId": "monk",
-        "count": 20,
-        "star": 2
+        "unitId": "echo_of_light",
+        "count": 10,
+        "star": 6
       }
     ]
   },
@@ -2337,20 +2349,20 @@
       {
         "slotId": "1-1",
         "unitId": "garrison_guard",
-        "count": 330,
+        "count": 105,
         "star": 5
       },
       {
         "slotId": "2-1",
-        "unitId": "royal_swordsman",
-        "count": 240,
-        "star": 6
+        "unitId": "bright_warrior",
+        "count": 230,
+        "star": 1
       },
       {
         "slotId": "2-2",
-        "unitId": "knight",
-        "count": 210,
-        "star": 2
+        "unitId": "echo_of_light",
+        "count": 18,
+        "star": 6
       },
       {
         "slotId": "3-1",
@@ -2360,39 +2372,39 @@
       },
       {
         "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 170,
-        "star": 4
+        "unitId": "royal_swordsman",
+        "count": 35,
+        "star": 6
       },
       {
         "slotId": "3-3",
-        "unitId": "assassin",
-        "count": 160,
-        "star": 3
-      },
-      {
-        "slotId": "4-1",
-        "unitId": "light_envoy",
-        "count": 150,
-        "star": 5
-      },
-      {
-        "slotId": "4-2",
-        "unitId": "priest",
-        "count": 150,
-        "star": 3
-      },
-      {
-        "slotId": "4-3",
-        "unitId": "light_mentor",
-        "count": 150,
+        "unitId": "martial_master",
+        "count": 145,
         "star": 4
       },
       {
+        "slotId": "4-1",
+        "unitId": "light_mentor",
+        "count": 55,
+        "star": 4
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "light_envoy",
+        "count": 60,
+        "star": 5
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "monk",
+        "count": 170,
+        "star": 2
+      },
+      {
         "slotId": "4-4",
-        "unitId": "echo_of_light",
-        "count": 50,
-        "star": 6
+        "unitId": "priest",
+        "count": 130,
+        "star": 3
       }
     ]
   },
@@ -2404,62 +2416,62 @@
       {
         "slotId": "1-1",
         "unitId": "garrison_guard",
-        "count": 360,
+        "count": 120,
         "star": 5
       },
       {
         "slotId": "2-1",
-        "unitId": "royal_swordsman",
-        "count": 280,
-        "star": 6
+        "unitId": "bright_warrior",
+        "count": 245,
+        "star": 1
       },
       {
         "slotId": "2-2",
-        "unitId": "knight",
-        "count": 230,
-        "star": 2
+        "unitId": "echo_of_light",
+        "count": 22,
+        "star": 6
       },
       {
         "slotId": "3-1",
         "unitId": "assassin",
-        "count": 220,
+        "count": 205,
         "star": 3
       },
       {
         "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 200,
-        "star": 4
+        "unitId": "royal_swordsman",
+        "count": 42,
+        "star": 6
       },
       {
         "slotId": "3-3",
-        "unitId": "assassin",
-        "count": 200,
-        "star": 3
-      },
-      {
-        "slotId": "4-1",
-        "unitId": "light_envoy",
-        "count": 170,
-        "star": 5
-      },
-      {
-        "slotId": "4-2",
-        "unitId": "priest",
-        "count": 180,
-        "star": 3
-      },
-      {
-        "slotId": "4-3",
-        "unitId": "light_mentor",
-        "count": 210,
+        "unitId": "martial_master",
+        "count": 155,
         "star": 4
       },
       {
+        "slotId": "4-1",
+        "unitId": "light_mentor",
+        "count": 70,
+        "star": 4
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "light_envoy",
+        "count": 68,
+        "star": 5
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "monk",
+        "count": 180,
+        "star": 2
+      },
+      {
         "slotId": "4-4",
-        "unitId": "echo_of_light",
-        "count": 230,
-        "star": 6
+        "unitId": "priest",
+        "count": 140,
+        "star": 3
       }
     ]
   },
@@ -2471,62 +2483,62 @@
       {
         "slotId": "1-1",
         "unitId": "garrison_guard",
-        "count": 420,
+        "count": 170,
         "star": 5
       },
       {
         "slotId": "2-1",
-        "unitId": "royal_swordsman",
-        "count": 310,
-        "star": 6
+        "unitId": "bright_warrior",
+        "count": 280,
+        "star": 1
       },
       {
         "slotId": "2-2",
-        "unitId": "knight",
-        "count": 270,
-        "star": 2
+        "unitId": "echo_of_light",
+        "count": 38,
+        "star": 6
       },
       {
         "slotId": "3-1",
-        "unitId": "assassin",
-        "count": 240,
-        "star": 3
+        "unitId": "royal_swordsman",
+        "count": 90,
+        "star": 6
       },
       {
         "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 230,
+        "unitId": "light_mentor",
+        "count": 105,
         "star": 4
       },
       {
         "slotId": "3-3",
         "unitId": "assassin",
-        "count": 220,
+        "count": 260,
         "star": 3
       },
       {
         "slotId": "4-1",
-        "unitId": "light_envoy",
-        "count": 190,
-        "star": 5
-      },
-      {
-        "slotId": "4-2",
-        "unitId": "priest",
-        "count": 210,
-        "star": 3
-      },
-      {
-        "slotId": "4-3",
-        "unitId": "light_mentor",
-        "count": 240,
+        "unitId": "martial_master",
+        "count": 150,
         "star": 4
       },
       {
+        "slotId": "4-2",
+        "unitId": "light_envoy",
+        "count": 82,
+        "star": 5
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "monk",
+        "count": 205,
+        "star": 2
+      },
+      {
         "slotId": "4-4",
-        "unitId": "echo_of_light",
-        "count": 190,
-        "star": 6
+        "unitId": "priest",
+        "count": 160,
+        "star": 3
       }
     ]
   },
@@ -2538,62 +2550,62 @@
       {
         "slotId": "1-1",
         "unitId": "garrison_guard",
-        "count": 460,
+        "count": 210,
         "star": 5
       },
       {
         "slotId": "2-1",
-        "unitId": "royal_swordsman",
-        "count": 350,
-        "star": 6
+        "unitId": "bright_warrior",
+        "count": 300,
+        "star": 1
       },
       {
         "slotId": "2-2",
-        "unitId": "knight",
-        "count": 310,
-        "star": 2
+        "unitId": "echo_of_light",
+        "count": 55,
+        "star": 6
       },
       {
         "slotId": "3-1",
-        "unitId": "assassin",
-        "count": 280,
-        "star": 3
+        "unitId": "royal_swordsman",
+        "count": 130,
+        "star": 6
       },
       {
         "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 260,
+        "unitId": "light_mentor",
+        "count": 130,
         "star": 4
       },
       {
         "slotId": "3-3",
         "unitId": "assassin",
-        "count": 250,
+        "count": 310,
         "star": 3
       },
       {
         "slotId": "4-1",
-        "unitId": "light_envoy",
-        "count": 230,
-        "star": 5
-      },
-      {
-        "slotId": "4-2",
-        "unitId": "priest",
-        "count": 250,
-        "star": 3
-      },
-      {
-        "slotId": "4-3",
-        "unitId": "light_mentor",
-        "count": 290,
+        "unitId": "martial_master",
+        "count": 175,
         "star": 4
       },
       {
+        "slotId": "4-2",
+        "unitId": "light_envoy",
+        "count": 95,
+        "star": 5
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "monk",
+        "count": 230,
+        "star": 2
+      },
+      {
         "slotId": "4-4",
-        "unitId": "echo_of_light",
-        "count": 320,
-        "star": 6
+        "unitId": "priest",
+        "count": 180,
+        "star": 3
       }
     ]
   },
@@ -2605,62 +2617,62 @@
       {
         "slotId": "1-1",
         "unitId": "garrison_guard",
-        "count": 560,
+        "count": 250,
         "star": 5
       },
       {
         "slotId": "2-1",
-        "unitId": "garrison_guard",
-        "count": 400,
-        "star": 5
+        "unitId": "bright_warrior",
+        "count": 330,
+        "star": 1
       },
       {
         "slotId": "2-2",
-        "unitId": "royal_swordsman",
-        "count": 380,
+        "unitId": "echo_of_light",
+        "count": 70,
         "star": 6
       },
       {
         "slotId": "3-1",
-        "unitId": "assassin",
-        "count": 300,
-        "star": 3
+        "unitId": "royal_swordsman",
+        "count": 165,
+        "star": 6
       },
       {
         "slotId": "3-2",
-        "unitId": "martial_master",
-        "count": 330,
+        "unitId": "light_mentor",
+        "count": 160,
         "star": 4
       },
       {
         "slotId": "3-3",
         "unitId": "assassin",
-        "count": 300,
+        "count": 360,
         "star": 3
       },
       {
         "slotId": "4-1",
-        "unitId": "light_envoy",
-        "count": 300,
-        "star": 5
-      },
-      {
-        "slotId": "4-2",
-        "unitId": "priest",
-        "count": 310,
-        "star": 3
-      },
-      {
-        "slotId": "4-3",
-        "unitId": "light_mentor",
-        "count": 360,
+        "unitId": "martial_master",
+        "count": 210,
         "star": 4
       },
       {
+        "slotId": "4-2",
+        "unitId": "light_envoy",
+        "count": 120,
+        "star": 5
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "monk",
+        "count": 260,
+        "star": 2
+      },
+      {
         "slotId": "4-4",
-        "unitId": "echo_of_light",
-        "count": 600,
-        "star": 6
+        "unitId": "priest",
+        "count": 210,
+        "star": 3
       }
     ]
   },

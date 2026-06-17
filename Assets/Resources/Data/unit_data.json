@@ -803,7 +803,7 @@
         "goldBattleText": "—",
         "talents": [
             {
-                "kind": "enter_if_board_faith_count_discover",
+                "kind": "round_start_if_board_faith_count_discover",
                 "faith": "莱特",
                 "threshold": 6,
                 "count": 1
@@ -811,7 +811,7 @@
         ],
         "goldTalents": [
             {
-                "kind": "enter_if_board_faith_count_discover",
+                "kind": "round_start_if_board_faith_count_discover",
                 "faith": "莱特",
                 "threshold": 6,
                 "count": 2
@@ -2873,7 +2873,7 @@
             {
                 "kind": "on_gift_action_team_gain_attack_every_n",
                 "threshold": 5,
-                "attack": 10,
+                "attack": 1,
                 "value": 1
             }
         ],
@@ -2881,7 +2881,7 @@
             {
                 "kind": "on_gift_action_team_gain_attack_every_n",
                 "threshold": 5,
-                "attack": 20,
+                "attack": 2,
                 "value": 2
             }
         ],

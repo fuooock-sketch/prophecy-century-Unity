@@ -126,6 +126,7 @@ namespace ProphecyCentury.UI
         private readonly Dictionary<string, Vector2> _battlePlayerPositionOverrides = new Dictionary<string, Vector2>();
         private static GameObject _cachedBattleUnitPrefab;
         private static Sprite _cachedBattleHexCellSprite;
+        private static Sprite _cachedBattleShieldSprite;
 
         private RunState Run => ProphecyGameSession.Instance.CurrentRun;
 
@@ -189,6 +190,8 @@ namespace ProphecyCentury.UI
             public int HpPerUnit;
             public int DamageMin;
             public int DamageMax;
+            public int ShieldLayers;
+            public Image ShieldImage;
             public BattleUnitView UnitView;
             public int Attack;
             public int Defense;
@@ -3790,6 +3793,7 @@ namespace ProphecyCentury.UI
                     }
                 }
 
+                ApplyBattleShieldState(views, battleEvent);
                 SetBattleStageProgress(Mathf.Lerp(0.05f, 0.95f, i / (float)total));
                 SetBattleStageText("轮次战斗", string.Join("\n", rollingLines));
 
@@ -3830,6 +3834,10 @@ namespace ProphecyCentury.UI
                         break;
                     case "control":
                         ApplyControlEvent(battleEvent, views, floatingTexts);
+                        yield return WaitAndUpdateBattleEffects(0.18f, floatingTexts, bursts);
+                        break;
+                    case "shield":
+                        ApplyBattleShieldFeedback(views, battleEvent, floatingTexts, bursts);
                         yield return WaitAndUpdateBattleEffects(0.18f, floatingTexts, bursts);
                         break;
                     case "count_gain":
@@ -4263,6 +4271,8 @@ namespace ProphecyCentury.UI
             {
                 AddFloatingText(battleEvent.Kind == "block" ? "格挡" : "免疫", target.Rect.anchoredPosition + new Vector2(0f, 60f), new Color32(150, 210, 255, 255), 20, floatingTexts);
                 SpawnEffectBurst(target.Rect.anchoredPosition, new Color32(150, 210, 255, 130), bursts);
+                target.ShieldLayers = Mathf.Max(0, battleEvent.TargetShieldLayers);
+                UpdateBattleShieldVisual(target);
                 return 0.16f;
             }
 
@@ -4302,6 +4312,48 @@ namespace ProphecyCentury.UI
             }
 
             return countLoss > 0 ? CountLossActionPauseDuration : 0.16f;
+        }
+
+        private void ApplyBattleShieldFeedback(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            if (battleEvent == null || views == null)
+            {
+                return;
+            }
+
+            var target = FindBattleStageView(views, battleEvent.TargetPlayerSide, battleEvent.TargetSlotId, battleEvent.TargetName)
+                ?? FindBattleStageView(views, battleEvent.SourcePlayerSide, battleEvent.SourceSlotId, battleEvent.SourceName);
+            if (target?.Rect == null || target.Dead)
+            {
+                return;
+            }
+
+            target.ShieldLayers = Mathf.Max(0, battleEvent.TargetShieldLayers > 0 ? battleEvent.TargetShieldLayers : battleEvent.SourceShieldLayers);
+            UpdateBattleShieldVisual(target);
+            AddFloatingText("护盾", target.Rect.anchoredPosition + new Vector2(0f, 82f), new Color32(255, 225, 92, 255), 22, floatingTexts);
+            SpawnEffectBurst(target.Rect.anchoredPosition, new Color32(255, 218, 64, 120), bursts);
+        }
+
+        private static void ApplyBattleShieldState(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent)
+        {
+            if (views == null || battleEvent == null)
+            {
+                return;
+            }
+
+            var source = FindBattleStageView(views, battleEvent.SourcePlayerSide, battleEvent.SourceSlotId, battleEvent.SourceName);
+            if (source != null)
+            {
+                source.ShieldLayers = Mathf.Max(0, battleEvent.SourceShieldLayers);
+                UpdateBattleShieldVisual(source);
+            }
+
+            var target = FindBattleStageView(views, battleEvent.TargetPlayerSide, battleEvent.TargetSlotId, battleEvent.TargetName);
+            if (target != null)
+            {
+                target.ShieldLayers = Mathf.Max(0, battleEvent.TargetShieldLayers);
+                UpdateBattleShieldVisual(target);
+            }
         }
 
         private void ApplyBattleAttackBuffFeedback(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
@@ -4802,11 +4854,12 @@ namespace ProphecyCentury.UI
             rootRect.anchorMax = new Vector2(0.5f, 0f);
             rootRect.pivot = new Vector2(0.5f, 0.5f);
             rootRect.anchoredPosition = new Vector2(0f, 188f);
-            rootRect.sizeDelta = new Vector2(270f, 44f);
+            rootRect.sizeDelta = new Vector2(360f, 44f);
 
-            CreateBattlePlaybackSpeedButton("SpeedSlow", "0.5x", -90f, 0.5f);
-            CreateBattlePlaybackSpeedButton("SpeedNormal", "1x", 0f, 1f);
-            CreateBattlePlaybackSpeedButton("SpeedFast", "2x", 90f, 2f);
+            CreateBattlePlaybackSpeedButton("SpeedSlow", "0.5x", -135f, 0.5f);
+            CreateBattlePlaybackSpeedButton("SpeedNormal", "1x", -45f, 1f);
+            CreateBattlePlaybackSpeedButton("SpeedFast", "2x", 45f, 2f);
+            CreateBattlePlaybackSpeedButton("SpeedFaster", "4x", 135f, 4f);
             RefreshBattlePlaybackSpeedButtons();
             _battlePlaybackSpeedRoot.SetActive(false);
         }
@@ -4854,7 +4907,8 @@ namespace ProphecyCentury.UI
 
                 var selected = (child.name == "SpeedSlow" && Mathf.Approximately(_battlePlaybackSpeed, 0.5f))
                     || (child.name == "SpeedNormal" && Mathf.Approximately(_battlePlaybackSpeed, 1f))
-                    || (child.name == "SpeedFast" && Mathf.Approximately(_battlePlaybackSpeed, 2f));
+                    || (child.name == "SpeedFast" && Mathf.Approximately(_battlePlaybackSpeed, 2f))
+                    || (child.name == "SpeedFaster" && Mathf.Approximately(_battlePlaybackSpeed, 4f));
                 image.color = selected
                     ? new Color32(78, 132, 190, 255)
                     : new Color32(42, 68, 104, 230);
@@ -6062,6 +6116,26 @@ namespace ProphecyCentury.UI
             view.Label.text = string.Empty;
             view.Label.raycastTarget = false;
             RefreshBattleStageTooltip(view);
+            UpdateBattleShieldVisual(view);
+        }
+
+        private static void UpdateBattleShieldVisual(BattleStageUnitView view)
+        {
+            if (view?.ShieldImage == null)
+            {
+                return;
+            }
+
+            var visible = !view.Dead && view.ShieldLayers > 0;
+            view.ShieldImage.gameObject.SetActive(visible);
+            if (!visible)
+            {
+                return;
+            }
+
+            var alpha = (byte)Mathf.Clamp(62 + view.ShieldLayers * 18, 72, 128);
+            view.ShieldImage.color = new Color32(255, 218, 64, alpha);
+            view.ShieldImage.transform.SetAsLastSibling();
         }
 
         private static int ResolveCurrentCount(int totalHp, int hpPerUnit)
@@ -6154,6 +6228,8 @@ namespace ProphecyCentury.UI
 
             view.Dead = true;
             view.Target = null;
+            view.ShieldLayers = 0;
+            UpdateBattleShieldVisual(view);
 
             if (view.Backing != null)
             {
@@ -7320,12 +7396,14 @@ namespace ProphecyCentury.UI
 
             unitView.Rect.anchoredPosition = start;
             unitView.Rect.localScale = Vector3.one * CalculateBattleUnitScale(rootSize);
+            var shieldImage = CreateBattleShieldImage(unitView.Rect);
 
-            return new BattleStageUnitView
+            var view = new BattleStageUnitView
             {
                 Rect = unitView.Rect,
                 Backing = unitView.Backing,
                 Label = unitView.Label,
+                ShieldImage = shieldImage,
                 UnitView = unitView.View,
                 StartPosition = start,
                 FightPosition = fight,
@@ -7352,6 +7430,8 @@ namespace ProphecyCentury.UI
                 AttackInterval = Mathf.Max(0.2f, definition?.attackInterval ?? 1f),
                 PlayerSide = playerSide
             };
+            UpdateBattleShieldVisual(view);
+            return view;
         }
 
         private BattleStageUnitView CreateBattleStagePositionedUnit(Transform root, BattleUnitSnapshot unit, bool playerSide)
@@ -7379,8 +7459,66 @@ namespace ProphecyCentury.UI
             view.Range = Mathf.Max(1f, unit.Range);
             view.Size = Mathf.Max(20, unit.Size);
             view.AttackInterval = Mathf.Max(0.2f, unit.AttackInterval);
+            view.ShieldLayers = Mathf.Max(0, unit.ShieldLayers);
             UpdateBattleStageLabel(view, unit.Name, view.Hp, view.MaxHp);
+            UpdateBattleShieldVisual(view);
             return view;
+        }
+
+        private static Image CreateBattleShieldImage(RectTransform parent)
+        {
+            if (parent == null)
+            {
+                return null;
+            }
+
+            var shieldObject = new GameObject("ShieldOverlay", typeof(Image));
+            shieldObject.transform.SetParent(parent, false);
+            shieldObject.transform.SetAsLastSibling();
+            var rect = shieldObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0f, 22f);
+            rect.sizeDelta = new Vector2(205f, 245f);
+
+            var image = shieldObject.GetComponent<Image>();
+            image.sprite = GetBattleShieldSprite();
+            image.color = new Color32(255, 218, 64, 78);
+            image.raycastTarget = false;
+            image.preserveAspect = false;
+            shieldObject.SetActive(false);
+            return image;
+        }
+
+        private static Sprite GetBattleShieldSprite()
+        {
+            if (_cachedBattleShieldSprite != null)
+            {
+                return _cachedBattleShieldSprite;
+            }
+
+            const int width = 96;
+            const int height = 120;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            var center = new Vector2((width - 1) * 0.5f, (height - 1) * 0.5f);
+            var radius = new Vector2(width * 0.46f, height * 0.46f);
+            for (var y = 0; y < height; y += 1)
+            {
+                for (var x = 0; x < width; x += 1)
+                {
+                    var dx = (x - center.x) / radius.x;
+                    var dy = (y - center.y) / radius.y;
+                    var distance = Mathf.Sqrt(dx * dx + dy * dy);
+                    var alpha = distance <= 1f ? Mathf.Clamp01(1f - Mathf.Pow(distance, 2.4f)) : 0f;
+                    texture.SetPixel(x, y, new Color(1f, 0.86f, 0.18f, alpha));
+                }
+            }
+
+            texture.filterMode = FilterMode.Bilinear;
+            texture.Apply(false, true);
+            _cachedBattleShieldSprite = Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
+            return _cachedBattleShieldSprite;
         }
 
         private BattleStagePrefabParts CreateBattleUnitObject(Transform root, string label, int star, string iconName, bool playerSide)
@@ -8825,6 +8963,7 @@ namespace ProphecyCentury.UI
             switch (skill.kind)
             {
                 case "battle_start_if_team_faith_count_next_round_discover":
+                case "round_start_if_board_faith_count_discover":
                 case "battle_start_self_attack_per_faith_count":
                 case "battle_start_team_attack_per_faith_count":
                 case "battle_start_self_stats_per_faith_count":
@@ -8862,6 +9001,7 @@ namespace ProphecyCentury.UI
                 switch (skill.kind)
                 {
                     case "battle_start_if_team_faith_count_next_round_discover":
+                    case "round_start_if_board_faith_count_discover":
                     case "battle_start_self_attack_per_faith_count":
                     case "battle_start_team_attack_per_faith_count":
                     case "battle_start_self_stats_per_faith_count":

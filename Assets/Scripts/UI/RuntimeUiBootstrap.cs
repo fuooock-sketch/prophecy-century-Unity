@@ -1132,28 +1132,60 @@ namespace ProphecyCentury.UI
             cardRect.anchorMax = new Vector2(0.5f, 0.5f);
             cardRect.pivot = new Vector2(0.5f, 0.5f);
             cardRect.anchoredPosition = Vector2.zero;
-            cardRect.sizeDelta = new Vector2(2200f, 600f);
+            cardRect.sizeDelta = new Vector2(2200f, 920f);
 
             var layout = cardContainer.GetComponent<GridLayoutGroup>();
-            layout.cellSize = new Vector2(640f, 480f);
+            layout.cellSize = new Vector2(640f, 420f);
             layout.spacing = new Vector2(60f, 40f);
             layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             layout.constraintCount = 3;
             layout.childAlignment = TextAnchor.MiddleCenter;
 
-            var campaigns = new[]
+            var campaigns = ProphecyGameSession.Instance?.Data?.Campaigns;
+            if (campaigns != null && campaigns.Count > 0)
+            {
+                for (var i = 0; i < campaigns.Count; i += 1)
+                {
+                    var campaign = campaigns[i];
+                    if (campaign == null || string.IsNullOrWhiteSpace(campaign.id))
+                    {
+                        continue;
+                    }
+
+                    CreateCampaignCard(cardContainer.transform, campaign.id, campaign.name, ResolveCampaignMapImageName(campaign.id, i), controller);
+                }
+
+                return screen;
+            }
+
+            var fallbackCampaigns = new[]
             {
                 ("south_town_adventure", "South Town Adventure", "level 1"),
                 ("snow_peak_defense", "Snow Peak Defense", "level 2"),
                 ("song_of_sang_city", "Song of Sang City", "level 3"),
             };
 
-            foreach (var (id, name, mapName) in campaigns)
+            foreach (var (id, name, mapName) in fallbackCampaigns)
             {
                 CreateCampaignCard(cardContainer.transform, id, name, mapName, controller);
             }
 
             return screen;
+        }
+
+        private static string ResolveCampaignMapImageName(string campaignId, int index)
+        {
+            switch (campaignId)
+            {
+                case "south_town_adventure":
+                    return "level 1";
+                case "snow_peak_defense":
+                    return "level 2";
+                case "song_of_sang_city":
+                    return "level 3";
+                default:
+                    return "level " + Mathf.Clamp(index + 1, 1, 3);
+            }
         }
 
         private static void CreateCampaignCard(Transform parent, string campaignId, string campaignName, string mapName, RunSceneController controller)
@@ -1166,8 +1198,11 @@ namespace ProphecyCentury.UI
             var mapImage = CreatePanel("MapImage", card.transform, Color.white, Vector2.zero, Vector2.one, new Vector2(8f, 8f), new Vector2(-8f, -8f));
             ApplySpriteFromProjectPath(mapImage.GetComponent<Image>(), "Art/maps_image/" + mapName + ".png");
 
-            var nameText = CreateText("CampaignName", card.transform, campaignName, 24, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(12f, -70f), new Vector2(-12f, -110f));
+            var nameText = CreateText("CampaignName", card.transform, string.IsNullOrWhiteSpace(campaignName) ? campaignId : campaignName, 24, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(12f, -70f), new Vector2(-12f, -110f));
             nameText.color = new Color32(239, 204, 126, 255);
+            nameText.resizeTextForBestFit = true;
+            nameText.resizeTextMinSize = 14;
+            nameText.resizeTextMaxSize = 24;
 
             CreateButton("SelectButton", card.transform, "选择此战役", new Vector2(0f, -180f), new Vector2(200f, 50f), () => controller.SelectCampaignAndOpenHeroSelection(campaignId));
             StylePrimaryButton(card.transform.Find("SelectButton"));

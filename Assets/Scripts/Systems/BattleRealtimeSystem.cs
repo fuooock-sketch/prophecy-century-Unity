@@ -8,10 +8,10 @@ namespace ProphecyCentury.Systems
 {
     public sealed class BattleRealtimeSystem
     {
-        private const float MaxBattleTime = 40f;
         private const float StepSeconds = 0.05f;
         private const float TargetSearchInterval = 1f;
         private const float AttackRangeSlack = 36f;
+        private const int MaxBattleSafetySteps = 200000;
         private const int MaxBattleEvents = 800;
         private const float LUCK_CRIT_CHANCE_PER_POINT = 0.06f;
         private const float LUCK_CRIT_DAMAGE_MULTIPLIER = 1.5f;
@@ -35,8 +35,16 @@ namespace ProphecyCentury.Systems
             var playerAreaEffects = new List<RealtimeAreaEffect>();
             var enemyAreaEffects = new List<RealtimeAreaEffect>();
 
-            while (elapsed < MaxBattleTime && players.Any(unit => unit.IsAlive) && enemies.Any(unit => unit.IsAlive))
+            var safetySteps = 0;
+            while (players.Any(unit => unit.IsAlive) && enemies.Any(unit => unit.IsAlive))
             {
+                safetySteps += 1;
+                if (safetySteps > MaxBattleSafetySteps)
+                {
+                    AddEvent(events, elapsed, "safety_limit", null, null, 0, $"Realtime battle safety limit reached after {MaxBattleSafetySteps} steps");
+                    break;
+                }
+
                 TickTimedSkills(players, enemies, random, playerAreaEffects, elapsed, events);
                 TickTimedSkills(enemies, players, random, enemyAreaEffects, elapsed, events);
                 TickSide(players, enemies, random, playerAreaEffects, elapsed, events);
@@ -401,7 +409,7 @@ namespace ProphecyCentury.Systems
                         if (attacker.ShieldLayers <= 0 && random.NextDouble() < Math.Max(0f, skill.chance))
                         {
                             attacker.ShieldLayers = Math.Max(1, skill.layers);
-                            AddEvent(events, elapsed, "skill", attacker, attacker, 0, $"{attacker.Name} 获得护盾");
+                            AddEvent(events, elapsed, "shield", attacker, attacker, attacker.ShieldLayers, $"{attacker.Name} 获得护盾");
                         }
                         break;
                     case "on_attack_count_summon":
@@ -895,12 +903,14 @@ namespace ProphecyCentury.Systems
                 SourceSlotId = source?.SlotId,
                 SourceHp = source?.Hp ?? 0,
                 SourceMaxHp = source?.MaxHp ?? 0,
+                SourceShieldLayers = source?.ShieldLayers ?? 0,
                 TargetUnitId = target?.UnitId,
                 TargetName = target?.Name,
                 TargetPlayerSide = target?.PlayerSide ?? false,
                 TargetSlotId = target?.SlotId,
                 TargetHp = target?.Hp ?? 0,
                 TargetMaxHp = target?.MaxHp ?? 0,
+                TargetShieldLayers = target?.ShieldLayers ?? 0,
                 Amount = amount,
                 Message = message
             };
@@ -941,6 +951,7 @@ namespace ProphecyCentury.Systems
                 MaxCount = unit.MaxCount,
                 HpPerUnit = unit.HpPerUnit,
                 CurrentTotalHp = unit.CurrentTotalHp,
+                ShieldLayers = unit.ShieldLayers,
                 Attack = unit.Attack,
                 Defense = unit.Defense,
                 Power = unit.Power,
@@ -1184,6 +1195,7 @@ namespace ProphecyCentury.Systems
                 CurrentTotalHp = Math.Max(0, snapshot.CurrentTotalHp > 0 ? snapshot.CurrentTotalHp : CurrentCount * HpPerUnit);
                 MaxHp = Math.Max(1, BaseCount * HpPerUnit);
                 Hp = Math.Max(0, CurrentTotalHp);
+                ShieldLayers = Math.Max(0, snapshot.ShieldLayers);
                 Attack = Math.Max(1, snapshot.Attack);
                 Defense = Math.Max(0, snapshot.Defense);
                 Power = Math.Max(1, snapshot.Power);

@@ -260,6 +260,12 @@ namespace ProphecyCentury.Systems
                         GainCount(runState, owner, ResolveRoundCountGain(talent, owner), owner, processed, depth);
                     }
                     break;
+                case "round_start_if_board_faith_count_discover":
+                    if (eventType == "on_round_start" && runState.boardUnits.Count(unit => UnitDef(unit)?.faith == talent.faith) >= Math.Max(1, talent.threshold))
+                    {
+                        AddRandomUnitsToHand(runState, unit => unit.faith == talent.faith && !unit.hidden, Count(talent, owner), owner);
+                    }
+                    break;
                 case "on_gain_race_unit_self_gain_count":
                     if (eventType == "on_gain_unit" && UnitDef(target)?.race == talent.race)
                     {
@@ -1522,6 +1528,7 @@ namespace ProphecyCentury.Systems
                     return eventType == "on_round_end";
                 case "round_start_retrigger_race_round_end_talents":
                 case "round_start_if_race_count_temp_power":
+                case "round_start_if_board_faith_count_discover":
                     return eventType == "on_round_start";
                 case "leave_board_gain_gold":
                 case "leave_board_tagged_units_gain_stats":

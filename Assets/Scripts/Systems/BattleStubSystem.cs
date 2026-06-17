@@ -11,9 +11,8 @@ namespace ProphecyCentury.Systems
     {
         private const float StepSeconds = 0.1f;
         private const float TargetSearchInterval = 1f;
-        private const int MaxBattleSeconds = 40;
-        private const int MaxBattleRounds = 50;
-        private const int MaxBattleEvents = 2000;
+        private const int MaxBattleSafetyRounds = 10000;
+        private const int MaxBattleEvents = 12000;
         private const int BattleHexColumnCount = 13;
         private const int BattleHexMaxRows = 6;
         private const float LUCK_CRIT_CHANCE_PER_POINT = 0.06f;
@@ -24,7 +23,6 @@ namespace ProphecyCentury.Systems
         public BattleStubResult Resolve(RunState runState)
         {
             var random = new Random(runState.round * 7919 + runState.boardUnits.Count * 131);
-            var battleTime = MaxBattleSeconds;
             var players = BuildPlayerUnits(runState);
             var enemies = BuildEnemyUnits(runState, random);
             var initialPlayerUnits = players.Select(CreateSnapshot).ToList();
@@ -45,8 +43,16 @@ namespace ProphecyCentury.Systems
 
             var attacks = 0;
             var elapsed = 0f;
-            for (var round = 1; round <= MaxBattleRounds && elapsed < battleTime && players.Any(unit => unit.IsAlive) && enemies.Any(unit => unit.IsAlive); round += 1)
+            var safetyLimitReached = false;
+            for (var round = 1; players.Any(unit => unit.IsAlive) && enemies.Any(unit => unit.IsAlive); round += 1)
             {
+                if (round > MaxBattleSafetyRounds)
+                {
+                    safetyLimitReached = true;
+                    AddEvent(events, elapsed, "safety_limit", null, null, round, $"Battle safety limit reached after {MaxBattleSafetyRounds} rounds");
+                    break;
+                }
+
                 AddEvent(events, elapsed, "round", null, null, round, $"Round {round}");
                 ResolveBattleRoundStart(players, enemies, round, random, events, elapsed);
                 ResolveBattleRoundStart(enemies, players, round, random, events, elapsed);
@@ -64,7 +70,7 @@ namespace ProphecyCentury.Systems
 
                 foreach (var unit in turnOrder)
                 {
-                    if (elapsed >= battleTime || !players.Any(item => item.IsAlive) || !enemies.Any(item => item.IsAlive))
+                    if (!players.Any(item => item.IsAlive) || !enemies.Any(item => item.IsAlive))
                     {
                         break;
                     }
@@ -77,8 +83,8 @@ namespace ProphecyCentury.Systems
                     var allies = unit.PlayerSide ? players : enemies;
                     var defenders = unit.PlayerSide ? enemies : players;
                     TakeHexTurn(unit, allies, defenders, random, ref attacks, events, ref elapsed);
-                    TickBattleState(players);
-                    TickBattleState(enemies);
+                    TickBattleState(players, events, elapsed);
+                    TickBattleState(enemies, events, elapsed);
                     ApplyContinuousAuras(players);
                     ApplyContinuousAuras(enemies);
                 }
@@ -86,9 +92,8 @@ namespace ProphecyCentury.Systems
 
             var playerAlive = players.Any(unit => unit.IsAlive);
             var enemyAlive = enemies.Any(unit => unit.IsAlive);
-            var timedOut = elapsed >= battleTime && playerAlive && enemyAlive;
             var victory = playerAlive && !enemyAlive;
-            if (timedOut)
+            if (safetyLimitReached && playerAlive && enemyAlive)
             {
                 var playerAliveCount = players.Count(unit => unit.IsAlive);
                 var enemyAliveCount = enemies.Count(unit => unit.IsAlive);
@@ -367,7 +372,7 @@ namespace ProphecyCentury.Systems
                             if (refreshRounds > 0 && round > 1 && (round - 1) % refreshRounds == 0)
                             {
                                 unit.ShieldLayers = Math.Max(unit.ShieldLayers, Math.Max(1, skill.layers));
-                                AddEvent(events, elapsed, "skill", unit, unit, unit.ShieldLayers, $"{unit.Name} refreshes shield");
+                                AddEvent(events, elapsed, "shield", unit, unit, unit.ShieldLayers, $"{unit.Name} refreshes shield");
                                 unit.SkillTriggers += 1;
                             }
                             break;
@@ -647,6 +652,7 @@ namespace ProphecyCentury.Systems
                 SourceSlotId = source?.SlotId,
                 SourceHp = source?.CurrentHp ?? 0,
                 SourceMaxHp = source?.MaxHp ?? 0,
+                SourceShieldLayers = source?.ShieldLayers ?? 0,
                 TargetUnitId = target?.UnitId,
                 TargetInstanceId = target?.InstanceId,
                 TargetName = target?.Name,
@@ -654,6 +660,7 @@ namespace ProphecyCentury.Systems
                 TargetSlotId = target?.SlotId,
                 TargetHp = target?.CurrentHp ?? 0,
                 TargetMaxHp = target?.MaxHp ?? 0,
+                TargetShieldLayers = target?.ShieldLayers ?? 0,
                 DestinationSlotId = destinationSlotId,
                 RouteSlotIds = routeSlotIds,
                 Amount = amount,
@@ -681,6 +688,7 @@ namespace ProphecyCentury.Systems
                 MaxCount = unit.MaxCount,
                 HpPerUnit = unit.HpPerUnit,
                 CurrentTotalHp = unit.CurrentTotalHp,
+                ShieldLayers = unit.ShieldLayers,
                 Attack = unit.Attack,
                 Defense = unit.Defense,
                 Power = unit.Power,
@@ -1165,6 +1173,8 @@ namespace ProphecyCentury.Systems
                 SourceState = state,
                 PlayerSide = playerSide,
                 SlotId = slotId,
+                BoardRow = row,
+                BoardCol = col,
                 Row = hexRow,
                 Col = hexColumn,
                 HexColumn = hexColumn,
@@ -1238,20 +1248,22 @@ namespace ProphecyCentury.Systems
                             foreach (var ally in shieldTargets)
                             {
                                 ally.ShieldLayers += Math.Max(1, skill.layers);
+                                AddEvent(events, elapsed, "shield", unit, ally, ally.ShieldLayers, $"{ally.Name} gains shield");
                             }
                             unit.SkillTriggers += 1;
                             break;
                         case "battle_start_front_occupied_rows_shield":
                             var frontRows = allies
-                                .Where(ally => ally.IsAlive)
-                                .Select(ally => ally.Row)
+                                .Where(ally => ally.IsAlive && ally.BoardRow > 0)
+                                .Select(ally => ally.BoardRow)
                                 .Distinct()
                                 .OrderBy(row => row)
                                 .Take(Math.Max(1, skill.count));
                             var frontRowSet = new HashSet<int>(frontRows);
-                            foreach (var ally in allies.Where(ally => ally.IsAlive && frontRowSet.Contains(ally.Row)))
+                            foreach (var ally in allies.Where(ally => ally.IsAlive && frontRowSet.Contains(ally.BoardRow)))
                             {
                                 ally.ShieldLayers += Math.Max(1, skill.layers);
+                                AddEvent(events, elapsed, "shield", unit, ally, ally.ShieldLayers, $"{ally.Name} gains shield");
                             }
                             unit.SkillTriggers += frontRowSet.Count > 0 ? 1 : 0;
                             break;
@@ -1263,6 +1275,7 @@ namespace ProphecyCentury.Systems
                                 unit.ShieldRefreshTimer = unit.ShieldRefreshInterval;
                             }
                             unit.SkillTriggers += 1;
+                            AddEvent(events, elapsed, "shield", unit, unit, unit.ShieldLayers, $"{unit.Name} gains shield");
                             break;
                         case "battle_start_self_attack_per_faith_count":
                             AddAttack(unit, CountFaith(allies, skill.faith, unit.Faith) * Math.Max(1, skill.value));
@@ -1488,6 +1501,7 @@ namespace ProphecyCentury.Systems
                         {
                             attacker.ShieldLayers += Math.Max(1, skill.layers);
                             attacker.SkillTriggers += 1;
+                            AddEvent(events, elapsed, "shield", attacker, attacker, attacker.ShieldLayers, $"{attacker.Name} gains shield");
                         }
                         break;
                     case "on_attack_count_summon":
@@ -1955,7 +1969,7 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private static void TickBattleState(List<BattleRuntimeUnit> units)
+        private static void TickBattleState(List<BattleRuntimeUnit> units, List<BattleEvent> events = null, float elapsed = 0f)
         {
             foreach (var unit in units.Where(unit => unit.IsAlive))
             {
@@ -1968,6 +1982,7 @@ namespace ProphecyCentury.Systems
                     {
                         unit.ShieldLayers = 1;
                         unit.ShieldRefreshTimer = unit.ShieldRefreshInterval;
+                        AddEvent(events, elapsed, "shield", unit, unit, unit.ShieldLayers, $"{unit.Name} refreshes shield");
                     }
                 }
             }
@@ -2829,6 +2844,7 @@ namespace ProphecyCentury.Systems
         public string SourceSlotId;
         public int SourceHp;
         public int SourceMaxHp;
+        public int SourceShieldLayers;
         public string TargetUnitId;
         public string TargetInstanceId;
         public string TargetName;
@@ -2836,6 +2852,7 @@ namespace ProphecyCentury.Systems
         public string TargetSlotId;
         public int TargetHp;
         public int TargetMaxHp;
+        public int TargetShieldLayers;
         public string DestinationSlotId;
         public string RouteSlotIds;
         public int Amount;
@@ -2858,6 +2875,7 @@ namespace ProphecyCentury.Systems
         public int MaxCount;
         public int HpPerUnit;
         public int CurrentTotalHp;
+        public int ShieldLayers;
         public int Attack;
         public int Defense;
         public int Power;
@@ -2901,6 +2919,8 @@ namespace ProphecyCentury.Systems
         public UnitCardState SourceState;
         public bool PlayerSide;
         public string SlotId;
+        public int BoardRow;
+        public int BoardCol;
         public int Row;
         public int Col;
         public int HexColumn;

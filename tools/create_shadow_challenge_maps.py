@@ -18,45 +18,27 @@ LOG_PATH = Path(os.environ.get(
 ))
 
 
-LIGHT_NAME_TO_ID = {
-    "流浪者": "wanderer",
-    "精灵": "elf",
-    "卫戍协兵": "garrison_guard",
-    "骑士": "knight",
-    "牧师": "priest",
-    "光明武士": "bright_warrior",
-    "铁匠": "blacksmith",
-    "刺客": "assassin",
-    "武学大师": "martial_master",
-    "莱特使者": "light_envoy",
-    "光明导师": "light_mentor",
-    "皇家剑士": "royal_swordsman",
-    "僧侣": "monk",
-    "莱特的回响": "echo_of_light",
-}
-
-
 LIGHT_ROWS = [
-    "2-1 流浪者x17；3-2 精灵x12",
-    "2-1 流浪者x20；3-2 流浪者x18；4-2 精灵x16",
-    "1-1 卫戍协兵x30；2-1 骑士x22；3-2 流浪者x20；4-2 牧师x14",
-    "1-1 卫戍协兵x38；2-1 骑士x30；2-2 光明武士x25；3-2 流浪者x28；4-2 牧师x17",
-    "1-1 卫戍协兵x44；2-1 光明武士x36；2-2 骑士x30；3-1 铁匠x25；3-2 流浪者x24；4-2 牧师x15",
-    "1-1 卫戍协兵x60；2-1 骑士x50；2-2 光明武士x35；3-1 刺客x48；3-2 铁匠x35；4-2 流浪者x40；4-3 牧师x20",
-    "1-1 卫戍协兵x60；2-1 骑士x48；2-2 光明武士x30；3-1 刺客x50；3-2 武学大师x38；3-3 铁匠x36；4-1 流浪者x44；4-2 牧师x30",
-    "1-1 卫戍协兵x80；2-1 骑士x65；2-2 光明武士x50；3-1 刺客x45；3-2 武学大师x40；3-3 铁匠x40；4-1 流浪者x42；4-2 牧师x35；4-3 莱特使者x35",
-    "1-1 卫戍协兵x85；2-1 骑士x70；2-2 光明武士x60；3-1 铁匠x45；3-2 武学大师x45；3-3 流浪者x50；4-1 莱特使者x40；4-2 牧师x45；4-3 光明导师x28",
-    "1-1 卫戍协兵x130；2-1 骑士x90；2-2 光明武士x80；3-1 皇家剑士x60；3-2 武学大师x60；3-3 铁匠x55；4-1 流浪者x60；4-2 莱特使者x50；4-3 牧师x55；4-4 光明导师x32",
-    "1-1 卫戍协兵x140；2-1 骑士x95；2-2 光明武士x85；3-1 皇家剑士x75；3-2 武学大师x70；3-3 刺客x60；4-1 莱特使者x65；4-2 牧师x70；4-3 光明导师x44；4-4 铁匠x40",
-    "1-1 卫戍协兵x145；2-1 骑士x105；2-2 皇家剑士x95；3-1 刺客x105；3-2 武学大师x85；3-3 刺客x90；4-1 流浪者x80；4-2 牧师x70；4-3 莱特使者x65；4-4 光明导师x72",
-    "1-1 卫戍协兵x210；2-1 皇家剑士x145；2-2 光明武士x130；3-1 骑士x110；3-2 武学大师x105；3-3 刺客x95；4-1 莱特使者x90；4-2 牧师x95；4-3 光明导师x50；4-4 铁匠x26",
-    "1-1 卫戍协兵x200；2-1 骑士x135；2-2 皇家剑士x125；3-1 光明武士x115；3-2 武学大师x110；3-3 刺客x100；4-1 莱特使者x105；4-2 牧师x110；4-3 光明导师x85；4-4 僧侣x91",
-    "1-1 卫戍协兵x310；2-1 皇家剑士x220；2-2 光明武士x190；3-1 骑士x170；3-2 武学大师x150；3-3 刺客x140；4-1 莱特使者x140；4-2 牧师x150；4-3 光明导师x130；4-4 僧侣x20",
-    "1-1 卫戍协兵x330；2-1 皇家剑士x240；2-2 骑士x210；3-1 刺客x190；3-2 武学大师x170；3-3 刺客x160；4-1 莱特使者x150；4-2 牧师x150；4-3 光明导师x150；4-4 莱特的回响x50",
-    "1-1 卫戍协兵x360；2-1 皇家剑士x280；2-2 骑士x230；3-1 刺客x220；3-2 武学大师x200；3-3 刺客x200；4-1 莱特使者x170；4-2 牧师x180；4-3 光明导师x210；4-4 莱特的回响x230",
-    "1-1 卫戍协兵x420；2-1 皇家剑士x310；2-2 骑士x270；3-1 刺客x240；3-2 武学大师x230；3-3 刺客x220；4-1 莱特使者x190；4-2 牧师x210；4-3 光明导师x240；4-4 莱特的回响x190",
-    "1-1 卫戍协兵x460；2-1 皇家剑士x350；2-2 骑士x310；3-1 刺客x280；3-2 武学大师x260；3-3 刺客x250；4-1 莱特使者x230；4-2 牧师x250；4-3 光明导师x290；4-4 莱特的回响x320",
-    "1-1 卫戍协兵x560；2-1 卫戍协兵x400；2-2 皇家剑士x380；3-1 刺客x300；3-2 武学大师x330；3-3 刺客x300；4-1 莱特使者x300；4-2 牧师x310；4-3 光明导师x360；4-4 莱特的回响x600",
+    [("2-1", "wanderer", 17), ("3-2", "elf", 12)],
+    [("4-4", "elf", 21)],
+    [("4-3", "bright_warrior", 23), ("4-4", "elf", 21)],
+    [("1-1", "bright_warrior", 23), ("2-1", "monk", 14), ("2-2", "blacksmith", 15), ("3-2", "elf", 24), ("3-3", "wanderer", 10)],
+    [("1-1", "bright_warrior", 28), ("2-1", "monk", 14), ("2-2", "blacksmith", 15), ("3-1", "knight", 14), ("3-2", "elf", 27), ("3-3", "wanderer", 10), ("4-4", "priest", 9)],
+    [("1-1", "bright_warrior", 33), ("2-1", "monk", 20), ("2-2", "blacksmith", 18), ("3-1", "knight", 14), ("3-2", "priest", 12), ("3-3", "wanderer", 18), ("4-1", "elf", 35), ("4-2", "monk", 14), ("4-3", "elf", 30), ("4-4", "blacksmith", 18)],
+    [("2-1", "knight", 19), ("2-2", "knight", 19), ("3-1", "monk", 55), ("3-2", "bright_warrior", 42), ("3-3", "blacksmith", 24), ("4-1", "assassin", 12), ("4-3", "elf", 70), ("4-4", "priest", 22)],
+    [("1-1", "bright_warrior", 55), ("2-1", "knight", 22), ("2-2", "knight", 20), ("3-1", "monk", 65), ("3-2", "priest", 26), ("3-3", "blacksmith", 28), ("4-1", "assassin", 18), ("4-2", "wanderer", 24), ("4-3", "elf", 75), ("4-4", "priest", 28)],
+    [("1-1", "bright_warrior", 65), ("2-1", "knight", 24), ("2-2", "knight", 22), ("3-1", "monk", 70), ("3-2", "assassin", 38), ("3-3", "blacksmith", 32), ("4-1", "martial_master", 12), ("4-2", "wanderer", 28), ("4-3", "elf", 80), ("4-4", "priest", 30)],
+    [("1-1", "bright_warrior", 95), ("2-1", "monk", 90), ("2-2", "knight", 60), ("3-1", "wanderer", 42), ("3-2", "assassin", 65), ("3-3", "martial_master", 28), ("4-1", "blacksmith", 42), ("4-2", "priest", 48), ("4-3", "elf", 95), ("4-4", "light_mentor", 18)],
+    [("1-1", "bright_warrior", 105), ("2-1", "monk", 95), ("2-2", "knight", 62), ("3-1", "wanderer", 50), ("3-2", "assassin", 72), ("3-3", "martial_master", 32), ("4-1", "priest", 55), ("4-2", "light_envoy", 18), ("4-3", "elf", 100), ("4-4", "light_mentor", 22)],
+    [("1-1", "garrison_guard", 28), ("2-1", "bright_warrior", 95), ("2-2", "knight", 70), ("3-1", "assassin", 88), ("3-2", "monk", 120), ("3-3", "martial_master", 45), ("4-1", "priest", 70), ("4-2", "light_envoy", 28), ("4-3", "light_mentor", 35), ("4-4", "echo_of_light", 4)],
+    [("1-1", "garrison_guard", 45), ("2-1", "bright_warrior", 130), ("2-2", "garrison_guard", 26), ("3-1", "assassin", 130), ("3-2", "monk", 135), ("3-3", "martial_master", 70), ("4-1", "priest", 75), ("4-2", "light_envoy", 35), ("4-3", "light_mentor", 60), ("4-4", "echo_of_light", 6)],
+    [("1-1", "garrison_guard", 55), ("2-1", "bright_warrior", 145), ("2-2", "garrison_guard", 32), ("3-1", "assassin", 145), ("3-2", "monk", 145), ("3-3", "martial_master", 78), ("4-1", "priest", 85), ("4-2", "light_envoy", 40), ("4-3", "light_mentor", 70), ("4-4", "echo_of_light", 8)],
+    [("1-1", "garrison_guard", 70), ("2-1", "bright_warrior", 160), ("2-2", "garrison_guard", 40), ("3-1", "assassin", 160), ("3-2", "monk", 155), ("3-3", "royal_swordsman", 38), ("4-1", "martial_master", 90), ("4-2", "light_envoy", 46), ("4-3", "light_mentor", 85), ("4-4", "echo_of_light", 10)],
+    [("1-1", "garrison_guard", 105), ("2-1", "bright_warrior", 230), ("2-2", "echo_of_light", 18), ("3-1", "assassin", 190), ("3-2", "royal_swordsman", 35), ("3-3", "martial_master", 145), ("4-1", "light_mentor", 55), ("4-2", "light_envoy", 60), ("4-3", "monk", 170), ("4-4", "priest", 130)],
+    [("1-1", "garrison_guard", 120), ("2-1", "bright_warrior", 245), ("2-2", "echo_of_light", 22), ("3-1", "assassin", 205), ("3-2", "royal_swordsman", 42), ("3-3", "martial_master", 155), ("4-1", "light_mentor", 70), ("4-2", "light_envoy", 68), ("4-3", "monk", 180), ("4-4", "priest", 140)],
+    [("1-1", "garrison_guard", 170), ("2-1", "bright_warrior", 280), ("2-2", "echo_of_light", 38), ("3-1", "royal_swordsman", 90), ("3-2", "light_mentor", 105), ("3-3", "assassin", 260), ("4-1", "martial_master", 150), ("4-2", "light_envoy", 82), ("4-3", "monk", 205), ("4-4", "priest", 160)],
+    [("1-1", "garrison_guard", 210), ("2-1", "bright_warrior", 300), ("2-2", "echo_of_light", 55), ("3-1", "royal_swordsman", 130), ("3-2", "light_mentor", 130), ("3-3", "assassin", 310), ("4-1", "martial_master", 175), ("4-2", "light_envoy", 95), ("4-3", "monk", 230), ("4-4", "priest", 180)],
+    [("1-1", "garrison_guard", 250), ("2-1", "bright_warrior", 330), ("2-2", "echo_of_light", 70), ("3-1", "royal_swordsman", 165), ("3-2", "light_mentor", 160), ("3-3", "assassin", 360), ("4-1", "martial_master", 210), ("4-2", "light_envoy", 120), ("4-3", "monk", 260), ("4-4", "priest", 210)],
 ]
 
 
@@ -174,19 +156,16 @@ def extract_latest_logged_battle_units() -> list[list[dict[str, Any]]]:
 
 def parse_light_states(unit_stars: dict[str, int]) -> list[list[dict[str, Any]]]:
     states: list[list[dict[str, Any]]] = []
-    token_pattern = re.compile(r"(?P<slot>\d-\d)\s+(?P<name>[^x；]+)x(?P<count>\d+)")
     for line in LIGHT_ROWS:
         units: list[dict[str, Any]] = []
-        for match in token_pattern.finditer(line):
-            name = match.group("name").strip()
-            unit_id = LIGHT_NAME_TO_ID.get(name)
-            if not unit_id:
-                raise RuntimeError(f"Unknown unit name in light challenge: {name}")
+        for slot_id, unit_id, count in line:
+            if unit_id not in unit_stars:
+                raise RuntimeError(f"Unknown unit id in light challenge: {unit_id}")
             units.append(
                 {
-                    "slotId": match.group("slot"),
+                    "slotId": slot_id,
                     "unitId": unit_id,
-                    "count": int(match.group("count")),
+                    "count": int(count),
                     "star": unit_stars[unit_id],
                 }
             )
