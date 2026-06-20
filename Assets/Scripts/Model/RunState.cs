@@ -36,6 +36,8 @@ namespace ProphecyCentury.Model
         public int campaignWins;
         public int campaignLosses;
         public bool campaignCompleted;
+        public string customChallengeId;
+        public bool customChallengeGenerated;
         public bool isShopLocked;
         public string lastBattleSummary;
         public bool isExplorationBattle;
@@ -50,6 +52,7 @@ namespace ProphecyCentury.Model
         public List<ShopPoolEntryState> shopPool = new List<ShopPoolEntryState>();
         public List<WorldMapNodeState> worldMapNodes = new List<WorldMapNodeState>();
         public List<InventoryItemState> inventoryItems = new List<InventoryItemState>();
+        public List<CustomChallengeRoundState> customChallengeCaptureRounds = new List<CustomChallengeRoundState>();
         public HeroRuntimeState heroState = new HeroRuntimeState();
         public ManageResourceState manageResources = new ManageResourceState();
         public BattleRewardState pendingBattleRewards = new BattleRewardState();
@@ -109,6 +112,35 @@ namespace ProphecyCentury.Model
     public sealed class BoardUnitState : UnitCardState
     {
         public string boardSlotId;
+    }
+
+    [Serializable]
+    public sealed class CustomChallengeCampaignState
+    {
+        public string id;
+        public string name;
+        public string createdLabel;
+        public string sourceCampaignId;
+        public string sourceCampaignName;
+        public List<CustomChallengeRoundState> rounds = new List<CustomChallengeRoundState>();
+    }
+
+    [Serializable]
+    public sealed class CustomChallengeRoundState
+    {
+        public int round;
+        public List<CustomChallengeUnitState> units = new List<CustomChallengeUnitState>();
+    }
+
+    [Serializable]
+    public sealed class CustomChallengeUnitState
+    {
+        public string unitId;
+        public string name;
+        public int star;
+        public bool isGolden;
+        public string slotId;
+        public int count;
     }
 
     [Serializable]

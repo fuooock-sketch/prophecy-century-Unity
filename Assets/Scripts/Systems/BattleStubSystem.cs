@@ -177,6 +177,7 @@ namespace ProphecyCentury.Systems
                 return;
             }
 
+            ResolveActionSelfShieldIfNone(actor, events, elapsed);
             var target = PickHexTurnTarget(actor, defenders);
             if (target == null)
             {
@@ -284,6 +285,26 @@ namespace ProphecyCentury.Systems
                     AddTemporaryCount(receiver, gain);
                     receiver.SkillTriggers += 1;
                     AddEvent(events, elapsed, "count_gain", actor, receiver, gain, $"{receiver.Name} 因 {actor.Name} 行动，临时数量 +{gain}");
+                }
+            }
+        }
+
+        private static void ResolveActionSelfShieldIfNone(BattleRuntimeUnit actor, List<BattleEvent> events, float elapsed)
+        {
+            if (actor == null || !actor.IsAlive || actor.ShieldLayers > 0)
+            {
+                return;
+            }
+
+            foreach (var skill in GetBattleSkills(actor))
+            {
+                switch (skill.kind)
+                {
+                    case "battle_action_self_shield_if_none":
+                        actor.ShieldLayers = Math.Max(actor.ShieldLayers, Math.Max(1, skill.layers));
+                        actor.SkillTriggers += 1;
+                        AddEvent(events, elapsed, "shield", actor, actor, actor.ShieldLayers, $"{actor.Name} gains action shield");
+                        return;
                 }
             }
         }
@@ -718,6 +739,15 @@ namespace ProphecyCentury.Systems
         private static List<BattleRuntimeUnit> BuildEnemyUnits(RunState runState, Random random)
         {
             var data = ProphecyGameSession.Instance.Data;
+            if (CustomChallengeSystem.IsCustomChallengeId(runState?.campaignId))
+            {
+                var customEnemies = BuildCustomChallengeEnemyRuntimeUnits(runState);
+                if (customEnemies.Count > 0)
+                {
+                    return customEnemies;
+                }
+            }
+
             var preset = data.FindEnemyPreset(runState.explorationBattleEnemyPresetId);
             if (preset != null)
             {
@@ -790,6 +820,56 @@ namespace ProphecyCentury.Systems
                 }
 
                 var runtime = CreateEnemyRuntimeUnit(picked, slot, runState.round, GetThreatCost(picked), campaignMultiplier);
+                if (runtime != null)
+                {
+                    enemies.Add(runtime);
+                }
+            }
+
+            return enemies;
+        }
+
+        private static List<BattleRuntimeUnit> BuildCustomChallengeEnemyRuntimeUnits(RunState runState)
+        {
+            var enemies = new List<BattleRuntimeUnit>();
+            if (runState == null || !CustomChallengeSystem.TryGetRound(runState.customChallengeId, runState.round, out var challengeRound))
+            {
+                return enemies;
+            }
+
+            var usedSlots = new HashSet<string>();
+            foreach (var unit in challengeRound.units ?? new List<CustomChallengeUnitState>())
+            {
+                if (unit == null || string.IsNullOrWhiteSpace(unit.unitId))
+                {
+                    continue;
+                }
+
+                var definition = ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                var slotId = IsSupportedBattleSlot(unit.slotId)
+                    ? unit.slotId
+                    : ResolvePresetFallbackSlot(definition, usedSlots);
+                if (!usedSlots.Add(slotId))
+                {
+                    slotId = ResolvePresetFallbackSlot(definition, usedSlots);
+                    usedSlots.Add(slotId);
+                }
+
+                var state = new UnitCardState
+                {
+                    unitId = definition.id,
+                    name = string.IsNullOrWhiteSpace(unit.name) ? definition.name : unit.name,
+                    star = unit.star > 0 ? unit.star : definition.star,
+                    isGolden = unit.isGolden,
+                    baseCount = Math.Max(1, unit.count),
+                    maxCount = 0
+                };
+                var runtime = CreateRuntimeUnit(state, false, definition, slotId, 1f);
                 if (runtime != null)
                 {
                     enemies.Add(runtime);

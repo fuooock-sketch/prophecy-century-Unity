@@ -299,6 +299,7 @@ namespace ProphecyCentury.Systems
                     continue;
                 }
 
+                ResolveActionSelfShieldIfNone(attacker, events, elapsed);
                 attacker.AttackTimer = Math.Max(0.2f, attacker.AttackInterval);
                 attacker.AttackCount += 1;
                 attacker.HasStartedAttacking = true;
@@ -333,6 +334,25 @@ namespace ProphecyCentury.Systems
                             break;
                         }
                     }
+                }
+            }
+        }
+
+        private static void ResolveActionSelfShieldIfNone(RealtimeBattleUnit attacker, List<BattleEvent> events, float elapsed)
+        {
+            if (attacker == null || !attacker.IsAlive || attacker.ShieldLayers > 0)
+            {
+                return;
+            }
+
+            foreach (var skill in GetBattleSkills(attacker))
+            {
+                switch (skill.kind)
+                {
+                    case "battle_action_self_shield_if_none":
+                        attacker.ShieldLayers = Math.Max(attacker.ShieldLayers, Math.Max(1, skill.layers));
+                        AddEvent(events, elapsed, "shield", attacker, attacker, attacker.ShieldLayers, $"{attacker.Name} gains action shield");
+                        return;
                 }
             }
         }

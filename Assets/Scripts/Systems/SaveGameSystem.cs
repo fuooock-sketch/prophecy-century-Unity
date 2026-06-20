@@ -83,6 +83,7 @@ namespace ProphecyCentury.Systems
             if (run.manageResources == null) run.manageResources = new ManageResourceState();
             if (run.pendingBattleRewards == null) run.pendingBattleRewards = new BattleRewardState();
             if (run.pendingBattleRewards.discoverFaithRewards == null) run.pendingBattleRewards.discoverFaithRewards = new System.Collections.Generic.List<DiscoverFaithRewardState>();
+            CustomChallengeSystem.Normalize(run);
             NormalizeWorldMapState(run);
             NormalizeExplorationBattleState(run);
             if (run.campaignRoundLimit <= 0)
@@ -169,6 +170,11 @@ namespace ProphecyCentury.Systems
         private static WorldMapDefinition ResolveCurrentMap(RunState run)
         {
             var data = ProphecyGameSession.Instance?.Data;
+            if (CustomChallengeSystem.IsCustomChallengeId(run?.campaignId))
+            {
+                return CustomChallengeSystem.ResolveCustomChallengeMap(data);
+            }
+
             var campaign = data?.FindCampaign(run?.campaignId);
             return data?.FindWorldMap(campaign?.mapId) ?? data?.WorldMaps?.FirstOrDefault();
         }

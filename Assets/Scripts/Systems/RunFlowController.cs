@@ -214,11 +214,17 @@ namespace ProphecyCentury.Systems
                 return;
             }
 
+            if (result.Victory)
+            {
+                CaptureCustomChallengeRound(run, run.round);
+            }
+
             if (run.campaignRoundLimit > 0 && run.round >= run.campaignRoundLimit)
             {
                 run.campaignCompleted = true;
                 run.state = "victory";
                 run.phase = GamePhase.Victory;
+                TryCreateCustomChallengeFromCompletedRun(run);
                 return;
             }
 
@@ -649,12 +655,16 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
                 if (WorldMapSystem.CheckVictoryCondition(run, map))
                 {
                     ApplyNodeReward(run, nodeResult, nodeId);
+                    CaptureCustomChallengeRound(run, run.round);
+                    TryCreateCustomChallengeFromCompletedRun(run);
                     ClearExplorationBattleContext(run);
                     return;
                 }
 
+                var completedRound = run.round;
                 StartNextNightManageAfterDayNode(run);
                 ApplyNodeReward(run, nodeResult, nodeId);
+                CaptureCustomChallengeRound(run, completedRound);
                 ClearExplorationBattleContext(run);
                 return;
             }
@@ -863,8 +873,31 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
         {
             var data = ProphecyGameSession.Instance.Data;
             var run = ProphecyGameSession.Instance.CurrentRun;
+            if (CustomChallengeSystem.IsCustomChallengeId(run?.campaignId))
+            {
+                return CustomChallengeSystem.ResolveCustomChallengeMap(data);
+            }
+
             var campaign = data?.FindCampaign(run?.campaignId);
             return data?.FindWorldMap(campaign?.mapId) ?? data?.WorldMaps?.FirstOrDefault();
+        }
+
+        private static void CaptureCustomChallengeRound(RunState run, int completedRound)
+        {
+            CustomChallengeSystem.CaptureRound(run, completedRound);
+        }
+
+        private static void TryCreateCustomChallengeFromCompletedRun(RunState run)
+        {
+            if (run == null || run.campaignRoundLimit != 20)
+            {
+                return;
+            }
+
+            if (run.campaignWins == 20 && run.campaignLosses == 0)
+            {
+                CustomChallengeSystem.CreateFromRun(run);
+            }
         }
 
         private static void ClearExplorationBattleContext(RunState run)

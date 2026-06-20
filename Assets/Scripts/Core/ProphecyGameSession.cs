@@ -46,6 +46,7 @@ namespace ProphecyCentury.Core
         {
             var campaign = campaignId ?? Data.Campaigns.FirstOrDefault()?.id ?? "south_town_adventure";
             var hero = heroId ?? Data.Heroes.FirstOrDefault()?.id ?? "james";
+            var customChallengeId = CustomChallengeSystem.IsCustomChallengeId(campaign) ? campaign : null;
             var map = ResolveCampaignMap(campaign);
             var startNodeId = map?.startNodeId ?? "start";
 
@@ -68,7 +69,8 @@ namespace ProphecyCentury.Core
                 maxFateValue = startFateValue,
                 shopLevel = 1,
                 shopUpgradeAnchorRound = 1,
-                campaignRoundLimit = ResolveCampaignRoundLimit(campaign)
+                campaignRoundLimit = ResolveCampaignRoundLimit(campaign),
+                customChallengeId = customChallengeId
             };
 
             InitializeWorldMapNodeStates(CurrentRun, map);
@@ -81,6 +83,11 @@ namespace ProphecyCentury.Core
 
         private int ResolveCampaignRoundLimit(string campaignId)
         {
+            if (CustomChallengeSystem.IsCustomChallengeId(campaignId))
+            {
+                return 20;
+            }
+
             switch (campaignId)
             {
                 case "shadow_elemental_challenge":
@@ -107,6 +114,11 @@ namespace ProphecyCentury.Core
 
         private WorldMapDefinition ResolveCampaignMap(string campaignId)
         {
+            if (CustomChallengeSystem.IsCustomChallengeId(campaignId))
+            {
+                return CustomChallengeSystem.ResolveCustomChallengeMap(Data);
+            }
+
             var campaign = Data?.FindCampaign(campaignId);
             var mapId = campaign?.mapId;
             if (!string.IsNullOrWhiteSpace(mapId))

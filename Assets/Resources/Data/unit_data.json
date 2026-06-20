@@ -1792,29 +1792,27 @@
         "goldBattleText": "每次行动时，如果自身没有护盾，则获得1个护盾，能够完全抵挡2次伤害。",
         "talents": [
             {
-                "kind": "on_gain_power_convert_to_attack_random_board_unit",
-                "value": 10
+                "kind": "on_gain_count_transfer_to_random_other_allies",
+                "count": 1
             }
         ],
         "goldTalents": [
             {
-                "kind": "on_gain_power_convert_to_attack_random_board_unit",
-                "value": 10,
-                "goldValue": 20
+                "kind": "on_gain_count_transfer_to_random_other_allies",
+                "count": 1,
+                "goldCount": 2
             }
         ],
         "battleSkills": [
             {
-                "kind": "battle_start_self_refreshing_shield",
-                "layers": 1,
-                "refreshRounds": 3
+                "kind": "battle_action_self_shield_if_none",
+                "layers": 1
             }
         ],
         "goldBattleSkills": [
             {
-                "kind": "battle_start_self_refreshing_shield",
-                "layers": 1,
-                "refreshRounds": 2
+                "kind": "battle_action_self_shield_if_none",
+                "layers": 2
             }
         ],
         "sizeTier": 3,

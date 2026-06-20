@@ -1,5 +1,7 @@
 using System.IO;
 using ProphecyCentury.Core;
+using ProphecyCentury.Model;
+using ProphecyCentury.Systems;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -138,6 +140,7 @@ namespace ProphecyCentury.UI
             var titlePanel = FindDeepChild(root, "TitlePanel")?.gameObject;
             var campaignScreen = FindDeepChild(root, "CampaignSelectionScreen")?.gameObject;
             var heroScreen = FindDeepChild(root, "HeroSelectionScreen")?.gameObject;
+            var formationPreviewScreen = FindDeepChild(root, "CampaignFormationPreviewScreen")?.gameObject;
 
             if (campaignScreen == null)
             {
@@ -149,9 +152,15 @@ namespace ProphecyCentury.UI
                 heroScreen = CreateHeroSelectionScreen(root, controller);
             }
 
+            if (formationPreviewScreen == null)
+            {
+                formationPreviewScreen = CreateCampaignFormationPreviewScreen(root, controller);
+            }
+
             campaignScreen.SetActive(false);
             heroScreen.SetActive(false);
-            controller.SetSelectionScreens(titlePanel, campaignScreen, heroScreen);
+            formationPreviewScreen.SetActive(false);
+            controller.SetSelectionScreens(titlePanel, campaignScreen, heroScreen, formationPreviewScreen);
         }
 
         private static void HideTitleSelectionControls(Transform root)
@@ -308,11 +317,13 @@ namespace ProphecyCentury.UI
 
             var campaignSelectionScreen = CreateCampaignSelectionScreen(canvasObject.transform, controller);
             var heroSelectionScreen = CreateHeroSelectionScreen(canvasObject.transform, controller);
+            var formationPreviewScreen = CreateCampaignFormationPreviewScreen(canvasObject.transform, controller);
             campaignSelectionScreen.SetActive(false);
             heroSelectionScreen.SetActive(false);
+            formationPreviewScreen.SetActive(false);
 
             AssignField(controller, "titlePanel", titlePanel);
-            controller.SetSelectionScreens(titlePanel, campaignSelectionScreen, heroSelectionScreen);
+            controller.SetSelectionScreens(titlePanel, campaignSelectionScreen, heroSelectionScreen, formationPreviewScreen);
 
             var settingsModal = CreateSettingsModal(canvasObject.transform);
             settingsModal.SetActive(false);
@@ -1112,6 +1123,30 @@ namespace ProphecyCentury.UI
             }
         }
 
+        private static void StyleCampaignListButton(Transform buttonTransform, bool primary)
+        {
+            if (buttonTransform == null)
+            {
+                return;
+            }
+
+            var image = buttonTransform.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = primary ? new Color32(158, 105, 38, 255) : new Color32(31, 55, 69, 230);
+            }
+
+            var label = buttonTransform.Find("Label")?.GetComponent<Text>();
+            if (label != null)
+            {
+                label.color = primary ? new Color32(255, 240, 198, 255) : new Color32(190, 220, 218, 230);
+                label.fontSize = primary ? 20 : 18;
+                label.resizeTextForBestFit = true;
+                label.resizeTextMinSize = 13;
+                label.resizeTextMaxSize = primary ? 20 : 18;
+            }
+        }
+
         private static GameObject CreateCampaignSelectionScreen(Transform parent, RunSceneController controller)
         {
             var screen = CreatePanel("CampaignSelectionScreen", parent, new Color32(5, 9, 18, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
@@ -1125,21 +1160,35 @@ namespace ProphecyCentury.UI
             SetTitleCenteredRect(titleText.GetComponent<RectTransform>(), new Vector2(1280f, -40f), new Vector2(600f, 60f));
             titleText.color = new Color32(239, 204, 126, 255);
 
-            var cardContainer = new GameObject("CampaignCards", typeof(GridLayoutGroup));
-            cardContainer.transform.SetParent(screen.transform, false);
-            var cardRect = cardContainer.GetComponent<RectTransform>();
-            cardRect.anchorMin = new Vector2(0.5f, 0.5f);
-            cardRect.anchorMax = new Vector2(0.5f, 0.5f);
-            cardRect.pivot = new Vector2(0.5f, 0.5f);
-            cardRect.anchoredPosition = Vector2.zero;
-            cardRect.sizeDelta = new Vector2(2200f, 920f);
+            var scrollObject = CreatePanel("CampaignListScroll", screen.transform, new Color32(7, 14, 27, 205), Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(scrollObject.GetComponent<RectTransform>(), 510f, 145f, 1540f, 1000f);
+            var scroll = scrollObject.AddComponent<ScrollRect>();
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
 
-            var layout = cardContainer.GetComponent<GridLayoutGroup>();
-            layout.cellSize = new Vector2(640f, 420f);
-            layout.spacing = new Vector2(60f, 40f);
-            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            layout.constraintCount = 3;
-            layout.childAlignment = TextAnchor.MiddleCenter;
+            var viewport = CreatePanel("CampaignListViewport", scrollObject.transform, new Color32(0, 0, 0, 0), Vector2.zero, Vector2.one, new Vector2(12f, 12f), new Vector2(-12f, -12f));
+            viewport.AddComponent<RectMask2D>();
+            scroll.viewport = viewport.GetComponent<RectTransform>();
+
+            var list = new GameObject("CampaignList", typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            list.transform.SetParent(viewport.transform, false);
+            var listRect = list.GetComponent<RectTransform>();
+            listRect.anchorMin = new Vector2(0f, 1f);
+            listRect.anchorMax = new Vector2(1f, 1f);
+            listRect.pivot = new Vector2(0.5f, 1f);
+            listRect.offsetMin = Vector2.zero;
+            listRect.offsetMax = Vector2.zero;
+            var listLayout = list.GetComponent<VerticalLayoutGroup>();
+            listLayout.spacing = 10f;
+            listLayout.padding = new RectOffset(8, 8, 8, 8);
+            listLayout.childControlWidth = true;
+            listLayout.childControlHeight = true;
+            listLayout.childForceExpandWidth = true;
+            listLayout.childForceExpandHeight = false;
+            var fitter = list.GetComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            scroll.content = listRect;
 
             var campaigns = ProphecyGameSession.Instance?.Data?.Campaigns;
             if (campaigns != null && campaigns.Count > 0)
@@ -1152,22 +1201,33 @@ namespace ProphecyCentury.UI
                         continue;
                     }
 
-                    CreateCampaignCard(cardContainer.transform, campaign.id, campaign.name, ResolveCampaignMapImageName(campaign.id, i), controller);
+                    CreateCampaignListItem(list.transform, campaign.id, campaign.name, campaign.desc, ResolveCampaignMapImageName(campaign.id, i), false, null, controller);
                 }
+            }
+            else
+            {
+                var fallbackCampaigns = new[]
+                {
+                    ("south_town_adventure", "South Town Adventure", "The current Web version routes all campaigns into the same core run flow.", "level 1"),
+                    ("snow_peak_defense", "Snow Peak Defense", "A 20-round defense challenge.", "level 2"),
+                    ("song_of_sang_city", "Song of Sang City", "A captured Ganger devour board curve.", "level 3"),
+                };
 
-                return screen;
+                foreach (var (id, name, desc, mapName) in fallbackCampaigns)
+                {
+                    CreateCampaignListItem(list.transform, id, name, desc, mapName, false, null, controller);
+                }
             }
 
-            var fallbackCampaigns = new[]
+            foreach (var challenge in CustomChallengeSystem.LoadAll())
             {
-                ("south_town_adventure", "South Town Adventure", "level 1"),
-                ("snow_peak_defense", "Snow Peak Defense", "level 2"),
-                ("song_of_sang_city", "Song of Sang City", "level 3"),
-            };
+                if (challenge == null || string.IsNullOrWhiteSpace(challenge.id))
+                {
+                    continue;
+                }
 
-            foreach (var (id, name, mapName) in fallbackCampaigns)
-            {
-                CreateCampaignCard(cardContainer.transform, id, name, mapName, controller);
+                var desc = $"{challenge.createdLabel}\n来源：{challenge.sourceCampaignName}  20 回合阵型";
+                CreateCampaignListItem(list.transform, challenge.id, challenge.name, desc, "level 2", true, challenge, controller);
             }
 
             return screen;
@@ -1206,6 +1266,103 @@ namespace ProphecyCentury.UI
 
             CreateButton("SelectButton", card.transform, "选择此战役", new Vector2(0f, -180f), new Vector2(200f, 50f), () => controller.SelectCampaignAndOpenHeroSelection(campaignId));
             StylePrimaryButton(card.transform.Find("SelectButton"));
+        }
+
+        private static void CreateCampaignListItem(Transform parent, string campaignId, string campaignName, string desc, string mapName, bool custom, CustomChallengeCampaignState challenge, RunSceneController controller)
+        {
+            var item = CreatePanel((custom ? "CustomChallenge_" : "CampaignListItem_") + campaignId, parent, new Color32(14, 26, 42, 245), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var rowHeight = custom ? 174f : 132f;
+            var layout = item.AddComponent<LayoutElement>();
+            layout.preferredHeight = rowHeight;
+            layout.minHeight = rowHeight;
+
+            var rim = CreatePanel("ItemRim", item.transform, new Color32(204, 169, 94, custom ? (byte)110 : (byte)66), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            rim.GetComponent<Image>().raycastTarget = false;
+
+            var smallMapImageSize = new Vector2(196f, 110f);
+            var mapImage = CreatePanel("MapImage", item.transform, Color.white, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(mapImage.GetComponent<RectTransform>(), 16f, (rowHeight - smallMapImageSize.y) * 0.5f, smallMapImageSize.x, smallMapImageSize.y);
+            ApplySpriteFromProjectPath(mapImage.GetComponent<Image>(), "Art/maps_image/" + mapName + ".png");
+
+            var nameText = CreateText("CampaignName", item.transform, string.IsNullOrWhiteSpace(campaignName) ? campaignId : campaignName, 27, TextAnchor.MiddleLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(nameText.GetComponent<RectTransform>(), 236f, custom ? 16f : 14f, 740f, 36f);
+            nameText.color = custom ? new Color32(154, 226, 255, 255) : new Color32(239, 204, 126, 255);
+            nameText.resizeTextForBestFit = true;
+            nameText.resizeTextMinSize = 16;
+            nameText.resizeTextMaxSize = 27;
+
+            var previewSummary = CampaignFormationPreviewSystem.BuildPreviewSummary(campaignId);
+            var hasPreview = previewSummary.Rounds != null && previewSummary.Rounds.Count > 0;
+            var difficultyLabel = hasPreview ? $"难度 {previewSummary.DifficultyScore}" : "难度未知";
+            var description = string.IsNullOrWhiteSpace(desc) ? "20 回合战役" : desc;
+            var descText = CreateText("CampaignDescription", item.transform, $"{difficultyLabel}  |  {description}", 18, TextAnchor.UpperLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(descText.GetComponent<RectTransform>(), 236f, custom ? 54f : 54f, 790f, custom ? 50f : 48f);
+            descText.color = new Color32(205, 218, 224, 245);
+
+            CreateButton("ViewFormationButton", item.transform, hasPreview ? "查看阵型" : "无阵型", Vector2.zero, new Vector2(136f, 44f), () => controller.OpenCampaignFormationPreview(campaignId));
+            SetPixelRectTopLeft(item.transform.Find("ViewFormationButton")?.GetComponent<RectTransform>(), 1168f, custom ? 20f : 44f, 136f, 44f);
+            StyleCampaignListButton(item.transform.Find("ViewFormationButton"), false);
+            var viewButton = item.transform.Find("ViewFormationButton")?.GetComponent<Button>();
+            if (viewButton != null)
+            {
+                viewButton.interactable = hasPreview;
+            }
+
+            CreateButton("SelectButton", item.transform, "选择", Vector2.zero, new Vector2(136f, 44f), () => controller.SelectCampaignAndOpenHeroSelection(campaignId));
+            SetPixelRectTopLeft(item.transform.Find("SelectButton")?.GetComponent<RectTransform>(), 1324f, custom ? 20f : 44f, 136f, 44f);
+            StyleCampaignListButton(item.transform.Find("SelectButton"), true);
+
+            if (!custom)
+            {
+                return;
+            }
+
+            var input = CreateInputField("RenameInput", item.transform, challenge?.name ?? campaignName);
+            SetPixelRectTopLeft(input.GetComponent<RectTransform>(), 236f, 122f, 500f, 34f);
+
+            CreateButton("RenameCustomChallenge", item.transform, "保存名称", Vector2.zero, new Vector2(146f, 38f), () =>
+            {
+                if (controller.RenameCustomChallenge(campaignId, input.text))
+                {
+                    nameText.text = input.text;
+                }
+            });
+            SetPixelRectTopLeft(item.transform.Find("RenameCustomChallenge")?.GetComponent<RectTransform>(), 1160f, 122f, 146f, 38f);
+            StyleCampaignListButton(item.transform.Find("RenameCustomChallenge"), false);
+
+            CreateButton("DeleteCustomChallenge", item.transform, "删除", Vector2.zero, new Vector2(104f, 38f), () =>
+            {
+                if (controller.DeleteCustomChallenge(campaignId))
+                {
+                    UnityEngine.Object.Destroy(item);
+                }
+            });
+            SetPixelRectTopLeft(item.transform.Find("DeleteCustomChallenge")?.GetComponent<RectTransform>(), 1324f, 122f, 104f, 38f);
+            StyleCampaignListButton(item.transform.Find("DeleteCustomChallenge"), false);
+        }
+
+        private static GameObject CreateCampaignFormationPreviewScreen(Transform parent, RunSceneController controller)
+        {
+            var screen = CreatePanel("CampaignFormationPreviewScreen", parent, new Color32(5, 9, 18, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var view = screen.AddComponent<CampaignFormationPreviewView>();
+            view.Build(controller);
+            return screen;
+        }
+
+        private static InputField CreateInputField(string name, Transform parent, string value)
+        {
+            var inputObject = new GameObject(name, typeof(Image), typeof(InputField));
+            inputObject.transform.SetParent(parent, false);
+            var image = inputObject.GetComponent<Image>();
+            image.color = new Color32(6, 14, 24, 245);
+
+            var text = CreateText("Text", inputObject.transform, value ?? string.Empty, 18, TextAnchor.MiddleLeft, Vector2.zero, Vector2.one, new Vector2(12f, 0f), new Vector2(-12f, 0f));
+            text.color = Color.white;
+            var input = inputObject.GetComponent<InputField>();
+            input.textComponent = text;
+            input.text = value ?? string.Empty;
+            input.targetGraphic = image;
+            return input;
         }
 
         private static GameObject CreateHeroSelectionScreen(Transform parent, RunSceneController controller)

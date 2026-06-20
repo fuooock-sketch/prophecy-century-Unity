@@ -378,6 +378,22 @@ namespace ProphecyCentury.Systems
                         GainCount(runState, recipient, eventValue * Value(talent, owner, 1), owner, processed, depth);
                     }
                     break;
+                case "on_gain_count_transfer_to_random_other_allies":
+                    if (eventType == "on_gain_count" && target == owner && eventValue > 0)
+                    {
+                        var recipients = runState.boardUnits.Where(unit => unit != owner).ToList();
+                        if (recipients.Count == 0)
+                        {
+                            break;
+                        }
+
+                        RemoveGainedCount(owner, eventValue);
+                        foreach (var recipient in PickRandom(recipients, Count(talent, owner)))
+                        {
+                            GainCount(runState, recipient, eventValue, owner, processed, depth);
+                        }
+                    }
+                    break;
                 case "on_gain_stat_retrigger_side_adjacent_entry_effects":
                     if (eventType == "on_gain_count" && target == owner && !owner.manageRoundStatRetriggerTriggered)
                     {
@@ -1379,6 +1395,20 @@ namespace ProphecyCentury.Systems
             target.maxCount = 0;
         }
 
+        private static void RemoveGainedCount(UnitCardState target, int amount)
+        {
+            if (target == null || amount <= 0)
+            {
+                return;
+            }
+
+            var definition = UnitDef(target);
+            var startCount = ResolveStartCount(definition);
+            var current = Math.Max(startCount, target.baseCount > 0 ? target.baseCount : startCount);
+            target.baseCount = Math.Max(startCount, current - amount);
+            target.maxCount = 0;
+        }
+
         private static int ResolveStartCount(UnitDefinition definition)
         {
             if (definition == null)
@@ -1540,6 +1570,7 @@ namespace ProphecyCentury.Systems
                     return eventType == "on_leave";
                 case "on_gain_power_self_gain_attack":
                 case "on_gain_power_convert_to_attack_random_board_unit":
+                case "on_gain_count_transfer_to_random_other_allies":
                     return eventType == "on_gain_count";
                 case "on_gain_race_unit_self_gain_count":
                     return eventType == "on_gain_unit";

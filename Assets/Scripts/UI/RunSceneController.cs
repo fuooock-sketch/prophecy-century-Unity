@@ -28,6 +28,7 @@ namespace ProphecyCentury.UI
         [SerializeField] private GameObject runPanel;
         [SerializeField] private GameObject campaignSelectionScreen;
         [SerializeField] private GameObject heroSelectionScreen;
+        [SerializeField] private GameObject formationPreviewScreen;
         [SerializeField] private string selectedCampaignId;
 
         [Header("Panels")]
@@ -316,6 +317,21 @@ namespace ProphecyCentury.UI
             {
                 runPanel.SetActive(false);
             }
+
+            if (campaignSelectionScreen != null)
+            {
+                campaignSelectionScreen.SetActive(false);
+            }
+
+            if (heroSelectionScreen != null)
+            {
+                heroSelectionScreen.SetActive(false);
+            }
+
+            if (formationPreviewScreen != null)
+            {
+                formationPreviewScreen.SetActive(false);
+            }
         }
 
         public void ShowRun()
@@ -336,6 +352,11 @@ namespace ProphecyCentury.UI
                 heroSelectionScreen.SetActive(false);
             }
 
+            if (formationPreviewScreen != null)
+            {
+                formationPreviewScreen.SetActive(false);
+            }
+
             if (runPanel != null)
             {
                 runPanel.SetActive(true);
@@ -354,11 +375,22 @@ namespace ProphecyCentury.UI
             this.heroSelectionScreen = heroScreen;
         }
 
+        public void SetSelectionScreens(GameObject titlePanel, GameObject campaignScreen, GameObject heroScreen, GameObject formationScreen)
+        {
+            SetSelectionScreens(titlePanel, campaignScreen, heroScreen);
+            this.formationPreviewScreen = formationScreen;
+        }
+
         public void OpenCampaignSelection()
         {
             if (titlePanel != null)
             {
                 titlePanel.SetActive(false);
+            }
+
+            if (formationPreviewScreen != null)
+            {
+                formationPreviewScreen.SetActive(false);
             }
 
             if (campaignSelectionScreen != null)
@@ -384,6 +416,49 @@ namespace ProphecyCentury.UI
             }
         }
 
+        public bool RenameCustomChallenge(string challengeId, string newName)
+        {
+            var success = CustomChallengeSystem.RenameChallenge(challengeId, newName);
+            ShowFloatingText(success ? "已重命名挑战" : "重命名失败");
+            return success;
+        }
+
+        public bool DeleteCustomChallenge(string challengeId)
+        {
+            var success = CustomChallengeSystem.DeleteChallenge(challengeId);
+            if (success && selectedCampaignId == challengeId)
+            {
+                selectedCampaignId = null;
+            }
+
+            ShowFloatingText(success ? "已删除挑战" : "删除失败");
+            return success;
+        }
+
+        public void OpenCampaignFormationPreview(string campaignId)
+        {
+            var view = formationPreviewScreen != null ? formationPreviewScreen.GetComponent<CampaignFormationPreviewView>() : null;
+            if (view == null)
+            {
+                ShowFloatingText("阵型预览界面未初始化");
+                return;
+            }
+
+            if (campaignSelectionScreen != null)
+            {
+                campaignSelectionScreen.SetActive(false);
+            }
+
+            if (heroSelectionScreen != null)
+            {
+                heroSelectionScreen.SetActive(false);
+            }
+
+            formationPreviewScreen.SetActive(true);
+            formationPreviewScreen.transform.SetAsLastSibling();
+            view.ShowCampaign(campaignId);
+        }
+
         public void StartRunWithHero(string heroId)
         {
             if (string.IsNullOrEmpty(selectedCampaignId))
@@ -406,6 +481,11 @@ namespace ProphecyCentury.UI
                 campaignSelectionScreen.SetActive(false);
             }
 
+            if (formationPreviewScreen != null)
+            {
+                formationPreviewScreen.SetActive(false);
+            }
+
             if (titlePanel != null)
             {
                 titlePanel.SetActive(true);
@@ -418,6 +498,20 @@ namespace ProphecyCentury.UI
             if (heroSelectionScreen != null)
             {
                 heroSelectionScreen.SetActive(false);
+            }
+
+            if (campaignSelectionScreen != null)
+            {
+                campaignSelectionScreen.SetActive(true);
+                campaignSelectionScreen.transform.SetAsLastSibling();
+            }
+        }
+
+        public void ReturnToCampaignFromFormationPreview()
+        {
+            if (formationPreviewScreen != null)
+            {
+                formationPreviewScreen.SetActive(false);
             }
 
             if (campaignSelectionScreen != null)
@@ -7994,6 +8088,11 @@ namespace ProphecyCentury.UI
         private WorldMapDefinition ResolveCurrentMap()
         {
             var data = ProphecyGameSession.Instance.Data;
+            if (CustomChallengeSystem.IsCustomChallengeId(Run?.campaignId))
+            {
+                return CustomChallengeSystem.ResolveCustomChallengeMap(data);
+            }
+
             var campaign = data?.FindCampaign(Run?.campaignId);
             return data?.FindWorldMap(campaign?.mapId) ?? data?.WorldMaps?.FirstOrDefault();
         }
