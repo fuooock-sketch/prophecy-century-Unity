@@ -929,10 +929,8 @@ namespace ProphecyCentury.UI
             }
 
             WriteLog(success ? $"已部署手牌第 {index + 1} 张。" : $"无法部署手牌第 {index + 1} 张。");
-            RefreshView();
             PlayNumberChangeFeedback(before);
-            PlayDevourFeedbackIfNeeded(devourEvents);
-            PlayManageFeedbackIfNeeded(feedbackEvents);
+            PlayFeedbackThenRefresh(devourEvents, feedbackEvents);
             if (success && deployedGoldenCard && !needsTargetSelection)
             {
                 OpenGoldDeployRewardModal();
@@ -984,10 +982,8 @@ namespace ProphecyCentury.UI
             }
 
             WriteLog(success ? $"已部署手牌第 {index + 1} 张到 {boardSlotId}。" : $"无法部署手牌第 {index + 1} 张到 {boardSlotId}。");
-            RefreshView();
             PlayNumberChangeFeedback(before);
-            PlayDevourFeedbackIfNeeded(devourEvents);
-            PlayManageFeedbackIfNeeded(feedbackEvents);
+            PlayFeedbackThenRefresh(devourEvents, feedbackEvents);
             if (success && deployedGoldenCard && !needsTargetSelection)
             {
                 OpenGoldDeployRewardModal();
@@ -1061,9 +1057,8 @@ namespace ProphecyCentury.UI
                 WriteLog($"{sourceName} 的祝福没有生效。");
             }
 
-            RefreshView();
             PlayNumberChangeFeedback(before);
-            PlayManageFeedbackIfNeeded(feedbackEvents);
+            PlayFeedbackThenRefresh(null, feedbackEvents);
             if (openGoldReward)
             {
                 OpenGoldDeployRewardModal();
@@ -1101,8 +1096,7 @@ namespace ProphecyCentury.UI
                 ShowFloatingText("无法使用密林宝钻");
             }
 
-            RefreshView();
-            PlayManageFeedbackIfNeeded(FilterForestGemUseFeedback(feedbackEvents));
+            PlayFeedbackThenRefresh(null, FilterForestGemUseFeedback(feedbackEvents));
             return success;
         }
 
@@ -1557,11 +1551,9 @@ namespace ProphecyCentury.UI
             }
 
             WriteLog(success ? $"已出售手牌第 {index + 1} 张。" : $"无法出售手牌第 {index + 1} 张。");
-            RefreshView();
             ShowGoldChangeFeedback(goldBefore);
             PlayNumberChangeFeedback(before);
-            PlayDevourFeedbackIfNeeded(devourEvents);
-            PlayManageFeedbackIfNeeded(feedbackEvents);
+            PlayFeedbackThenRefresh(devourEvents, feedbackEvents);
         }
 
         private void SellBoardCard(int index)
@@ -1593,11 +1585,9 @@ namespace ProphecyCentury.UI
             }
 
             WriteLog(success ? $"已出售棋盘第 {index + 1} 个单位。" : $"无法出售棋盘第 {index + 1} 个单位。");
-            RefreshView();
             ShowGoldChangeFeedback(goldBefore);
             PlayNumberChangeFeedback(before);
-            PlayDevourFeedbackIfNeeded(devourEvents);
-            PlayManageFeedbackIfNeeded(feedbackEvents);
+            PlayFeedbackThenRefresh(devourEvents, feedbackEvents);
         }
 
         private void SellBoardSlot(string boardSlotId)
@@ -1628,11 +1618,9 @@ namespace ProphecyCentury.UI
             }
 
             WriteLog(success ? $"已出售棋盘 {boardSlotId} 的单位。" : $"无法出售棋盘 {boardSlotId} 的单位。");
-            RefreshView();
             ShowGoldChangeFeedback(goldBefore);
             PlayNumberChangeFeedback(before);
-            PlayDevourFeedbackIfNeeded(devourEvents);
-            PlayManageFeedbackIfNeeded(feedbackEvents);
+            PlayFeedbackThenRefresh(devourEvents, feedbackEvents);
         }
 
         private static void PlayFailureSfx(bool notEnoughGold)
@@ -2371,6 +2359,35 @@ namespace ProphecyCentury.UI
             StartCoroutine(PlayDevourFeedbackRoutine(devourEvents));
         }
 
+        private void PlayFeedbackThenRefresh(List<DevourShopEventState> devourEvents, ManageFeedbackEventsState feedbackEvents)
+        {
+            var hasDevourEvents = devourEvents != null && devourEvents.Any(item => item != null && item.devouredCard != null);
+            var hasManageEvents = HasManageFeedbackEvents(feedbackEvents);
+            if (!hasDevourEvents && !hasManageEvents)
+            {
+                RefreshView();
+                return;
+            }
+
+            StartCoroutine(PlayFeedbackThenRefreshRoutine(devourEvents, feedbackEvents));
+        }
+
+        private IEnumerator PlayFeedbackThenRefreshRoutine(List<DevourShopEventState> devourEvents, ManageFeedbackEventsState feedbackEvents)
+        {
+            if (devourEvents != null && devourEvents.Any(item => item != null && item.devouredCard != null))
+            {
+                yield return PlayDevourFeedbackRoutine(devourEvents);
+            }
+
+            RefreshView();
+
+            if (HasManageFeedbackEvents(feedbackEvents))
+            {
+                PrepareHandAddFeedback(feedbackEvents.handAddEvents);
+                yield return PlayManageFeedbackRoutine(feedbackEvents);
+            }
+        }
+
         private void PlayManageFeedbackIfNeeded(ManageFeedbackEventsState feedbackEvents)
         {
             if (feedbackEvents == null)
@@ -2378,21 +2395,25 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            var hasEvents =
-                (feedbackEvents.forestGemGiftEvents != null && feedbackEvents.forestGemGiftEvents.Count > 0)
-                || (feedbackEvents.evolveEvents != null && feedbackEvents.evolveEvents.Count > 0)
-                || (feedbackEvents.countGainEvents != null && feedbackEvents.countGainEvents.Count > 0)
-                || (feedbackEvents.entryEffectEvents != null && feedbackEvents.entryEffectEvents.Count > 0)
-                || (feedbackEvents.handAddEvents != null && feedbackEvents.handAddEvents.Count > 0)
-                || (feedbackEvents.attackChangeEvents != null && feedbackEvents.attackChangeEvents.Count > 0)
-                || (feedbackEvents.shopBuffEvents != null && feedbackEvents.shopBuffEvents.Count > 0);
-            if (!hasEvents)
+            if (!HasManageFeedbackEvents(feedbackEvents))
             {
                 return;
             }
 
             PrepareHandAddFeedback(feedbackEvents.handAddEvents);
             StartCoroutine(PlayManageFeedbackRoutine(feedbackEvents));
+        }
+
+        private static bool HasManageFeedbackEvents(ManageFeedbackEventsState feedbackEvents)
+        {
+            return feedbackEvents != null
+                && (((feedbackEvents.forestGemGiftEvents != null && feedbackEvents.forestGemGiftEvents.Count > 0)
+                    || (feedbackEvents.evolveEvents != null && feedbackEvents.evolveEvents.Count > 0)
+                    || (feedbackEvents.countGainEvents != null && feedbackEvents.countGainEvents.Count > 0)
+                    || (feedbackEvents.entryEffectEvents != null && feedbackEvents.entryEffectEvents.Count > 0)
+                    || (feedbackEvents.handAddEvents != null && feedbackEvents.handAddEvents.Count > 0)
+                    || (feedbackEvents.attackChangeEvents != null && feedbackEvents.attackChangeEvents.Count > 0)
+                    || (feedbackEvents.shopBuffEvents != null && feedbackEvents.shopBuffEvents.Count > 0)));
         }
 
         private void PrepareHandAddFeedback(List<HandAddEventState> handEvents)

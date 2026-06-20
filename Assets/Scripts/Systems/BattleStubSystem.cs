@@ -852,7 +852,7 @@ namespace ProphecyCentury.Systems
                 }
             }
 
-            if (!IsFixedShadowPreset(preset))
+            if (!IsFixedCapturedPreset(preset))
             {
                 FillWorldMapPresetLineup(enemies, usedSlots, runState);
                 ApplyWorldMapPresetScaling(enemies, runState);
@@ -861,12 +861,13 @@ namespace ProphecyCentury.Systems
             return enemies;
         }
 
-        private static bool IsFixedShadowPreset(EnemyPresetDefinition preset)
+        private static bool IsFixedCapturedPreset(EnemyPresetDefinition preset)
         {
             return preset != null
                 && !string.IsNullOrWhiteSpace(preset.id)
                 && (preset.id.StartsWith("shadow_elemental_", StringComparison.Ordinal)
-                    || preset.id.StartsWith("shadow_light_", StringComparison.Ordinal));
+                    || preset.id.StartsWith("shadow_light_", StringComparison.Ordinal)
+                    || preset.id.StartsWith("snow_peak_defense_", StringComparison.Ordinal));
         }
 
         private static void FillWorldMapPresetLineup(List<BattleRuntimeUnit> enemies, HashSet<string> usedSlots, RunState runState)
@@ -1228,6 +1229,7 @@ namespace ProphecyCentury.Systems
 
         private static void ResolveBattleStart(List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> enemies, Random random, List<BattleEvent> events = null, float elapsed = 0f)
         {
+            var initialAllies = allies.ToList();
             for (var i = 0; i < allies.Count; i += 1)
             {
                 var unit = allies[i];
@@ -1301,11 +1303,8 @@ namespace ProphecyCentury.Systems
                             AddBattleStats(unit, skill, faithCount);
                             break;
                         case "battle_start_self_count_percent_per_faith_count":
-                            var selfFaithCount = CountFaith(allies, skill.faith, unit.Faith);
-                            var percent = Math.Max(0, skill.value) * selfFaithCount;
-                            var countGain = (int)Math.Ceiling(unit.CurrentCount * (percent / 100f));
-                            AddTemporaryCount(unit, countGain);
-                            unit.SkillTriggers += countGain > 0 ? 1 : 0;
+                            var selfFaithCount = CountFaith(initialAllies, skill.faith, unit.Faith);
+                            ApplySelfCountPercentPerFaithCount(unit, selfFaithCount, skill);
                             break;
                         case "battle_start_speedup_first_attack_crit_stun_restore":
                             unit.OriginalSpeed = unit.Speed;
@@ -1435,7 +1434,7 @@ namespace ProphecyCentury.Systems
                                 }
 
                                 var pounceEvent = AddEvent(events, elapsed, "skill", unit, pounceTarget, 0, $"{unit.Name} pounces {pounceTarget.Name}");
-                                MovePouncerNextToTarget(unit, pounceTarget);
+                                MovePouncerNextToTarget(unit, pounceTarget, allies, enemies);
                                 if (pounceEvent != null)
                                 {
                                     pounceEvent.DestinationSlotId = unit.SlotId;
@@ -1627,6 +1626,7 @@ namespace ProphecyCentury.Systems
                     case "battle_periodic_nearby_enemies_attack_and_death_explode":
                     case "on_death_explode":
                     case "on_death_explode_if_hits_next_round_team_attack":
+                    case "on_death_explode_if_hits_next_round_team_count":
                         var hitCount = 0;
                         foreach (var enemy in enemies.Where(enemy => enemy.IsAlive && Distance(unit, enemy) <= Math.Max(1, skill.radius)).ToList())
                         {
@@ -1639,14 +1639,16 @@ namespace ProphecyCentury.Systems
                             hitCount += 1;
                         }
 
-                        if (unit.PlayerSide && skill.kind == "on_death_explode_if_hits_next_round_team_attack" && hitCount >= Math.Max(1, skill.hitThreshold))
+                        if (unit.PlayerSide
+                            && (skill.kind == "on_death_explode_if_hits_next_round_team_count" || skill.kind == "on_death_explode_if_hits_next_round_team_attack")
+                            && hitCount >= Math.Max(1, skill.hitThreshold))
                         {
                             foreach (var ally in allies.Where(ally => ally.SourceState != null))
                             {
-                                ally.PendingRoundTempAttack += Math.Max(0, skill.nextRoundAttack);
+                                ally.PendingRoundTempCount += Math.Max(0, skill.nextRoundCount > 0 ? skill.nextRoundCount : skill.nextRoundAttack);
                             }
 
-                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.nextRoundAttack), $"{unit.Name} grants next round team attack");
+                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.nextRoundCount > 0 ? skill.nextRoundCount : skill.nextRoundAttack), $"{unit.Name} grants next round team count");
                         }
 
                         unit.SkillTriggers += 1;
@@ -1919,6 +1921,7 @@ namespace ProphecyCentury.Systems
             foreach (var unit in players.Where(unit => unit.SourceState != null))
             {
                 var source = unit.SourceState;
+                source.pendingNextRoundTempCount += Math.Max(0, unit.PendingRoundTempCount);
                 source.pendingNextRoundTempAttack += Math.Max(0, unit.PendingRoundTempAttack);
                 source.pendingNextRoundTempPower += Math.Max(0, unit.PendingRoundTempPower);
                 source.pendingNextRoundPermanentHp += Math.Max(0, unit.PendingRoundPermanentHp);
@@ -2149,6 +2152,47 @@ namespace ProphecyCentury.Systems
         {
             var faith = string.IsNullOrWhiteSpace(skillFaith) ? fallbackFaith : skillFaith;
             return units.Count(unit => unit.IsAlive && unit.Faith == faith);
+        }
+
+        private static int ApplySelfCountPercentPerFaithCount(BattleRuntimeUnit unit, int faithCount, SkillDefinition skill, List<BattleEvent> events = null, float elapsed = 0f)
+        {
+            if (unit == null || skill == null || faithCount <= 0)
+            {
+                return 0;
+            }
+
+            var percent = Math.Max(0, skill.value) * faithCount;
+            var countGain = (int)Math.Ceiling(unit.CurrentCount * (percent / 100f));
+            AddTemporaryCount(unit, countGain);
+            if (countGain > 0)
+            {
+                unit.SkillTriggers += 1;
+                AddEvent(events, elapsed, "skill", unit, unit, countGain, $"{unit.Name} gains faith count");
+            }
+
+            return countGain;
+        }
+
+        private static void ResolveFaithSummonCountBonuses(List<BattleRuntimeUnit> allies, BattleRuntimeUnit summoned, List<BattleEvent> events = null, float elapsed = 0f)
+        {
+            if (allies == null || summoned == null || !summoned.IsAlive || string.IsNullOrWhiteSpace(summoned.Faith))
+            {
+                return;
+            }
+
+            foreach (var ally in allies.Where(ally => ally != null && ally != summoned && ally.IsAlive).ToList())
+            {
+                foreach (var skill in GetBattleSkills(ally).Where(skill => skill.kind == "battle_start_self_count_percent_per_faith_count"))
+                {
+                    var faith = string.IsNullOrWhiteSpace(skill.faith) ? ally.Faith : skill.faith;
+                    if (summoned.Faith != faith)
+                    {
+                        continue;
+                    }
+
+                    ApplySelfCountPercentPerFaithCount(ally, 1, skill, events, elapsed);
+                }
+            }
         }
 
         private static float SkillRefreshSeconds(SkillDefinition skill, float fallback)
@@ -2400,6 +2444,7 @@ namespace ProphecyCentury.Systems
                 summoned.SummonDuration = skill.duration > 0f ? skill.duration : 0f;
                 allies.Add(summoned);
                 AddEvent(events, elapsed, "summon", source, summoned, 0, $"{source.Name} summons {summoned.Name}");
+                ResolveFaithSummonCountBonuses(allies, summoned, events, elapsed);
             }
         }
 
@@ -2535,18 +2580,30 @@ namespace ProphecyCentury.Systems
             return HexDistance(left.HexColumn, left.HexRow, right.HexColumn, right.HexRow);
         }
 
-        private static void MovePouncerNextToTarget(BattleRuntimeUnit unit, BattleRuntimeUnit target)
+        private static void MovePouncerNextToTarget(BattleRuntimeUnit unit, BattleRuntimeUnit target, IEnumerable<BattleRuntimeUnit> allies, IEnumerable<BattleRuntimeUnit> enemies)
         {
             if (unit == null || target == null)
             {
                 return;
             }
 
+            var occupied = BuildOccupiedHexSet(allies, enemies, unit);
             var destination = GetHexNeighbors(target.HexColumn, target.HexRow)
+                .Where(coord => !occupied.Contains(HexKey(coord.Column, coord.Row)))
                 .OrderBy(coord => HexDistance(unit.HexColumn, unit.HexRow, coord.Column, coord.Row))
-                .FirstOrDefault();
-            unit.HexColumn = destination.Column;
-            unit.HexRow = destination.Row;
+                .Select(coord => (HexCoord?)coord)
+                .FirstOrDefault()
+                ?? GetHexNeighbors(target.HexColumn, target.HexRow)
+                    .OrderBy(coord => HexDistance(unit.HexColumn, unit.HexRow, coord.Column, coord.Row))
+                    .Select(coord => (HexCoord?)coord)
+                    .FirstOrDefault();
+            if (!destination.HasValue)
+            {
+                return;
+            }
+
+            unit.HexColumn = destination.Value.Column;
+            unit.HexRow = destination.Value.Row;
             unit.Row = unit.HexRow;
             unit.Col = unit.HexColumn;
             unit.SlotId = FormatHexSlot(unit.HexColumn, unit.HexRow);
@@ -2977,6 +3034,7 @@ namespace ProphecyCentury.Systems
         public int TeamForestGiftTotal;
         public int SkillTriggers;
         public int PendingRoundTempAttack;
+        public int PendingRoundTempCount;
         public int PendingRoundTempPower;
         public int PendingRoundPermanentHp;
         public int PendingRoundPermanentPower;

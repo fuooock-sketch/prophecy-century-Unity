@@ -80,6 +80,7 @@ namespace ProphecyCentury.Data
         public int valuePerFaith;
         public int hitThreshold;
         public int nextRoundAttack;
+        public int nextRoundCount;
         public int giftThreshold;
         public int roundOffset;
         public int count;

@@ -441,7 +441,7 @@ namespace ProphecyCentury.Systems
                     {
                         var excluded = new HashSet<string>(talent.excludeUnitIds ?? Array.Empty<string>());
                         var candidates = runState.boardUnits
-                            .Where(unit => unit != owner && CountsAsRace(runState, unit, talent.race) && !excluded.Contains(unit.unitId) && HasEntryTalent(unit))
+                            .Where(unit => unit != owner && CountsAsRace(runState, unit, talent.race) && !excluded.Contains(unit.unitId) && HasSelfEntryTalent(unit, "retrigger"))
                             .ToList();
                         foreach (var unit in PickRandom(candidates, Count(talent, owner)))
                         {
@@ -759,7 +759,7 @@ namespace ProphecyCentury.Systems
                     }
                     break;
                 case "on_any_entry_effect_triggered_self_gain_attack":
-                    if (eventType == "on_entry" && target != owner && HasEntryTalent(target))
+                    if (eventType == "on_entry" && target != owner && HasSelfEntryTalent(target, reason))
                     {
                         GainCount(runState, owner, Value(talent, owner, Attack(talent, owner, 0)), target, processed, depth);
                     }
@@ -792,7 +792,7 @@ namespace ProphecyCentury.Systems
                     }
                     break;
                 case "on_any_entry_effect_count_evolve":
-                    if (eventType == "on_entry" && target != owner && HasEntryTalent(target))
+                    if (eventType == "on_entry" && target != owner && HasSelfEntryTalent(target, reason))
                     {
                         owner.manageEntryEffectTriggerCount += 1;
                         if (owner.manageEntryEffectTriggerCount >= Math.Max(1, talent.threshold))
@@ -810,7 +810,7 @@ namespace ProphecyCentury.Systems
                     }
                     break;
                 case "while_on_board_entry_effect_self_and_rear_gain_attack":
-                    if (eventType == "on_entry" && target != owner && HasEntryTalent(target))
+                    if (eventType == "on_entry" && target != owner && HasSelfEntryTalent(target, reason))
                     {
                         foreach (var unit in SelfAndRearRow(runState, owner))
                         {
@@ -843,7 +843,7 @@ namespace ProphecyCentury.Systems
         private void RetriggerRaceRoundEndTalents(RunState runState, BoardUnitState owner, SkillDefinition talent, HashSet<string> processed, int depth)
         {
             var times = Math.Max(1, owner.isGolden ? NonZero(talent.goldTimes, talent.times, 1) : NonZero(talent.times, 1));
-            var targets = runState.boardUnits.Where(unit => unit != owner && CountsAsRace(runState, unit, talent.race)).ToList();
+            var targets = runState.boardUnits.Where(unit => unit != owner && CountsAsRace(runState, unit, talent.race) && HasSelfEntryTalent(unit, "retrigger")).ToList();
             for (var i = 0; i < times; i += 1)
             {
                 foreach (var target in targets)
@@ -981,7 +981,8 @@ namespace ProphecyCentury.Systems
                 manageRoundEntryEffectTriggerCount = card.manageRoundEntryEffectTriggerCount,
                 manageFaithCountGainBucket = card.manageFaithCountGainBucket,
                 manageRoundForestGemGiftBonusCount = card.manageRoundForestGemGiftBonusCount,
-                manageRoundStatRetriggerTriggered = card.manageRoundStatRetriggerTriggered
+                manageRoundStatRetriggerTriggered = card.manageRoundStatRetriggerTriggered,
+                pendingNextRoundTempCount = card.pendingNextRoundTempCount
             };
         }
 

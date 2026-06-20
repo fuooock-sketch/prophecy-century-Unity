@@ -94,6 +94,7 @@ namespace ProphecyCentury.Model
         public int manageReceiveGiftPowerBucket;
         public bool manageReceiveGiftDiscoverTriggered;
         public bool manageRoundAttackRewardTriggered;
+        public int pendingNextRoundTempCount;
         public int pendingNextRoundTempAttack;
         public int pendingNextRoundTempPower;
         public int pendingNextRoundPermanentHp;

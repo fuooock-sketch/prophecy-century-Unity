@@ -3441,8 +3441,8 @@
                 "value": 1
             },
             {
-                "kind": "on_sell_price_if_attack_threshold",
-                "threshold": 100,
+                "kind": "on_sell_price_if_count_threshold",
+                "threshold": 30,
                 "price": 2,
                 "value": 1
             }
@@ -3453,9 +3453,9 @@
                 "value": 2
             },
             {
-                "kind": "on_sell_price_if_attack_threshold",
-                "threshold": 100,
-                "price": 4,
+                "kind": "on_sell_price_if_count_threshold",
+                "threshold": 30,
+                "price": 3,
                 "value": 2
             }
         ],
@@ -4007,21 +4007,21 @@
         "goldTalents": [],
         "battleSkills": [
             {
-                "kind": "on_death_explode_if_hits_next_round_team_attack",
+                "kind": "on_death_explode_if_hits_next_round_team_count",
                 "radius": 3,
                 "attackMultiplier": 1,
                 "hitThreshold": 3,
-                "nextRoundAttack": 2,
+                "nextRoundCount": 2,
                 "value": 2
             }
         ],
         "goldBattleSkills": [
             {
-                "kind": "on_death_explode_if_hits_next_round_team_attack",
+                "kind": "on_death_explode_if_hits_next_round_team_count",
                 "radius": 3,
                 "attackMultiplier": 1,
                 "hitThreshold": 3,
-                "nextRoundAttack": 4,
+                "nextRoundCount": 4,
                 "value": 4
             }
         ],

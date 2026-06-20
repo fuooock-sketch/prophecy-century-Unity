@@ -613,6 +613,7 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
                     continue;
                 }
 
+                unit.roundTempCount += Math.Max(0, unit.pendingNextRoundTempCount);
                 unit.roundTempAttack += Math.Max(0, unit.pendingNextRoundTempAttack);
                 unit.roundTempPower += Math.Max(0, unit.pendingNextRoundTempPower);
                 unit.shopBuffHp += Math.Max(0, unit.pendingNextRoundPermanentHp);
@@ -953,6 +954,7 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
 
         private static void ClearPendingBattleState(UnitCardState unit)
         {
+            unit.pendingNextRoundTempCount = 0;
             unit.pendingNextRoundTempAttack = 0;
             unit.pendingNextRoundTempPower = 0;
             unit.pendingNextRoundPermanentHp = 0;

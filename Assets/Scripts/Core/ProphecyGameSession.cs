@@ -97,7 +97,7 @@ namespace ProphecyCentury.Core
             switch (campaignId)
             {
                 case "snow_peak_defense":
-                    return 18;
+                    return 20;
                 case "song_of_sang_city":
                     return 24;
                 default:

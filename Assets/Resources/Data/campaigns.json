@@ -8,14 +8,14 @@
   {
     "id": "snow_peak_defense",
     "name": "Snow Peak Defense",
-    "desc": "Reserved campaign branch for future Godot parity work.",
-    "mapId": "abyss_wilds"
+    "desc": "A 20-round defense challenge built from the latest captured player battle snapshots.",
+    "mapId": "snow_peak_defense_map"
   },
   {
     "id": "song_of_sang_city",
     "name": "Song of Sang City",
-    "desc": "Reserved campaign branch for future Godot parity work.",
-    "mapId": "abyss_wilds"
+    "desc": "A 20-round challenge built from the captured Ganger devour board from live play.",
+    "mapId": "song_sang_city_map"
   },
   {
     "id": "shadow_elemental_challenge",

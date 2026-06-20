@@ -588,6 +588,7 @@ namespace ProphecyCentury.Systems
                     case "battle_periodic_nearby_enemies_attack_and_death_explode":
                     case "on_death_explode":
                     case "on_death_explode_if_hits_next_round_team_attack":
+                    case "on_death_explode_if_hits_next_round_team_count":
                         var hitCount = 0;
                         foreach (var enemy in enemies.Where(enemy => enemy.IsAlive && Distance(unit, enemy) <= Math.Max(1f, skill.radius * 80f)).ToList())
                         {
@@ -600,9 +601,11 @@ namespace ProphecyCentury.Systems
                             hitCount += 1;
                         }
 
-                        if (unit.PlayerSide && skill.kind == "on_death_explode_if_hits_next_round_team_attack" && hitCount >= Math.Max(1, skill.hitThreshold))
+                        if (unit.PlayerSide
+                            && (skill.kind == "on_death_explode_if_hits_next_round_team_count" || skill.kind == "on_death_explode_if_hits_next_round_team_attack")
+                            && hitCount >= Math.Max(1, skill.hitThreshold))
                         {
-                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.nextRoundAttack), $"{unit.Name} grants next round team attack");
+                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.nextRoundCount > 0 ? skill.nextRoundCount : skill.nextRoundAttack), $"{unit.Name} grants next round team count");
                         }
                         break;
                     case "on_death_next_round_shop_cards_gain_attack":

@@ -147,6 +147,7 @@ namespace ProphecyCentury.Systems
                 manageReceiveGiftPowerBucket = card.manageReceiveGiftPowerBucket,
                 manageReceiveGiftDiscoverTriggered = card.manageReceiveGiftDiscoverTriggered,
                 manageRoundAttackRewardTriggered = card.manageRoundAttackRewardTriggered,
+                pendingNextRoundTempCount = card.pendingNextRoundTempCount,
                 battleProgressCounters = card.battleProgressCounters?.Select(counter => new BattleProgressCounterState { key = counter.key, value = counter.value }).ToList() ?? new System.Collections.Generic.List<BattleProgressCounterState>(),
                 boardSlotId = boardSlotId
             };
@@ -172,9 +173,16 @@ namespace ProphecyCentury.Systems
 
             var definition = ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
             var talents = unit.isGolden ? definition?.goldTalents ?? definition?.talents : definition?.talents;
-            var attack = (definition?.attack ?? 0) + unit.shopBuffAttack;
-            var priceTalent = talents?.FirstOrDefault(talent => talent.kind == "on_sell_price_if_attack_threshold");
-            if (priceTalent == null || attack < priceTalent.threshold)
+            var priceTalent = talents?.FirstOrDefault(talent => talent.kind == "on_sell_price_if_count_threshold");
+            if (priceTalent == null)
+            {
+                return fallback;
+            }
+
+            var startCount = ResolveStartCount(definition);
+            var count = Math.Max(1, unit.baseCount > 0 ? unit.baseCount : startCount)
+                + Math.Max(0, unit.roundTempCount);
+            if (count < Math.Max(1, priceTalent.threshold))
             {
                 return fallback;
             }
