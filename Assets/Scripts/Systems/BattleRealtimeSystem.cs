@@ -167,8 +167,12 @@ namespace ProphecyCentury.Systems
                             }
                             break;
                         case "battle_start_stealth":
+                        case "battle_start_stealth_assassinate_lowest_hp":
                             unit.FirstAttackForceCrit = true;
-                            unit.FirstAttackCritMultiplier = ProphecyGameSession.Instance.Data.Config?.critDamageMultiple ?? 1.5f;
+                            unit.FirstAttackCritMultiplier = skill.kind == "battle_start_stealth_assassinate_lowest_hp"
+                                ? Math.Max(1f, skill.attackMultiplier)
+                                : ProphecyGameSession.Instance.Data.Config?.critDamageMultiple ?? 1.5f;
+                            unit.PreferLowestHp = skill.kind == "battle_start_stealth_assassinate_lowest_hp";
                             AddEvent(events, elapsed, "skill", unit, unit, 0, $"{unit.Name} enters stealth");
                             break;
                         case "battle_start_lowest_power_ally_gain_source_power":
@@ -178,6 +182,14 @@ namespace ProphecyCentury.Systems
                                 AddTemporaryCount(targetAlly, Math.Max(1, skill.value));
                                 AddEvent(events, elapsed, "skill", unit, targetAlly, Math.Max(1, skill.value), $"{targetAlly.Name} 临时数量增加");
                             }
+                            break;
+                        case "battle_start_delay_snipe_backline":
+                            unit.DelayedSnipeTimer = Math.Max(0.1f, skill.delay);
+                            unit.DelayedSnipeCritDistance = Math.Max(0f, skill.distance);
+                            unit.DelayedSnipeAttackMultiplier = Math.Max(1f, skill.attackMultiplier);
+                            unit.DelayedSnipeCritMultiplier = Math.Max(1f, skill.critMultiplier);
+                            unit.PreferBackline = true;
+                            AddEvent(events, elapsed, "skill", unit, unit, 0, $"{unit.Name} prepares a backline snipe");
                             break;
                         case "battle_start_summon_units":
                         case "battle_start_and_death_summon_units":
@@ -241,6 +253,10 @@ namespace ProphecyCentury.Systems
                                 }
                             }
                             break;
+                        case "battle_start_self_temp_initiative":
+                            unit.Initiative += Math.Max(0, skill.value);
+                            AddEvent(events, elapsed, "skill", unit, unit, Math.Max(0, skill.value), $"{unit.Name} gains temporary initiative");
+                            break;
                     }
                 }
             }
@@ -252,6 +268,12 @@ namespace ProphecyCentury.Systems
             {
                 attacker.AttackTimer = Math.Max(0f, attacker.AttackTimer - StepSeconds);
                 if (attacker.StunRemaining > 0f)
+                {
+                    continue;
+                }
+
+                ResolveDelayedSnipe(attacker, defenders, attackers, random, elapsed, events);
+                if (!attacker.IsAlive)
                 {
                     continue;
                 }
@@ -355,6 +377,37 @@ namespace ProphecyCentury.Systems
                         return;
                 }
             }
+        }
+
+        private static void ResolveDelayedSnipe(RealtimeBattleUnit unit, List<RealtimeBattleUnit> enemies, List<RealtimeBattleUnit> allies, Random random, float elapsed, List<BattleEvent> events)
+        {
+            if (unit == null || !unit.IsAlive || unit.DelayedSnipeTimer <= 0f)
+            {
+                return;
+            }
+
+            unit.DelayedSnipeTimer -= StepSeconds;
+            if (unit.DelayedSnipeTimer > 0f)
+            {
+                return;
+            }
+
+            var target = enemies
+                .Where(enemy => enemy.IsAlive)
+                .OrderBy(enemy => Distance(unit, enemy))
+                .ThenBy(enemy => unit.PreferLowestHp ? enemy.Hp : 0)
+                .ThenByDescending(enemy => unit.PreferBackline ? enemy.Row : 0)
+                .FirstOrDefault();
+            if (target == null)
+            {
+                return;
+            }
+
+            var forceCrit = unit.DelayedSnipeCritDistance > 0f && Distance(unit, target) >= unit.DelayedSnipeCritDistance;
+            var multiplier = forceCrit ? Math.Max(1f, unit.DelayedSnipeCritMultiplier) : Math.Max(1f, unit.DelayedSnipeAttackMultiplier);
+            var damage = Math.Max(1, (int)Math.Round(CalculateDamage(unit, target, random) * multiplier));
+            AddEvent(events, elapsed, "skill", unit, target, 0, $"{unit.Name} 延迟狙击 {target.Name}");
+            DealDamage(unit, target, damage, allies, enemies, random, events, elapsed, forceCrit);
         }
 
         private static void ResolveAllyActionTempCountBonuses(RealtimeBattleUnit actor, List<RealtimeBattleUnit> allies, List<BattleEvent> events, float elapsed)
@@ -472,6 +525,20 @@ namespace ProphecyCentury.Systems
                                 AddEvent(events, elapsed, "skill", attacker, areaTarget, 0, $"{attacker.Name} triggers gift area attack");
                                 DealDamage(attacker, areaTarget, Math.Max(1, damage), allies, enemies, random, events, elapsed);
                             }
+                        }
+                        break;
+                    case "on_attack_self_count_loss_percent_aoe":
+                        if (attacker.CurrentCount > 1)
+                        {
+                            var lossCount = CalculateSelfCountLoss(attacker, skill);
+                            AddEvent(events, elapsed, "skill", attacker, attacker, lossCount, $"{attacker.Name} loses troops for area attack");
+                            ApplySelfCountLoss(attacker, lossCount);
+                        }
+
+                        foreach (var areaTarget in enemies.Where(enemy => enemy.IsAlive && enemy != target && Distance(enemy, target) <= Math.Max(1f, skill.radius)).ToList())
+                        {
+                            AddEvent(events, elapsed, "skill", attacker, areaTarget, 0, $"{attacker.Name} 触发范围攻击");
+                            DealDamage(attacker, areaTarget, Math.Max(1, damage), allies, enemies, random, events, elapsed);
                         }
                         break;
                     case "on_attack_mark_target_next_round_forest_gem_on_death":
@@ -649,6 +716,7 @@ namespace ProphecyCentury.Systems
             return defenders
                 .Where(unit => unit.IsAlive)
                 .OrderBy(unit => Distance(attacker, unit))
+                .ThenBy(unit => attacker.PreferLowestHp ? unit.Hp : 0)
                 .ThenByDescending(unit => unit.Row)
                 .ThenBy(unit => unit.Hp)
                 .FirstOrDefault();
@@ -677,6 +745,7 @@ namespace ProphecyCentury.Systems
             return defenders
                 .Where(unit => unit.IsAlive && Distance(attacker, unit) <= AttackRange(attacker, unit) + AttackRangeSlack)
                 .OrderBy(unit => Distance(attacker, unit))
+                .ThenBy(unit => attacker.PreferLowestHp ? unit.Hp : 0)
                 .ThenBy(unit => unit.Hp)
                 .FirstOrDefault();
         }
@@ -1126,8 +1195,10 @@ namespace ProphecyCentury.Systems
 
         private static int CalculateSelfCountLoss(RealtimeBattleUnit unit, SkillDefinition skill)
         {
-            var percent = skill.selfHpLoss > 0 ? skill.selfHpLoss : skill.damage > 0 ? skill.damage : skill.hp > 0 ? skill.hp : 25;
-            return Math.Max(1, Math.Min(unit.CurrentCount - 1, (int)Math.Ceiling(unit.CurrentCount * (percent / 100f))));
+            var ratio = skill.percent > 0f
+                ? skill.percent
+                : (skill.selfHpLoss > 0 ? skill.selfHpLoss : skill.damage > 0 ? skill.damage : skill.hp > 0 ? skill.hp : 25) / 100f;
+            return Math.Max(1, Math.Min(unit.CurrentCount - 1, (int)Math.Ceiling(unit.CurrentCount * ratio)));
         }
 
         private static int ApplySelfCountLoss(RealtimeBattleUnit unit, int lossCount)
@@ -1296,6 +1367,12 @@ namespace ProphecyCentury.Systems
             public int TeamForestGiftTotal;
             public bool FirstAttackForceCrit;
             public float FirstAttackCritMultiplier;
+            public bool PreferLowestHp;
+            public bool PreferBackline;
+            public float DelayedSnipeTimer;
+            public float DelayedSnipeAttackMultiplier;
+            public float DelayedSnipeCritMultiplier;
+            public float DelayedSnipeCritDistance;
             public RealtimeBattleUnit ForestGemDeathMarkSource;
             public int ForestGemDeathMarkAmount;
             public readonly Dictionary<string, int> SkillCounters = new Dictionary<string, int>();

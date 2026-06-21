@@ -115,6 +115,8 @@ namespace ProphecyCentury.Data
         public float attackMultiplier;
         public float deathAttackMultiplier;
         public float critMultiplier;
+        public float percent;
+        public float distance;
         public float stunSeconds;
         public int stunTurns;
         public int moveLockTurns;

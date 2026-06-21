@@ -66,6 +66,8 @@ namespace ProphecyCentury.UI
         private const float BattleFloatingTextDuration = 0.75f;
         private const float CountLossFloatingTextDelay = 0.62f;
         private const float CountLossActionPauseDuration = 1.34f;
+        private const float RoundEndFeedbackBudgetSeconds = 2.55f;
+        private const float RoundEndFeedbackFinalRefreshSeconds = 0.35f;
         private int _selectedHandIndex = -1;
         private string _selectedBoardSlotId;
         private string _pendingTargetedEntrySourceSlotId;
@@ -77,6 +79,7 @@ namespace ProphecyCentury.UI
         private bool _dragSellMode;
         private bool _battlePlaybackRunning;
         private bool _dayExploreTransitionRunning;
+        private readonly Dictionary<string, int> _delayedCountDisplayOverrides = new Dictionary<string, int>();
         private Transform _battleFieldRoot;
         private GameObject _battleStartActionButton;
         private GameObject _battlePlaybackSpeedRoot;
@@ -1023,8 +1026,7 @@ namespace ProphecyCentury.UI
             }
 
             WriteLog(success ? $"已部署手牌第 {index + 1} 张。" : $"无法部署手牌第 {index + 1} 张。");
-            PlayNumberChangeFeedback(before);
-            PlayFeedbackThenRefresh(devourEvents, feedbackEvents);
+            PlayFeedbackThenRefresh(devourEvents, feedbackEvents, before);
             if (success && deployedGoldenCard && !needsTargetSelection)
             {
                 OpenGoldDeployRewardModal();
@@ -1076,8 +1078,7 @@ namespace ProphecyCentury.UI
             }
 
             WriteLog(success ? $"已部署手牌第 {index + 1} 张到 {boardSlotId}。" : $"无法部署手牌第 {index + 1} 张到 {boardSlotId}。");
-            PlayNumberChangeFeedback(before);
-            PlayFeedbackThenRefresh(devourEvents, feedbackEvents);
+            PlayFeedbackThenRefresh(devourEvents, feedbackEvents, before);
             if (success && deployedGoldenCard && !needsTargetSelection)
             {
                 OpenGoldDeployRewardModal();
@@ -1151,8 +1152,7 @@ namespace ProphecyCentury.UI
                 WriteLog($"{sourceName} 的祝福没有生效。");
             }
 
-            PlayNumberChangeFeedback(before);
-            PlayFeedbackThenRefresh(null, feedbackEvents);
+            PlayFeedbackThenRefresh(null, feedbackEvents, before);
             if (openGoldReward)
             {
                 OpenGoldDeployRewardModal();
@@ -1190,7 +1190,7 @@ namespace ProphecyCentury.UI
                 ShowFloatingText("无法使用密林宝钻");
             }
 
-            PlayFeedbackThenRefresh(null, FilterForestGemUseFeedback(feedbackEvents));
+            PlayFeedbackThenRefresh(null, FilterForestGemUseFeedback(feedbackEvents), before);
             return success;
         }
 
@@ -1646,8 +1646,7 @@ namespace ProphecyCentury.UI
 
             WriteLog(success ? $"已出售手牌第 {index + 1} 张。" : $"无法出售手牌第 {index + 1} 张。");
             ShowGoldChangeFeedback(goldBefore);
-            PlayNumberChangeFeedback(before);
-            PlayFeedbackThenRefresh(devourEvents, feedbackEvents);
+            PlayFeedbackThenRefresh(devourEvents, feedbackEvents, before);
         }
 
         private void SellBoardCard(int index)
@@ -1680,8 +1679,7 @@ namespace ProphecyCentury.UI
 
             WriteLog(success ? $"已出售棋盘第 {index + 1} 个单位。" : $"无法出售棋盘第 {index + 1} 个单位。");
             ShowGoldChangeFeedback(goldBefore);
-            PlayNumberChangeFeedback(before);
-            PlayFeedbackThenRefresh(devourEvents, feedbackEvents);
+            PlayFeedbackThenRefresh(devourEvents, feedbackEvents, before);
         }
 
         private void SellBoardSlot(string boardSlotId)
@@ -1713,8 +1711,7 @@ namespace ProphecyCentury.UI
 
             WriteLog(success ? $"已出售棋盘 {boardSlotId} 的单位。" : $"无法出售棋盘 {boardSlotId} 的单位。");
             ShowGoldChangeFeedback(goldBefore);
-            PlayNumberChangeFeedback(before);
-            PlayFeedbackThenRefresh(devourEvents, feedbackEvents);
+            PlayFeedbackThenRefresh(devourEvents, feedbackEvents, before);
         }
 
         private static void PlayFailureSfx(bool notEnoughGold)
@@ -2240,6 +2237,122 @@ namespace ProphecyCentury.UI
             StartCoroutine(PlayNumberChangeFeedbackAfterLayout(before));
         }
 
+        private void BeginDelayedCountDisplay(List<UnitNumberSnapshot> before)
+        {
+            _delayedCountDisplayOverrides.Clear();
+            if (before == null || before.Count == 0)
+            {
+                return;
+            }
+
+            var after = CaptureUnitNumberSnapshots();
+            var used = new bool[before.Count];
+            foreach (var current in after)
+            {
+                var previousIndex = FindPreviousSnapshot(before, used, current);
+                if (previousIndex < 0)
+                {
+                    continue;
+                }
+
+                used[previousIndex] = true;
+                var previous = before[previousIndex];
+                if (previous.Count == current.Count)
+                {
+                    continue;
+                }
+
+                _delayedCountDisplayOverrides[DisplayCountKey(current.Zone, current.Index, current.SlotId)] = previous.Count;
+            }
+        }
+
+        private void EndDelayedCountDisplay()
+        {
+            _delayedCountDisplayOverrides.Clear();
+        }
+
+        private bool TryGetDelayedDisplayCount(string zone, int index, string slotId, out int count)
+        {
+            return _delayedCountDisplayOverrides.TryGetValue(DisplayCountKey(zone, index, slotId), out count);
+        }
+
+        private static string DisplayCountKey(string zone, int index, string slotId)
+        {
+            return zone == "board"
+                ? $"{zone}:{slotId ?? string.Empty}"
+                : $"{zone}:{index}";
+        }
+
+        private UnitCardState CreateDisplayCountCard(UnitDefinition definition, UnitCardState card, string zone, int index, string slotId)
+        {
+            if (card == null || !TryGetDelayedDisplayCount(zone, index, slotId, out var displayCount))
+            {
+                return card;
+            }
+
+            var startCount = ResolveDefinitionStartCount(definition);
+            var clone = CloneDisplayCard(card);
+            clone.baseCount = Mathf.Max(1, displayCount - Mathf.Max(0, clone.roundTempCount));
+            if (clone.baseCount < startCount)
+            {
+                clone.baseCount = startCount;
+                clone.roundTempCount = Mathf.Max(0, displayCount - startCount);
+            }
+
+            return clone;
+        }
+
+        private static UnitCardState CloneDisplayCard(UnitCardState card)
+        {
+            return new UnitCardState
+            {
+                unitId = card.unitId,
+                name = card.name,
+                star = card.star,
+                isGolden = card.isGolden,
+                shopPoolCost = card.shopPoolCost,
+                shopPoolReserved = card.shopPoolReserved,
+                shopPoolContribution = card.shopPoolContribution,
+                fromShopPurchase = card.fromShopPurchase,
+                shopBuffHp = card.shopBuffHp,
+                shopBuffAttack = card.shopBuffAttack,
+                boardAuraAttack = card.boardAuraAttack,
+                shopBuffDefense = card.shopBuffDefense,
+                shopBuffPower = card.shopBuffPower,
+                shopBuffSpeed = card.shopBuffSpeed,
+                shopBuffLuck = card.shopBuffLuck,
+                shopBuffMorale = card.shopBuffMorale,
+                baseCount = card.baseCount,
+                maxCount = card.maxCount,
+                forestGemCount = card.forestGemCount,
+                roundTempCount = card.roundTempCount,
+                roundTempAttack = card.roundTempAttack,
+                roundTempPower = card.roundTempPower,
+                roundTempMorale = card.roundTempMorale,
+                forestGemsAttached = card.forestGemsAttached,
+                forestGemsReceived = card.forestGemsReceived,
+                manageEntryEffectTriggerCount = card.manageEntryEffectTriggerCount,
+                manageRoundEntryEffectTriggerCount = card.manageRoundEntryEffectTriggerCount,
+                manageFaithCountGainBucket = card.manageFaithCountGainBucket,
+                manageRoundForestGemGiftBonusCount = card.manageRoundForestGemGiftBonusCount,
+                manageRoundStatRetriggerTriggered = card.manageRoundStatRetriggerTriggered,
+                manageGiftActionBucket = card.manageGiftActionBucket,
+                manageAttackGainBucket = card.manageAttackGainBucket,
+                manageReceiveGiftPowerBucket = card.manageReceiveGiftPowerBucket,
+                manageReceiveGiftDiscoverTriggered = card.manageReceiveGiftDiscoverTriggered,
+                manageRoundAttackRewardTriggered = card.manageRoundAttackRewardTriggered,
+                pendingNextRoundTempCount = card.pendingNextRoundTempCount,
+                pendingNextRoundTempAttack = card.pendingNextRoundTempAttack,
+                pendingNextRoundTempPower = card.pendingNextRoundTempPower,
+                pendingNextRoundPermanentHp = card.pendingNextRoundPermanentHp,
+                pendingNextRoundPermanentPower = card.pendingNextRoundPermanentPower,
+                pendingNextRoundPermanentLuck = card.pendingNextRoundPermanentLuck,
+                pendingNextRoundForestGems = card.pendingNextRoundForestGems,
+                pendingNextRoundEvolveTo = card.pendingNextRoundEvolveTo,
+                battleProgressCounters = card.battleProgressCounters
+            };
+        }
+
         private IEnumerator PlayNumberChangeFeedbackAfterLayout(List<UnitNumberSnapshot> before)
         {
             yield return null;
@@ -2453,21 +2566,23 @@ namespace ProphecyCentury.UI
             StartCoroutine(PlayDevourFeedbackRoutine(devourEvents));
         }
 
-        private void PlayFeedbackThenRefresh(List<DevourShopEventState> devourEvents, ManageFeedbackEventsState feedbackEvents)
+        private void PlayFeedbackThenRefresh(List<DevourShopEventState> devourEvents, ManageFeedbackEventsState feedbackEvents, List<UnitNumberSnapshot> before = null)
         {
             var hasDevourEvents = devourEvents != null && devourEvents.Any(item => item != null && item.devouredCard != null);
             var hasManageEvents = HasManageFeedbackEvents(feedbackEvents);
             if (!hasDevourEvents && !hasManageEvents)
             {
                 RefreshView();
+                PlayNumberChangeFeedback(before);
                 return;
             }
 
-            StartCoroutine(PlayFeedbackThenRefreshRoutine(devourEvents, feedbackEvents));
+            StartCoroutine(PlayFeedbackThenRefreshRoutine(devourEvents, feedbackEvents, before));
         }
 
-        private IEnumerator PlayFeedbackThenRefreshRoutine(List<DevourShopEventState> devourEvents, ManageFeedbackEventsState feedbackEvents)
+        private IEnumerator PlayFeedbackThenRefreshRoutine(List<DevourShopEventState> devourEvents, ManageFeedbackEventsState feedbackEvents, List<UnitNumberSnapshot> before)
         {
+            BeginDelayedCountDisplay(before);
             if (devourEvents != null && devourEvents.Any(item => item != null && item.devouredCard != null))
             {
                 yield return PlayDevourFeedbackRoutine(devourEvents);
@@ -2480,6 +2595,10 @@ namespace ProphecyCentury.UI
                 PrepareHandAddFeedback(feedbackEvents.handAddEvents);
                 yield return PlayManageFeedbackRoutine(feedbackEvents);
             }
+
+            EndDelayedCountDisplay();
+            RefreshView();
+            PlayNumberChangeFeedback(before);
         }
 
         private void PlayManageFeedbackIfNeeded(ManageFeedbackEventsState feedbackEvents)
@@ -2496,6 +2615,28 @@ namespace ProphecyCentury.UI
 
             PrepareHandAddFeedback(feedbackEvents.handAddEvents);
             StartCoroutine(PlayManageFeedbackRoutine(feedbackEvents));
+        }
+
+        private IEnumerator PlayRoundEndFeedbackThenRefresh(ManageFeedbackEventsState feedbackEvents, List<UnitNumberSnapshot> before, int beforeGold)
+        {
+            BeginDelayedCountDisplay(before);
+            RefreshView();
+            ShowGoldChangeFeedback(beforeGold);
+
+            if (HasManageFeedbackEvents(feedbackEvents))
+            {
+                PrepareHandAddFeedback(feedbackEvents.handAddEvents);
+                yield return PlayManageFeedbackRoutine(feedbackEvents, Mathf.Max(0.1f, RoundEndFeedbackBudgetSeconds - RoundEndFeedbackFinalRefreshSeconds));
+            }
+
+            EndDelayedCountDisplay();
+            RefreshView();
+            PlayNumberChangeFeedback(before);
+
+            if (RoundEndFeedbackFinalRefreshSeconds > 0f)
+            {
+                yield return new WaitForSeconds(RoundEndFeedbackFinalRefreshSeconds);
+            }
         }
 
         private static bool HasManageFeedbackEvents(ManageFeedbackEventsState feedbackEvents)
@@ -2552,52 +2693,65 @@ namespace ProphecyCentury.UI
             };
         }
 
-        private IEnumerator PlayManageFeedbackRoutine(ManageFeedbackEventsState feedbackEvents)
+        private IEnumerator PlayManageFeedbackRoutine(ManageFeedbackEventsState feedbackEvents, float budgetSeconds = -1f)
         {
+            var startedAt = Time.time;
             yield return null;
             yield return new WaitForSeconds(0.18f);
 
             foreach (var entryEvent in feedbackEvents.entryEffectEvents ?? new List<EntryEffectEventState>())
             {
+                if (IsFeedbackBudgetExceeded(startedAt, budgetSeconds)) yield break;
                 PlayEntryEffectFeedback(entryEvent);
                 yield return new WaitForSeconds(0.08f);
             }
 
             foreach (var handEvent in feedbackEvents.handAddEvents ?? new List<HandAddEventState>())
             {
+                if (IsFeedbackBudgetExceeded(startedAt, budgetSeconds)) yield break;
                 yield return PlayHandAddFeedback(handEvent);
                 yield return new WaitForSeconds(0.05f);
             }
 
             foreach (var giftEvent in feedbackEvents.forestGemGiftEvents ?? new List<ForestGemGiftEventState>())
             {
+                if (IsFeedbackBudgetExceeded(startedAt, budgetSeconds)) yield break;
                 yield return PlayForestGemGiftFeedback(giftEvent);
                 yield return new WaitForSeconds(0.04f);
             }
 
             foreach (var evolveEvent in feedbackEvents.evolveEvents ?? new List<UnitEvolveEventState>())
             {
+                if (IsFeedbackBudgetExceeded(startedAt, budgetSeconds)) yield break;
                 PlayEvolveFeedback(evolveEvent);
                 yield return new WaitForSeconds(0.14f);
             }
 
             foreach (var countEvent in feedbackEvents.countGainEvents ?? new List<CountGainEventState>())
             {
+                if (IsFeedbackBudgetExceeded(startedAt, budgetSeconds)) yield break;
                 PlayCountGainFeedback(countEvent);
                 yield return new WaitForSeconds(0.08f);
             }
 
             foreach (var attackEvent in feedbackEvents.attackChangeEvents ?? new List<AttackChangeEventState>())
             {
+                if (IsFeedbackBudgetExceeded(startedAt, budgetSeconds)) yield break;
                 PlayAttackChangeFeedback(attackEvent);
                 yield return new WaitForSeconds(0.08f);
             }
 
             foreach (var buffEvent in feedbackEvents.shopBuffEvents ?? new List<ShopBuffEventState>())
             {
+                if (IsFeedbackBudgetExceeded(startedAt, budgetSeconds)) yield break;
                 yield return PlayShopBuffFeedback(buffEvent);
                 yield return new WaitForSeconds(0.05f);
             }
+        }
+
+        private static bool IsFeedbackBudgetExceeded(float startedAt, float budgetSeconds)
+        {
+            return budgetSeconds > 0f && Time.time - startedAt >= budgetSeconds;
         }
 
         private IEnumerator PlayForestGemGiftFeedback(ForestGemGiftEventState giftEvent)
@@ -3407,10 +3561,7 @@ namespace ProphecyCentury.UI
                 : "回合结束效果已结算。";
 
             WriteLog(roundEndLine);
-            RefreshView();
-            ShowGoldChangeFeedback(roundEndGoldBefore);
-            PlayNumberChangeFeedback(roundEndBefore);
-            PlayManageFeedbackIfNeeded(roundEndFeedback);
+            yield return PlayRoundEndFeedbackThenRefresh(roundEndFeedback, roundEndBefore, roundEndGoldBefore);
             yield return PlayBattleStartCountdown("探索");
 
             if (_flow.StartNewDay())
@@ -3662,10 +3813,7 @@ namespace ProphecyCentury.UI
             }
 
             WriteLog(roundEndLine);
-            RefreshView();
-            ShowGoldChangeFeedback(roundEndGoldBefore);
-            PlayNumberChangeFeedback(roundEndBefore);
-            PlayManageFeedbackIfNeeded(roundEndFeedback);
+            yield return PlayRoundEndFeedbackThenRefresh(roundEndFeedback, roundEndBefore, roundEndGoldBefore);
             if (!isExplorationBattle)
             {
                 yield return PlayBattleStartCountdown();
@@ -8874,18 +9022,20 @@ namespace ProphecyCentury.UI
             layoutElement.flexibleWidth = cardWidth > 0f ? 0f : 1f;
 
             var unitDefinition = card == null ? null : ProphecyGameSession.Instance.Data.FindUnit(card.unitId);
+            var displayZone = dragSource == "board" ? "board" : dragSource == "hand" ? "hand" : "shop";
+            var displayCard = CreateDisplayCountCard(unitDefinition, card, displayZone, index, boardSlotId);
             var selected = dragSource == "hand" && _selectedHandIndex == index;
             var prefix = selected ? ">" : null;
             view.Bind(
                 unitDefinition,
-                card,
+                displayCard,
                 mode,
                 GetUnitCardRaceStyles(),
                 prefix,
                 selected);
             if (dragSource == "board")
             {
-                ApplyBoardCountBadge(view, unitDefinition, card);
+                ApplyBoardCountBadge(view, unitDefinition, displayCard);
             }
 
             var background = view.BackgroundImage != null ? view.BackgroundImage : cardObject.GetComponent<Image>();
@@ -9345,8 +9495,9 @@ namespace ProphecyCentury.UI
                 viewRect.offsetMin = Vector2.zero;
                 viewRect.offsetMax = Vector2.zero;
                 var definition = ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
-                view.Bind(definition, unit, UnitCardPresentationMode.Board, GetUnitCardRaceStyles(), null, isSelected);
-                ApplyBoardCountBadge(view, definition, unit);
+                var displayUnit = CreateDisplayCountCard(definition, unit, "board", -1, slotId);
+                view.Bind(definition, displayUnit, UnitCardPresentationMode.Board, GetUnitCardRaceStyles(), null, isSelected);
+                ApplyBoardCountBadge(view, definition, displayUnit);
 
                 var dragItem = cellObject.AddComponent<RuntimeUnitDragItem>();
                 dragItem.Controller = this;

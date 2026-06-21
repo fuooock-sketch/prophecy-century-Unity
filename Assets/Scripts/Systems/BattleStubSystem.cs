@@ -1398,10 +1398,14 @@ namespace ProphecyCentury.Systems
                         case "battle_start_stealth":
                         case "battle_start_stealth_assassinate_lowest_hp":
                             unit.FirstAttackForceCrit = true;
-                            unit.FirstAttackCritMultiplier = ProphecyGameSession.Instance.Data.Config?.critDamageMultiple ?? 1.5f;
+                            unit.FirstAttackCritMultiplier = skill.kind == "battle_start_stealth_assassinate_lowest_hp"
+                                ? Math.Max(1f, skill.attackMultiplier)
+                                : ProphecyGameSession.Instance.Data.Config?.critDamageMultiple ?? 1.5f;
                             unit.PreferLowestHp = skill.kind == "battle_start_stealth_assassinate_lowest_hp";
                             unit.DelayedSnipeTimer = skill.kind == "battle_start_stealth_assassinate_lowest_hp" ? Math.Max(0f, skill.delay) : 0f;
                             unit.DelayedSnipeCritical = SkillSnipeIsCritical(unit, skill);
+                            unit.DelayedSnipeAttackMultiplier = Math.Max(1f, skill.attackMultiplier);
+                            unit.DelayedSnipeCritMultiplier = Math.Max(1f, skill.critMultiplier > 0f ? skill.critMultiplier : skill.attackMultiplier);
                             unit.DelayedSnipeMultiplier = SkillSnipeMultiplier(unit, skill);
                             unit.SkillTriggers += 1;
                             break;
@@ -1441,6 +1445,9 @@ namespace ProphecyCentury.Systems
                         case "battle_start_delay_snipe_backline":
                             unit.DelayedSnipeTimer = Math.Max(0.1f, skill.delay);
                             unit.DelayedSnipeCritical = SkillSnipeIsCritical(unit, skill);
+                            unit.DelayedSnipeCritDistance = Math.Max(0f, skill.distance);
+                            unit.DelayedSnipeAttackMultiplier = Math.Max(1f, skill.attackMultiplier);
+                            unit.DelayedSnipeCritMultiplier = Math.Max(1f, skill.critMultiplier);
                             unit.DelayedSnipeMultiplier = SkillSnipeMultiplier(unit, skill);
                             unit.PreferBackline = true;
                             unit.SkillTriggers += 1;
@@ -1463,6 +1470,10 @@ namespace ProphecyCentury.Systems
                             break;
                         case "battle_start_self_temp_morale":
                             unit.Morale += Math.Max(0, skill.value);
+                            unit.SkillTriggers += skill.value > 0 ? 1 : 0;
+                            break;
+                        case "battle_start_self_temp_initiative":
+                            unit.Initiative += Math.Max(0, skill.value);
                             unit.SkillTriggers += skill.value > 0 ? 1 : 0;
                             break;
                         case "battle_start_if_team_faith_count_next_round_discover":
@@ -1591,6 +1602,14 @@ namespace ProphecyCentury.Systems
                             attacker.SkillTriggers += 1;
                         }
                         break;
+                    case "on_attack_multi_nearest_targets":
+                        foreach (var extraTarget in enemies.Where(enemy => enemy.IsAlive && enemy != target).OrderBy(enemy => Distance(target, enemy)).Take(Math.Max(0, skill.targets - 1)).ToList())
+                        {
+                            AddEvent(events, elapsed, "skill", attacker, extraTarget, 0, $"{attacker.Name} 追加攻击 {extraTarget.Name}");
+                            DealDamage(attacker, extraTarget, CalculateDamage(attacker, extraTarget, random), allies, enemies, random, events, elapsed);
+                            attacker.SkillTriggers += 1;
+                        }
+                        break;
                     case "on_attack_count_fire_rain_area_dot":
                         if (IncrementSkillCounter(attacker, skill.kind) >= Math.Max(1, skill.count))
                         {
@@ -1624,6 +1643,21 @@ namespace ProphecyCentury.Systems
 
                             attacker.SkillTriggers += 1;
                         }
+                        break;
+                    case "on_attack_self_count_loss_percent_aoe":
+                        if (attacker.CurrentCount > 1)
+                        {
+                            var lossCount = CalculateSelfCountLoss(attacker, skill);
+                            ApplySelfCountLoss(attacker, lossCount);
+                        }
+
+                        foreach (var areaTarget in enemies.Where(enemy => enemy.IsAlive && enemy != target && Distance(enemy, target) <= Math.Max(1f, skill.radius)).ToList())
+                        {
+                            AddEvent(events, elapsed, "skill", attacker, areaTarget, 0, $"{attacker.Name} 触发范围攻击");
+                            DealDamage(attacker, areaTarget, Math.Max(1, damage), allies, enemies, random, events, elapsed);
+                        }
+
+                        attacker.SkillTriggers += 1;
                         break;
                     case "on_attack_mark_target_next_round_forest_gem_on_death":
                         target.ForestGemDeathMarkSource = attacker;
@@ -1813,9 +1847,12 @@ namespace ProphecyCentury.Systems
                             .FirstOrDefault();
                         if (target != null)
                         {
-                            var damage = Math.Max(1, (int)Math.Round(CalculateDamage(unit, target, random) * Math.Max(1f, unit.DelayedSnipeMultiplier)));
+                            var distanceCritical = unit.DelayedSnipeCritDistance > 0f && Distance(unit, target) >= unit.DelayedSnipeCritDistance;
+                            var forceCrit = unit.DelayedSnipeCritical || distanceCritical;
+                            var multiplier = forceCrit ? Math.Max(1f, unit.DelayedSnipeCritMultiplier) : Math.Max(1f, unit.DelayedSnipeAttackMultiplier);
+                            var damage = Math.Max(1, (int)Math.Round(CalculateDamage(unit, target, random) * multiplier));
                             AddEvent(events, elapsed, "skill", unit, target, 0, $"{unit.Name} 寤惰繜鐙欏嚮 {target.Name}");
-                            DealDamage(unit, target, damage, units, enemies, random, events, elapsed, unit.DelayedSnipeCritical);
+                            DealDamage(unit, target, damage, units, enemies, random, events, elapsed, forceCrit);
                             unit.SkillTriggers += 1;
                         }
                     }
@@ -1882,8 +1919,10 @@ namespace ProphecyCentury.Systems
 
         private static int CalculateSelfCountLoss(BattleRuntimeUnit unit, SkillDefinition skill)
         {
-            var percent = skill.selfHpLoss > 0 ? skill.selfHpLoss : skill.damage > 0 ? skill.damage : skill.hp > 0 ? skill.hp : 25;
-            return Math.Max(1, Math.Min(unit.CurrentCount - 1, (int)Math.Ceiling(unit.CurrentCount * (percent / 100f))));
+            var ratio = skill.percent > 0f
+                ? skill.percent
+                : (skill.selfHpLoss > 0 ? skill.selfHpLoss : skill.damage > 0 ? skill.damage : skill.hp > 0 ? skill.hp : 25) / 100f;
+            return Math.Max(1, Math.Min(unit.CurrentCount - 1, (int)Math.Ceiling(unit.CurrentCount * ratio)));
         }
 
         private static int ApplySelfCountLoss(BattleRuntimeUnit unit, int lossCount)
@@ -3110,6 +3149,9 @@ namespace ProphecyCentury.Systems
         public bool PreferBackline;
         public float DelayedSnipeTimer;
         public float DelayedSnipeMultiplier;
+        public float DelayedSnipeAttackMultiplier;
+        public float DelayedSnipeCritMultiplier;
+        public float DelayedSnipeCritDistance;
         public bool DelayedSnipeCritical;
         public int TeamForestGiftTotal;
         public int SkillTriggers;

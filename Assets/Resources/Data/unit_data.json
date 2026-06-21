@@ -2040,7 +2040,7 @@
             },
             {
                 "kind": "on_receive_gift_self_evolve",
-                "threshold": 10,
+                "threshold": 5,
                 "targetUnitId": "elite_ranger_rider",
                 "value": 1
             }
@@ -2052,7 +2052,7 @@
             },
             {
                 "kind": "on_receive_gift_self_evolve",
-                "threshold": 10,
+                "threshold": 5,
                 "targetUnitId": "elite_ranger_rider",
                 "value": 2
             }
@@ -2115,16 +2115,14 @@
         ],
         "battleSkills": [
             {
-                "kind": "on_damaged_count_temp_morale",
-                "count": 3,
-                "value": 50
+                "kind": "battle_start_self_temp_initiative",
+                "value": 2
             }
         ],
         "goldBattleSkills": [
             {
-                "kind": "on_damaged_count_temp_morale",
-                "count": 1,
-                "value": 50
+                "kind": "battle_start_self_temp_initiative",
+                "value": 4
             }
         ],
         "sizeTier": 2,
@@ -2225,8 +2223,8 @@
                 "value": 1
             },
             {
-                "kind": "while_on_board_attack_gain_threshold_evolve",
-                "threshold": 50,
+                "kind": "while_on_board_count_gain_events_evolve",
+                "threshold": 10,
                 "targetUnitId": "sword_ranger"
             }
         ],
@@ -2236,8 +2234,8 @@
                 "value": 2
             },
             {
-                "kind": "while_on_board_attack_gain_threshold_evolve",
-                "threshold": 50,
+                "kind": "while_on_board_count_gain_events_evolve",
+                "threshold": 10,
                 "targetUnitId": "sword_ranger"
             }
         ],
@@ -2287,13 +2285,13 @@
         "goldBattleText": "受到攻击后如果存活，下回合开始时，获得2颗【密林宝钻】。",
         "talents": [
             {
-                "kind": "on_gain_forest_gem_self_gain_attack",
+                "kind": "on_receive_gift_self_gain_attack",
                 "value": 4
             }
         ],
         "goldTalents": [
             {
-                "kind": "on_gain_forest_gem_self_gain_attack",
+                "kind": "on_receive_gift_self_gain_attack",
                 "value": 8
             }
         ],
@@ -2350,17 +2348,15 @@
         "goldBattleText": "—",
         "talents": [
             {
-                "kind": "round_end_forward_adjacent_units_gain_attack_and_gift",
-                "attack": 10,
-                "gift": 2,
+                "kind": "round_end_forward_row_units_gift_forest_gem",
+                "value": 1,
                 "targetMode": "forward_row_all"
             }
         ],
         "goldTalents": [
             {
-                "kind": "round_end_forward_adjacent_units_gain_attack_and_gift",
-                "attack": 20,
-                "gift": 4,
+                "kind": "round_end_forward_row_units_gift_forest_gem",
+                "value": 2,
                 "targetMode": "forward_row_all"
             }
         ],
@@ -2408,13 +2404,13 @@
         "talents": [
             {
                 "kind": "on_entry_side_units_gift_forest_gem",
-                "value": 5
+                "value": 1
             }
         ],
         "goldTalents": [
             {
                 "kind": "on_entry_side_units_gift_forest_gem",
-                "value": 10
+                "value": 2
             }
         ],
         "battleSkills": [],
@@ -2528,7 +2524,7 @@
             },
             {
                 "kind": "on_receive_gift_self_evolve",
-                "threshold": 10,
+                "threshold": 5,
                 "targetUnitId": "phantom_archer",
                 "value": 1
             }
@@ -2540,23 +2536,13 @@
             },
             {
                 "kind": "on_receive_gift_self_evolve",
-                "threshold": 10,
+                "threshold": 5,
                 "targetUnitId": "phantom_archer",
                 "value": 2
             }
         ],
-        "battleSkills": [
-            {
-                "kind": "on_death_next_round_forest_gem",
-                "value": 1
-            }
-        ],
-        "goldBattleSkills": [
-            {
-                "kind": "on_death_next_round_forest_gem",
-                "value": 2
-            }
-        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
         "sizeTier": 1,
         "limit": 8,
         "startCount": 7,
@@ -2602,7 +2588,7 @@
         "talents": [
             {
                 "kind": "on_other_sell_absorb_attached_gems_and_gain_attack",
-                "value": 5
+                "value": 0
             }
         ],
         "goldTalents": [
@@ -2615,7 +2601,7 @@
             {
                 "kind": "battle_start_delay_snipe_backline",
                 "delay": 2,
-                "giftThreshold": 20,
+                "distance": 8,
                 "critMultiplier": 3
             }
         ],
@@ -2623,7 +2609,7 @@
             {
                 "kind": "battle_start_delay_snipe_backline",
                 "delay": 2,
-                "giftThreshold": 20,
+                "distance": 6,
                 "critMultiplier": 6
             }
         ],
@@ -2669,15 +2655,15 @@
         "talents": [
             {
                 "kind": "on_instant_evolve_self_gift_and_gain_attack",
-                "gift": 4,
-                "gain": 8
+                "gift": 1,
+                "gain": 1
             }
         ],
         "goldTalents": [
             {
                 "kind": "on_instant_evolve_self_gift_and_gain_attack",
-                "gift": 4,
-                "gain": 16
+                "gift": 2,
+                "gain": 2
             }
         ],
         "battleSkills": [],
@@ -2729,18 +2715,16 @@
         "goldBattleText": "每次攻击都会对额外的2支部队产生伤害，无论那2支部队有多远。",
         "talents": [
             {
-                "kind": "on_receive_gift_total_discover_race_unit_once",
-                "race": "甘席",
-                "threshold": 10,
-                "count": 1
+                "kind": "forest_gem_gift_count_bonus_aura",
+                "value": 1,
+                "count": 3
             }
         ],
         "goldTalents": [
             {
-                "kind": "on_receive_gift_total_discover_race_unit_once",
-                "race": "甘席",
-                "threshold": 10,
-                "count": 2
+                "kind": "forest_gem_gift_count_bonus_aura",
+                "value": 2,
+                "count": 3
             }
         ],
         "battleSkills": [
@@ -2752,7 +2736,7 @@
         "goldBattleSkills": [
             {
                 "kind": "on_attack_multi_nearest_targets",
-                "targets": 4
+                "targets": 3
             }
         ],
         "sizeTier": 1,
@@ -2926,17 +2910,15 @@
         "goldBattleText": "如果阵亡，下回合开始时获得2颗【密林宝钻】。",
         "talents": [
             {
-                "kind": "on_receive_gift_total_team_gain_power_every_n",
-                "power": 1,
-                "threshold": 30,
+                "kind": "on_gift_action_self_gain_count_every_n",
+                "threshold": 5,
                 "value": 4
             }
         ],
         "goldTalents": [
             {
-                "kind": "on_receive_gift_total_team_gain_power_every_n",
-                "power": 2,
-                "threshold": 30,
+                "kind": "on_gift_action_self_gain_count_every_n",
+                "threshold": 5,
                 "value": 8
             }
         ],
@@ -3005,16 +2987,16 @@
         ],
         "battleSkills": [
             {
-                "kind": "on_attack_if_team_gift_total_aoe",
-                "threshold": 50,
-                "radius": 6
+                "kind": "on_attack_self_count_loss_percent_aoe",
+                "percent": 0.05,
+                "radius": 2
             }
         ],
         "goldBattleSkills": [
             {
-                "kind": "on_attack_if_team_gift_total_aoe",
-                "threshold": 100,
-                "radius": 12
+                "kind": "on_attack_self_count_loss_percent_aoe",
+                "percent": 0.05,
+                "radius": 4
             }
         ],
         "sizeTier": 1,
@@ -3118,18 +3100,18 @@
             },
             {
                 "kind": "on_receive_gift_self_evolve",
-                "threshold": 30,
+                "threshold": 10,
                 "targetUnitId": "blood_mire_fiend"
             }
         ],
         "goldTalents": [
             {
                 "kind": "round_end_self_gift_forest_gem",
-                "value": 6
+                "value": 4
             },
             {
                 "kind": "on_receive_gift_self_evolve",
-                "threshold": 30,
+                "threshold": 10,
                 "targetUnitId": "blood_mire_fiend"
             }
         ],
@@ -3241,8 +3223,8 @@
         "sizeTier": 2,
         "size": 1,
         "tags": [],
-        "talentText": "入场时，随机吞噬商店中的1张卡牌，获得“该卡默认数量/10”的数量（至少为1）。",
-        "goldTalentText": "入场时，随机吞噬商店中的1张卡牌，获得“该卡默认数量/5”的数量（至少为1）。",
+        "talentText": "入场时，随机吞噬商店中的1张卡牌，获得“该卡在商店中当前数量/10”的数量（向下取整，至少为1）。",
+        "goldTalentText": "入场时，随机吞噬商店中的1张卡牌，获得“该卡在商店中当前数量/5”的数量（向下取整，至少为1）。",
         "battleText": "—",
         "goldBattleText": "—",
         "talents": [
@@ -3287,7 +3269,7 @@
         "attackRange": 1.0,
         "firstPurchaseHp": 105,
         "firstPurchaseAverageDamage": 73,
-        "skillText": "入场时，随机吞噬商店中的1张卡牌，获得“该卡默认数量/10”的数量（至少为1）。\n入场时，随机吞噬商店中的1张卡牌，获得“该卡默认数量/5”的数量（至少为1）。\n—\n—",
+        "skillText": "入场时，随机吞噬商店中的1张卡牌，获得“该卡在商店中当前数量/10”的数量（向下取整，至少为1）。\n入场时，随机吞噬商店中的1张卡牌，获得“该卡在商店中当前数量/5”的数量（向下取整，至少为1）。\n—\n—",
         "designOnlyInitialBaseDamage": 73
     },
     {
@@ -4299,17 +4281,13 @@
         "goldBattleText": "不会被反击。",
         "talents": [
             {
-                "kind": "round_end_tagged_units_devour_shop_gain_attack",
-                "targetTag": "野兽",
-                "multiplier": 1,
+                "kind": "on_devour_self_gain_attack",
                 "value": 2
             }
         ],
         "goldTalents": [
             {
-                "kind": "round_end_tagged_units_devour_shop_gain_attack",
-                "targetTag": "野兽",
-                "multiplier": 2,
+                "kind": "on_devour_self_gain_attack",
                 "value": 4
             }
         ],

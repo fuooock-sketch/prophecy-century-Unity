@@ -362,6 +362,17 @@ namespace ProphecyCentury.Systems
                         }
                     }
                     break;
+                case "while_on_board_count_gain_events_evolve":
+                    if (eventType == "on_gain_count" && target is BoardUnitState && eventValue > 0)
+                    {
+                        owner.manageAttackGainBucket += 1;
+                        if (owner.manageAttackGainBucket >= Math.Max(1, talent.threshold))
+                        {
+                            owner.manageAttackGainBucket = 0;
+                            Evolve(runState, owner, talent.targetUnitId, target, processed, depth);
+                        }
+                    }
+                    break;
                 case "while_on_board_self_gain_stat_team_gain_power":
                     if (eventType == "on_gain_count" && target == owner)
                     {
@@ -592,6 +603,15 @@ namespace ProphecyCentury.Systems
                         }
                     }
                     break;
+                case "round_end_forward_row_units_gift_forest_gem":
+                    if (eventType == "on_round_end")
+                    {
+                        foreach (var unit in ForwardAdjacent(runState, owner, talent.targetMode))
+                        {
+                            GiftForestGem(runState, owner, unit, Value(talent, owner), processed, depth);
+                        }
+                    }
+                    break;
                 case "on_entry_side_units_gift_forest_gem":
                     if (eventType == "on_entry" && target == owner)
                     {
@@ -630,6 +650,18 @@ namespace ProphecyCentury.Systems
                             {
                                 GainCount(runState, unit, gain, owner, processed, depth);
                             }
+                        }
+                    }
+                    break;
+                case "on_gift_action_self_gain_count_every_n":
+                    if (eventType == "on_gift_action" && talent.threshold > 0)
+                    {
+                        var bucket = runState.manageResources.forestGiftActions / talent.threshold;
+                        if (bucket > owner.manageGiftActionBucket)
+                        {
+                            var gain = (bucket - owner.manageGiftActionBucket) * Value(talent, owner, Attack(talent, owner, 0));
+                            owner.manageGiftActionBucket = bucket;
+                            GainCount(runState, owner, gain, owner, processed, depth);
                         }
                     }
                     break;
@@ -704,6 +736,12 @@ namespace ProphecyCentury.Systems
                         {
                             GainCount(runState, unit, Value(talent, owner, Attack(talent, owner, 0)), owner, processed, depth);
                         }
+                    }
+                    break;
+                case "on_devour_self_gain_attack":
+                    if (eventType == "on_devour")
+                    {
+                        GainCount(runState, owner, Value(talent, owner, Attack(talent, owner, 0)), owner, processed, depth);
                     }
                     break;
                 case "on_entry_add_unit_to_hand":
@@ -907,7 +945,7 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private void DevourShopCard(RunState runState, BoardUnitState owner, SkillDefinition talent, bool highestAttack, HashSet<string> processed, int depth)
+        private void DevourShopCard(RunState runState, BoardUnitState owner, SkillDefinition talent, bool highestCount, HashSet<string> processed, int depth)
         {
             var candidates = runState.shopCards
                 .Select((card, index) => new { card, index })
@@ -918,8 +956,8 @@ namespace ProphecyCentury.Systems
                 return;
             }
 
-            var picked = highestAttack
-                ? candidates.OrderByDescending(entry => EffectiveAttack(entry.card)).First()
+            var picked = highestCount
+                ? candidates.OrderByDescending(entry => CurrentShopCount(entry.card)).First()
                 : candidates[_random.Next(candidates.Count)];
             var card = _shopSystem.RemoveShopCardForDevour(runState, picked.index);
             if (card == null)
@@ -932,9 +970,9 @@ namespace ProphecyCentury.Systems
             if (stats != null)
             {
                 var ratio = talent.ratio > 0f ? talent.ratio : 1f;
-                var cardCount = Math.Max(1, card.baseCount > 0 ? card.baseCount : ResolveStartCount(UnitDef(card)));
+                var cardCount = CurrentShopCount(card);
                 var multiplier = Math.Max(1, NonZero(stats.attack, stats.power, stats.hp, talent.multiplier, 1));
-                gainedCount = Math.Max(1, (int)Math.Round(cardCount * multiplier * ratio));
+                gainedCount = Math.Max(1, (int)Math.Floor(cardCount * multiplier * ratio));
                 GainCount(runState, owner, gainedCount, owner, processed, depth, true);
                 AddStat(runState, owner, "defense", (int)Math.Round(EffectiveDefense(card) * stats.defense * ratio), owner, processed, depth);
                 AddStat(runState, owner, "speed", (int)Math.Round(EffectiveSpeed(card) * stats.speed * ratio), owner, processed, depth);
@@ -942,7 +980,7 @@ namespace ProphecyCentury.Systems
             }
             else
             {
-                var cardCount = Math.Max(1, card.baseCount > 0 ? card.baseCount : ResolveStartCount(UnitDef(card)));
+                var cardCount = CurrentShopCount(card);
                 gainedCount = cardCount * Math.Max(1, talent.multiplier);
                 GainCount(runState, owner, gainedCount, owner, processed, depth, true);
             }
@@ -958,6 +996,11 @@ namespace ProphecyCentury.Systems
             });
 
             Dispatch(runState, "on_devour", owner, "devour_shop", owner, 0, processed, depth + 1);
+        }
+
+        private static int CurrentShopCount(UnitCardState card)
+        {
+            return Math.Max(1, card?.baseCount > 0 ? card.baseCount : ResolveStartCount(UnitDef(card)));
         }
 
         private static UnitCardState CloneCard(UnitCardState card)
@@ -1550,6 +1593,7 @@ namespace ProphecyCentury.Systems
                 case "round_end_same_row_tagged_units_gain_count":
                 case "round_end_self_temp_morale_per_race_count":
                 case "round_end_forward_adjacent_units_gain_attack_and_gift":
+                case "round_end_forward_row_units_gift_forest_gem":
                 case "round_end_self_gift_forest_gem":
                 case "round_end_self_and_rear_rows_gain_count_retrigger_tag_round_end":
                 case "round_end_temp_gain_adjacent_attack":
@@ -1581,6 +1625,7 @@ namespace ProphecyCentury.Systems
                 case "while_on_board_any_ally_gain_stat_extra_defense":
                 case "while_on_board_attack_gain_threshold_add_random_unit_to_hand":
                 case "while_on_board_attack_gain_threshold_evolve":
+                case "while_on_board_count_gain_events_evolve":
                 case "on_faith_gain_count_threshold_self_gain_count":
                     return eventType == "on_gain_count";
                 case "while_on_board_self_gain_stat_team_gain_power":
@@ -1594,12 +1639,14 @@ namespace ProphecyCentury.Systems
                 case "on_gain_forest_gem_auto_gift_self_team_attack":
                     return eventType == "on_gain_forest_gem";
                 case "on_gift_action_team_gain_attack_every_n":
+                case "on_gift_action_self_gain_count_every_n":
                     return eventType == "on_gift_action";
                 case "on_other_sell_absorb_attached_gems_and_gain_attack":
                     return eventType == "on_sell";
                 case "on_instant_evolve_self_gift_and_gain_attack":
                     return eventType == "on_instant_evolve";
                 case "on_devour_team_gain_attack":
+                case "on_devour_self_gain_attack":
                     return eventType == "on_devour";
                 default:
                     return false;
