@@ -120,8 +120,10 @@ namespace ProphecyCentury.Model
         public string id;
         public string name;
         public string createdLabel;
+        public string createdAtLabel;
         public string sourceCampaignId;
         public string sourceCampaignName;
+        public int finalRoundPlayerScore;
         public List<CustomChallengeRoundState> rounds = new List<CustomChallengeRoundState>();
     }
 

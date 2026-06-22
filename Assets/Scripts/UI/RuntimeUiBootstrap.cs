@@ -101,6 +101,8 @@ namespace ProphecyCentury.UI
             HideTitleSelectionControls(root.transform);
             EnsureTitleShortcutChallengeButton(root.transform, controller);
             EnsureSelectionScreens(root.transform, controller);
+            EnsurePlayerHpBar(root.transform, controller);
+            EnsureArmyPowerLabel(root.transform, controller);
 
             WireButton(root.transform, "StartSelectedRunButton", controller.OpenCampaignSelection);
             WireButton(root.transform, "StartGameButton", controller.OpenCampaignSelection);
@@ -124,6 +126,86 @@ namespace ProphecyCentury.UI
             {
                 WireButton(root.transform, "EncyclopediaButtonV2", encyclopedia.Open);
             }
+        }
+
+        private static void EnsurePlayerHpBar(Transform root, RunSceneController controller)
+        {
+            if (root == null || controller == null)
+            {
+                return;
+            }
+
+            var hpBar = FindDeepChild(root, "HpBar");
+            if (hpBar == null)
+            {
+                return;
+            }
+
+            var fill = FindDeepChild(hpBar, "HpFill")?.GetComponent<Image>();
+            if (fill == null)
+            {
+                var fillObject = new GameObject("HpFill", typeof(Image));
+                fillObject.transform.SetParent(hpBar, false);
+                fill = fillObject.GetComponent<Image>();
+            }
+
+            ConfigurePlayerHpFill(fill);
+            fill.transform.SetAsFirstSibling();
+            AssignField(controller, "hpFillImage", fill);
+        }
+
+        private static void ConfigurePlayerHpFill(Image fill)
+        {
+            if (fill == null)
+            {
+                return;
+            }
+
+            fill.type = Image.Type.Simple;
+            fill.fillAmount = 1f;
+            fill.color = new Color32(226, 28, 31, 255);
+            fill.raycastTarget = false;
+
+            var rect = fill.rectTransform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.pivot = new Vector2(0f, 0.5f);
+        }
+
+        private static void EnsureArmyPowerLabel(Transform root, RunSceneController controller)
+        {
+            if (root == null || controller == null)
+            {
+                return;
+            }
+
+            var label = FindDeepChild(root, "ArmyPowerLabelV2")?.GetComponent<Text>();
+            if (label == null)
+            {
+                var playerPanel = FindDeepChild(root, "PlayerPanelV2");
+                if (playerPanel == null)
+                {
+                    playerPanel = FindDeepChild(root, "PlayerPanel");
+                }
+
+                if (playerPanel == null)
+                {
+                    return;
+                }
+
+                label = CreateText("ArmyPowerLabelV2", playerPanel, "全军战力：0", 26, TextAnchor.MiddleLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                SetPixelRectTopLeft(label.GetComponent<RectTransform>(), 46f, 448f, 311f, 30f);
+            }
+
+            label.color = new Color32(255, 218, 110, 255);
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 18;
+            label.resizeTextMaxSize = 26;
+            label.gameObject.SetActive(true);
+            label.transform.SetAsLastSibling();
+            AssignField(controller, "armyPowerLabel", label);
         }
 
         private static void EnsureTitleShortcutChallengeButton(Transform root, RunSceneController controller)
@@ -387,13 +469,16 @@ namespace ProphecyCentury.UI
             SetPixelRectTopLeft(hpBar.GetComponent<RectTransform>(), 46f, 478f, 311f, 36f);
             var hpFill = CreatePanel("HpFill", hpBar.transform, new Color32(226, 28, 31, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var hpFillImage = hpFill.GetComponent<Image>();
-            hpFillImage.type = Image.Type.Filled;
-            hpFillImage.fillMethod = Image.FillMethod.Horizontal;
-            hpFillImage.fillOrigin = 0;
-            hpFillImage.fillAmount = 1f;
+            ConfigurePlayerHpFill(hpFillImage);
             var hpV2 = CreateText("HpLabelV2", hpBar.transform, "100/100", 22, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var armyPowerV2 = CreateText("ArmyPowerLabelV2", playerPanelV2.transform, "全军战力：0", 26, TextAnchor.MiddleLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            armyPowerV2.color = new Color32(255, 218, 110, 255);
+            armyPowerV2.resizeTextForBestFit = true;
+            armyPowerV2.resizeTextMinSize = 18;
+            armyPowerV2.resizeTextMaxSize = 26;
             var goldV2 = CreateText("GoldLabelV2", playerPanelV2.transform, "金币：0", 18, TextAnchor.MiddleLeft, new Vector2(0.12f, 0.37f), new Vector2(0.88f, 0.405f), Vector2.zero, Vector2.zero);
             var stateV2 = CreateText("StateLabelV2", playerPanelV2.transform, "阶段：经营", 18, TextAnchor.MiddleLeft, new Vector2(0.12f, 0.335f), new Vector2(0.88f, 0.37f), Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(armyPowerV2.GetComponent<RectTransform>(), 46f, 448f, 311f, 30f);
             SetPixelRectTopLeft(goldV2.GetComponent<RectTransform>(), 46f, 520f, 311f, 24f);
             SetPixelRectTopLeft(stateV2.GetComponent<RectTransform>(), 46f, 548f, 311f, 24f);
             goldV2.gameObject.SetActive(false);
@@ -504,6 +589,7 @@ namespace ProphecyCentury.UI
             AssignField(controller, "roundLabel", roundV2);
             AssignField(controller, "hpLabel", hpV2);
             AssignField(controller, "stateLabel", stateV2);
+            AssignField(controller, "armyPowerLabel", armyPowerV2);
             AssignField(controller, "hpFillImage", hpFillImage);
             AssignField(controller, "titlePanel", titlePanel);
             AssignField(controller, "runPanel", runPanel);
@@ -1140,10 +1226,10 @@ namespace ProphecyCentury.UI
             if (label != null)
             {
                 label.color = primary ? new Color32(255, 240, 198, 255) : new Color32(190, 220, 218, 230);
-                label.fontSize = primary ? 20 : 18;
+                label.fontSize = primary ? 34 : 32;
                 label.resizeTextForBestFit = true;
-                label.resizeTextMinSize = 13;
-                label.resizeTextMaxSize = primary ? 20 : 18;
+                label.resizeTextMinSize = 24;
+                label.resizeTextMaxSize = primary ? 34 : 32;
             }
         }
 
@@ -1153,21 +1239,32 @@ namespace ProphecyCentury.UI
 
             CreateTitleLine(screen.transform, "TopLine", new Vector2(1280f, -80f), new Vector2(2200f, 2f), 0f, new Color32(92, 188, 200, 86));
 
-            CreateButton("BackButton", screen.transform, "返回", new Vector2(120f, -40f), new Vector2(140f, 48f), () => controller.ReturnToTitleFromCampaign());
+            CreateButton("BackButton", screen.transform, "返回", new Vector2(138f, -54f), new Vector2(200f, 72f), () => controller.ReturnToTitleFromCampaign());
             StyleSecondaryButton(screen.transform.Find("BackButton"));
+            var backLabel = screen.transform.Find("BackButton/Label")?.GetComponent<Text>();
+            if (backLabel != null)
+            {
+                backLabel.fontSize = 34;
+                backLabel.resizeTextMinSize = 26;
+                backLabel.resizeTextMaxSize = 34;
+            }
 
-            var titleText = CreateText("ScreenTitle", screen.transform, "选择命运的入口", 42, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
-            SetTitleCenteredRect(titleText.GetComponent<RectTransform>(), new Vector2(1280f, -40f), new Vector2(600f, 60f));
+            var titleText = CreateText("ScreenTitle", screen.transform, "选择命运的入口", 64, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetTitleCenteredRect(titleText.GetComponent<RectTransform>(), new Vector2(1280f, -44f), new Vector2(900f, 76f));
             titleText.color = new Color32(239, 204, 126, 255);
 
+            var subtitleText = CreateText("ScreenSubtitle", screen.transform, "选择战役或载入已通关的 20 回合阵型", 30, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetTitleCenteredRect(subtitleText.GetComponent<RectTransform>(), new Vector2(1280f, -104f), new Vector2(1120f, 42f));
+            subtitleText.color = new Color32(205, 218, 224, 230);
+
             var scrollObject = CreatePanel("CampaignListScroll", screen.transform, new Color32(7, 14, 27, 205), Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
-            SetPixelRectTopLeft(scrollObject.GetComponent<RectTransform>(), 510f, 145f, 1540f, 1000f);
+            SetPixelRectTopLeft(scrollObject.GetComponent<RectTransform>(), 350f, 170f, 1860f, 1010f);
             var scroll = scrollObject.AddComponent<ScrollRect>();
             scroll.horizontal = false;
             scroll.vertical = true;
             scroll.movementType = ScrollRect.MovementType.Clamped;
 
-            var viewport = CreatePanel("CampaignListViewport", scrollObject.transform, new Color32(0, 0, 0, 0), Vector2.zero, Vector2.one, new Vector2(12f, 12f), new Vector2(-12f, -12f));
+            var viewport = CreatePanel("CampaignListViewport", scrollObject.transform, new Color32(0, 0, 0, 0), Vector2.zero, Vector2.one, new Vector2(18f, 18f), new Vector2(-18f, -18f));
             viewport.AddComponent<RectMask2D>();
             scroll.viewport = viewport.GetComponent<RectTransform>();
 
@@ -1180,8 +1277,8 @@ namespace ProphecyCentury.UI
             listRect.offsetMin = Vector2.zero;
             listRect.offsetMax = Vector2.zero;
             var listLayout = list.GetComponent<VerticalLayoutGroup>();
-            listLayout.spacing = 10f;
-            listLayout.padding = new RectOffset(8, 8, 8, 8);
+            listLayout.spacing = 18f;
+            listLayout.padding = new RectOffset(10, 10, 10, 10);
             listLayout.childControlWidth = true;
             listLayout.childControlHeight = true;
             listLayout.childForceExpandWidth = true;
@@ -1226,7 +1323,7 @@ namespace ProphecyCentury.UI
                     continue;
                 }
 
-                var desc = $"{challenge.createdLabel}\n来源：{challenge.sourceCampaignName}  20 回合阵型";
+                var desc = $"来源：{challenge.sourceCampaignName}  20 回合阵型";
                 CreateCampaignListItem(list.transform, challenge.id, challenge.name, desc, "level 2", true, challenge, controller);
             }
 
@@ -1271,7 +1368,7 @@ namespace ProphecyCentury.UI
         private static void CreateCampaignListItem(Transform parent, string campaignId, string campaignName, string desc, string mapName, bool custom, CustomChallengeCampaignState challenge, RunSceneController controller)
         {
             var item = CreatePanel((custom ? "CustomChallenge_" : "CampaignListItem_") + campaignId, parent, new Color32(14, 26, 42, 245), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            var rowHeight = custom ? 174f : 132f;
+            var rowHeight = custom ? 300f : 230f;
             var layout = item.AddComponent<LayoutElement>();
             layout.preferredHeight = rowHeight;
             layout.minHeight = rowHeight;
@@ -1279,28 +1376,42 @@ namespace ProphecyCentury.UI
             var rim = CreatePanel("ItemRim", item.transform, new Color32(204, 169, 94, custom ? (byte)110 : (byte)66), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             rim.GetComponent<Image>().raycastTarget = false;
 
-            var smallMapImageSize = new Vector2(196f, 110f);
+            var smallMapImageSize = custom ? new Vector2(320f, 206f) : new Vector2(300f, 170f);
             var mapImage = CreatePanel("MapImage", item.transform, Color.white, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
-            SetPixelRectTopLeft(mapImage.GetComponent<RectTransform>(), 16f, (rowHeight - smallMapImageSize.y) * 0.5f, smallMapImageSize.x, smallMapImageSize.y);
+            SetPixelRectTopLeft(mapImage.GetComponent<RectTransform>(), 24f, (rowHeight - smallMapImageSize.y) * 0.5f, smallMapImageSize.x, smallMapImageSize.y);
             ApplySpriteFromProjectPath(mapImage.GetComponent<Image>(), "Art/maps_image/" + mapName + ".png");
 
-            var nameText = CreateText("CampaignName", item.transform, string.IsNullOrWhiteSpace(campaignName) ? campaignId : campaignName, 27, TextAnchor.MiddleLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            SetPixelRectTopLeft(nameText.GetComponent<RectTransform>(), 236f, custom ? 16f : 14f, 740f, 36f);
+            var nameText = CreateText("CampaignName", item.transform, string.IsNullOrWhiteSpace(campaignName) ? campaignId : campaignName, 48, TextAnchor.MiddleLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(nameText.GetComponent<RectTransform>(), 372f, custom ? 22f : 24f, 940f, 64f);
             nameText.color = custom ? new Color32(154, 226, 255, 255) : new Color32(239, 204, 126, 255);
             nameText.resizeTextForBestFit = true;
-            nameText.resizeTextMinSize = 16;
-            nameText.resizeTextMaxSize = 27;
+            nameText.resizeTextMinSize = 30;
+            nameText.resizeTextMaxSize = 48;
 
             var previewSummary = CampaignFormationPreviewSystem.BuildPreviewSummary(campaignId);
             var hasPreview = previewSummary.Rounds != null && previewSummary.Rounds.Count > 0;
-            var difficultyLabel = hasPreview ? $"难度 {previewSummary.DifficultyScore}" : "难度未知";
+            var finalRoundPower = custom && challenge != null && challenge.finalRoundPlayerScore > 0
+                ? challenge.finalRoundPlayerScore
+                : previewSummary.FinalRoundPower;
+            var powerLabel = finalRoundPower > 0 ? $"第20回合实际战力 {finalRoundPower}" : "第20回合实际战力未知";
             var description = string.IsNullOrWhiteSpace(desc) ? "20 回合战役" : desc;
-            var descText = CreateText("CampaignDescription", item.transform, $"{difficultyLabel}  |  {description}", 18, TextAnchor.UpperLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            SetPixelRectTopLeft(descText.GetComponent<RectTransform>(), 236f, custom ? 54f : 54f, 790f, custom ? 50f : 48f);
+            var createdLabel = custom ? $"新增：{FormatCustomChallengeCreatedAt(challenge)}" : string.Empty;
+            var descriptionText = custom
+                ? $"{powerLabel}  |  {createdLabel}\n{description}"
+                : $"{powerLabel}  |  {description}";
+            var descText = CreateText("CampaignDescription", item.transform, descriptionText, 32, TextAnchor.UpperLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(descText.GetComponent<RectTransform>(), 372f, custom ? 98f : 104f, 900f, custom ? 100f : 86f);
             descText.color = new Color32(205, 218, 224, 245);
+            descText.resizeTextForBestFit = true;
+            descText.resizeTextMinSize = 24;
+            descText.resizeTextMaxSize = 32;
 
-            CreateButton("ViewFormationButton", item.transform, hasPreview ? "查看阵型" : "无阵型", Vector2.zero, new Vector2(136f, 44f), () => controller.OpenCampaignFormationPreview(campaignId));
-            SetPixelRectTopLeft(item.transform.Find("ViewFormationButton")?.GetComponent<RectTransform>(), 1168f, custom ? 20f : 44f, 136f, 44f);
+            CreateButton("SelectButton", item.transform, "选择", Vector2.zero, new Vector2(190f, 76f), () => controller.SelectCampaignAndOpenHeroSelection(campaignId));
+            SetPixelRectTopLeft(item.transform.Find("SelectButton")?.GetComponent<RectTransform>(), 1540f, custom ? 28f : 28f, 190f, 76f);
+            StyleCampaignListButton(item.transform.Find("SelectButton"), true);
+
+            CreateButton("ViewFormationButton", item.transform, hasPreview ? "查看阵型" : "无阵型", Vector2.zero, new Vector2(190f, 76f), () => controller.OpenCampaignFormationPreview(campaignId));
+            SetPixelRectTopLeft(item.transform.Find("ViewFormationButton")?.GetComponent<RectTransform>(), 1540f, custom ? 122f : 126f, 190f, 76f);
             StyleCampaignListButton(item.transform.Find("ViewFormationButton"), false);
             var viewButton = item.transform.Find("ViewFormationButton")?.GetComponent<Button>();
             if (viewButton != null)
@@ -1308,37 +1419,49 @@ namespace ProphecyCentury.UI
                 viewButton.interactable = hasPreview;
             }
 
-            CreateButton("SelectButton", item.transform, "选择", Vector2.zero, new Vector2(136f, 44f), () => controller.SelectCampaignAndOpenHeroSelection(campaignId));
-            SetPixelRectTopLeft(item.transform.Find("SelectButton")?.GetComponent<RectTransform>(), 1324f, custom ? 20f : 44f, 136f, 44f);
-            StyleCampaignListButton(item.transform.Find("SelectButton"), true);
-
             if (!custom)
             {
                 return;
             }
 
             var input = CreateInputField("RenameInput", item.transform, challenge?.name ?? campaignName);
-            SetPixelRectTopLeft(input.GetComponent<RectTransform>(), 236f, 122f, 500f, 34f);
+            SetPixelRectTopLeft(input.GetComponent<RectTransform>(), 372f, 224f, 640f, 50f);
 
-            CreateButton("RenameCustomChallenge", item.transform, "保存名称", Vector2.zero, new Vector2(146f, 38f), () =>
+            CreateButton("RenameCustomChallenge", item.transform, "保存名称", Vector2.zero, new Vector2(190f, 50f), () =>
             {
                 if (controller.RenameCustomChallenge(campaignId, input.text))
                 {
                     nameText.text = input.text;
                 }
             });
-            SetPixelRectTopLeft(item.transform.Find("RenameCustomChallenge")?.GetComponent<RectTransform>(), 1160f, 122f, 146f, 38f);
+            SetPixelRectTopLeft(item.transform.Find("RenameCustomChallenge")?.GetComponent<RectTransform>(), 1044f, 224f, 190f, 50f);
             StyleCampaignListButton(item.transform.Find("RenameCustomChallenge"), false);
 
-            CreateButton("DeleteCustomChallenge", item.transform, "删除", Vector2.zero, new Vector2(104f, 38f), () =>
+            CreateButton("DeleteCustomChallenge", item.transform, "删除", Vector2.zero, new Vector2(128f, 50f), () =>
             {
                 if (controller.DeleteCustomChallenge(campaignId))
                 {
                     UnityEngine.Object.Destroy(item);
                 }
             });
-            SetPixelRectTopLeft(item.transform.Find("DeleteCustomChallenge")?.GetComponent<RectTransform>(), 1324f, 122f, 104f, 38f);
+            SetPixelRectTopLeft(item.transform.Find("DeleteCustomChallenge")?.GetComponent<RectTransform>(), 1260f, 224f, 128f, 50f);
             StyleCampaignListButton(item.transform.Find("DeleteCustomChallenge"), false);
+        }
+
+        private static string FormatCustomChallengeCreatedAt(CustomChallengeCampaignState challenge)
+        {
+            if (!string.IsNullOrWhiteSpace(challenge?.createdAtLabel))
+            {
+                return challenge.createdAtLabel;
+            }
+
+            var legacy = challenge?.createdLabel;
+            if (!string.IsNullOrWhiteSpace(legacy))
+            {
+                return legacy.Replace("通关挑战", string.Empty).Trim();
+            }
+
+            return "未知时间";
         }
 
         private static GameObject CreateCampaignFormationPreviewScreen(Transform parent, RunSceneController controller)
@@ -1356,8 +1479,11 @@ namespace ProphecyCentury.UI
             var image = inputObject.GetComponent<Image>();
             image.color = new Color32(6, 14, 24, 245);
 
-            var text = CreateText("Text", inputObject.transform, value ?? string.Empty, 18, TextAnchor.MiddleLeft, Vector2.zero, Vector2.one, new Vector2(12f, 0f), new Vector2(-12f, 0f));
+            var text = CreateText("Text", inputObject.transform, value ?? string.Empty, 30, TextAnchor.MiddleLeft, Vector2.zero, Vector2.one, new Vector2(16f, 0f), new Vector2(-16f, 0f));
             text.color = Color.white;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = 22;
+            text.resizeTextMaxSize = 30;
             var input = inputObject.GetComponent<InputField>();
             input.textComponent = text;
             input.text = value ?? string.Empty;

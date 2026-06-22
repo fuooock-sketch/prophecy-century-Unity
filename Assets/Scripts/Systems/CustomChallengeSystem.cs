@@ -81,7 +81,7 @@ namespace ProphecyCentury.Systems
 
         public static CustomChallengeCampaignState CreateFromRun(RunState run)
         {
-            if (run == null || run.customChallengeGenerated || run.campaignRoundLimit != 20 || run.campaignWins != 20 || run.campaignLosses != 0)
+            if (run == null || run.customChallengeGenerated || run.campaignRoundLimit != 20 || !run.campaignCompleted)
             {
                 return null;
             }
@@ -100,13 +100,18 @@ namespace ProphecyCentury.Systems
             }
 
             var now = DateTime.Now;
+            var finalBattle = run.battleHistory?
+                .Where(item => item != null && item.round == 20 && item.victory)
+                .LastOrDefault();
             var challenge = new CustomChallengeCampaignState
             {
                 id = CustomPrefix + now.ToString("yyyyMMddHHmmss"),
                 name = $"我的通关阵型 #{nextNumber}",
-                createdLabel = $"通关挑战 {now:yyyy-MM-dd HH:mm}",
+                createdLabel = $"通关挑战 {now:yyyy-MM-dd HH:mm:ss}",
+                createdAtLabel = now.ToString("yyyy-MM-dd HH:mm:ss"),
                 sourceCampaignId = run.campaignId,
                 sourceCampaignName = ResolveCampaignName(run.campaignId),
+                finalRoundPlayerScore = Math.Max(0, finalBattle?.playerScore ?? 0),
                 rounds = rounds.Take(20).ToList()
             };
 
@@ -232,6 +237,11 @@ namespace ProphecyCentury.Systems
                     if (string.IsNullOrWhiteSpace(item.name))
                     {
                         item.name = item.id;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(item.createdAtLabel))
+                    {
+                        item.createdAtLabel = item.createdLabel;
                     }
 
                     return item;

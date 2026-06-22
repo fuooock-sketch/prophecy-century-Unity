@@ -21,6 +21,7 @@ namespace ProphecyCentury.UI
         [SerializeField] private Text roundLabel;
         [SerializeField] private Text hpLabel;
         [SerializeField] private Text stateLabel;
+        [SerializeField] private Text armyPowerLabel;
         [SerializeField] private Image hpFillImage;
 
         [Header("Meta")]
@@ -7263,8 +7264,27 @@ namespace ProphecyCentury.UI
 
             if (hpFillImage != null)
             {
-                hpFillImage.fillAmount = Mathf.Clamp01(clamped / (float)maxFate);
+                SetHpBarProgress(Mathf.Clamp01(clamped / (float)maxFate));
             }
+        }
+
+        private void SetHpBarProgress(float amount)
+        {
+            if (hpFillImage == null)
+            {
+                return;
+            }
+
+            var safeAmount = Mathf.Clamp01(amount);
+            hpFillImage.type = Image.Type.Simple;
+            hpFillImage.fillAmount = 1f;
+            hpFillImage.raycastTarget = false;
+
+            var rect = hpFillImage.rectTransform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = new Vector2(safeAmount, 1f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
 
         private RectTransform ResolveHpBarRect()
@@ -8121,14 +8141,17 @@ namespace ProphecyCentury.UI
 
             SetTextLabel("RoundLabelV2", roundText);
             UpdateRoundGoldIcon();
-            hpLabel.text = $"命运值 {Mathf.Max(0, Run.playerHp)}/{Mathf.Max(1, Run.maxFateValue > 0 ? Run.maxFateValue : 100)}";
+            var armyPowerText = $"全军战力：{CalculateCurrentArmyPower()}";
+            if (armyPowerLabel != null)
+            {
+                armyPowerLabel.text = armyPowerText;
+            }
+
+            SetTextLabel("ArmyPowerLabelV2", armyPowerText);
+            SetPlayerHpDisplay(Run.playerHp);
             if (stateLabel != null)
             {
                 stateLabel.text = $"阶段：{FormatRunPhase()}";
-            }
-            if (hpFillImage != null)
-            {
-                hpFillImage.fillAmount = Mathf.Clamp01(Run.playerHp / (float)Mathf.Max(1, Run.maxFateValue > 0 ? Run.maxFateValue : 100));
             }
             RefreshShopMetaStars();
             RefreshShopActionLabels();
@@ -8156,6 +8179,16 @@ namespace ProphecyCentury.UI
             RefreshWorldMapView();
             EnsureBattleLogButton();
             RefreshBattleLogButton();
+        }
+
+        private int CalculateCurrentArmyPower()
+        {
+            if (Run == null)
+            {
+                return 0;
+            }
+
+            return Mathf.Max(0, BattleStubSystem.EstimatePlayerScore(Run));
         }
 
         private void EnsureWorldMapView()

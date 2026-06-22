@@ -894,10 +894,7 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
                 return;
             }
 
-            if (run.campaignWins == 20 && run.campaignLosses == 0)
-            {
-                CustomChallengeSystem.CreateFromRun(run);
-            }
+            CustomChallengeSystem.CreateFromRun(run);
         }
 
         private static void ClearExplorationBattleContext(RunState run)

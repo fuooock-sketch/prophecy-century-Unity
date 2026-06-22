@@ -41,12 +41,14 @@ namespace ProphecyCentury.Systems
             foreach (var round in rounds)
             {
                 round.RoundScore = CalculateRoundScore(round);
+                round.RoundPower = CalculateRoundPower(round);
             }
 
             return new CampaignFormationPreviewSummary
             {
                 Rounds = rounds,
-                DifficultyScore = CalculateCampaignScore(rounds)
+                DifficultyScore = CalculateCampaignScore(rounds),
+                FinalRoundPower = rounds.Count > 0 ? Math.Max(0, rounds[rounds.Count - 1].RoundPower) : 0
             };
         }
 
@@ -164,6 +166,7 @@ namespace ProphecyCentury.Systems
             if (round != null)
             {
                 round.RoundScore = CalculateRoundScore(round);
+                round.RoundPower = CalculateRoundPower(round);
             }
 
             return round;
@@ -200,6 +203,16 @@ namespace ProphecyCentury.Systems
             var totalPower = round.Units.Sum(unit => Math.Max(0, unit.StaticPower));
             var formationBonus = Math.Min(12, Math.Max(0, round.Units.Count - 1) * 2);
             return Math.Min(100, Math.Max(1, (int)Math.Round(Math.Sqrt(totalPower) * 1.95f + formationBonus)));
+        }
+
+        private static int CalculateRoundPower(CampaignFormationPreviewRound round)
+        {
+            if (round?.Units == null || round.Units.Count == 0)
+            {
+                return 0;
+            }
+
+            return round.Units.Sum(unit => Math.Max(0, unit.StaticPower));
         }
 
         private static int CalculateUnitPower(UnitDefinition definition, int star, int count, bool golden)
@@ -257,6 +270,7 @@ namespace ProphecyCentury.Systems
         public string PresetId;
         public string SourceName;
         public int RoundScore;
+        public int RoundPower;
         public List<CampaignFormationPreviewUnit> Units = new List<CampaignFormationPreviewUnit>();
     }
 
@@ -274,6 +288,7 @@ namespace ProphecyCentury.Systems
     public sealed class CampaignFormationPreviewSummary
     {
         public int DifficultyScore;
+        public int FinalRoundPower;
         public List<CampaignFormationPreviewRound> Rounds = new List<CampaignFormationPreviewRound>();
     }
 }

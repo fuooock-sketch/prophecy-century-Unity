@@ -126,7 +126,7 @@ namespace ProphecyCentury.UI
             var round = _rounds[_roundIndex];
             _roundText.text = $"第 {round.Round} 回合 / 共 {_rounds.Count} 回合";
             _sourceText.text = string.IsNullOrWhiteSpace(round.SourceName) ? string.Empty : round.SourceName;
-            _scoreText.text = $"关卡难度 {_difficultyScore} / 本回合强度 {round.RoundScore}";
+            _scoreText.text = $"本回合战力 {round.RoundPower}";
 
             foreach (var unit in round.Units)
             {

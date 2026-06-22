@@ -433,7 +433,7 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private static int ResolveAttackDamage(RealtimeBattleUnit attacker, RealtimeBattleUnit target, List<RealtimeBattleUnit> allies, List<RealtimeBattleUnit> enemies, Random random, List<BattleEvent> events, float elapsed, string attackMessage)
+        private static int ResolveAttackDamage(RealtimeBattleUnit attacker, RealtimeBattleUnit target, List<RealtimeBattleUnit> allies, List<RealtimeBattleUnit> enemies, Random random, List<BattleEvent> events, float elapsed, string attackMessage, bool allowForcedCounterattack = true)
         {
             var damage = CalculateDamage(attacker, target, random);
             var forceCrit = ResolveForceCrit(attacker, random, out var critMultiplier);
@@ -451,7 +451,7 @@ namespace ProphecyCentury.Systems
             }
 
             AddEvent(events, elapsed, "attack", attacker, target, 0, attackMessage);
-            return DealDamage(attacker, target, damage, allies, enemies, random, events, elapsed, didCrit);
+            return DealDamage(attacker, target, damage, allies, enemies, random, events, elapsed, didCrit, allowForcedCounterattack);
         }
 
         private static void ResolveAllyCritTemporaryCount(RealtimeBattleUnit attacker, List<RealtimeBattleUnit> allies, List<BattleEvent> events, float elapsed)
@@ -503,28 +503,31 @@ namespace ProphecyCentury.Systems
                         if (IncrementSkillCounter(attacker, skill.kind) >= Math.Max(1, skill.count))
                         {
                             attacker.SkillCounters[skill.kind] = 0;
-                            AddAreaEffect(areaEffects, attacker, target, skill, events, elapsed);
+                            if (skill.duration <= 0f)
+                            {
+                                ResolveInstantFireRain(attacker, target, allies, enemies, random, skill, events, elapsed);
+                            }
+                            else
+                            {
+                                AddAreaEffect(areaEffects, attacker, target, skill, events, elapsed);
+                            }
                         }
                         break;
                     case "on_attack_count_formula_aoe":
                         if (IncrementSkillCounter(attacker, skill.kind) >= Math.Max(1, skill.count))
                         {
                             attacker.SkillCounters[skill.kind] = 0;
-                            foreach (var areaTarget in enemies.Where(enemy => enemy.IsAlive && Distance(enemy, target) <= Math.Max(1f, skill.radius)).ToList())
-                            {
-                                AddEvent(events, elapsed, "skill", attacker, areaTarget, 0, $"{attacker.Name} 触发范围攻击");
-                                DealDamage(attacker, areaTarget, Math.Max(1, (int)Math.Round(CalculateDamage(attacker, areaTarget) * Math.Max(1f, skill.attackMultiplier))), allies, enemies, random, events, elapsed);
-                            }
+                            var areaTargets = enemies.Where(enemy => enemy.IsAlive && Distance(enemy, target) <= Math.Max(1f, skill.radius)).ToList();
+                            var areaDamages = areaTargets.Select(areaTarget => Math.Max(1, (int)Math.Round(CalculateDamage(attacker, areaTarget) * Math.Max(1f, skill.attackMultiplier)))).ToList();
+                            DealAreaDamageSimultaneously(attacker, areaTargets, areaDamages, allies, enemies, random, events, elapsed, $"{attacker.Name} 触发范围攻击");
                         }
                         break;
                     case "on_attack_if_team_gift_total_aoe":
                         if (attacker.TeamForestGiftTotal >= Math.Max(1, skill.threshold))
                         {
-                            foreach (var areaTarget in enemies.Where(enemy => enemy.IsAlive && enemy != target && Distance(enemy, target) <= Math.Max(1f, skill.radius)).ToList())
-                            {
-                                AddEvent(events, elapsed, "skill", attacker, areaTarget, 0, $"{attacker.Name} triggers gift area attack");
-                                DealDamage(attacker, areaTarget, Math.Max(1, damage), allies, enemies, random, events, elapsed);
-                            }
+                            var areaTargets = enemies.Where(enemy => enemy.IsAlive && enemy != target && Distance(enemy, target) <= Math.Max(1f, skill.radius)).ToList();
+                            var areaDamages = areaTargets.Select(_ => Math.Max(1, damage)).ToList();
+                            DealAreaDamageSimultaneously(attacker, areaTargets, areaDamages, allies, enemies, random, events, elapsed, $"{attacker.Name} triggers gift area attack");
                         }
                         break;
                     case "on_attack_self_count_loss_percent_aoe":
@@ -535,11 +538,9 @@ namespace ProphecyCentury.Systems
                             ApplySelfCountLoss(attacker, lossCount);
                         }
 
-                        foreach (var areaTarget in enemies.Where(enemy => enemy.IsAlive && enemy != target && Distance(enemy, target) <= Math.Max(1f, skill.radius)).ToList())
-                        {
-                            AddEvent(events, elapsed, "skill", attacker, areaTarget, 0, $"{attacker.Name} 触发范围攻击");
-                            DealDamage(attacker, areaTarget, Math.Max(1, damage), allies, enemies, random, events, elapsed);
-                        }
+                        var selfLossTargets = enemies.Where(enemy => enemy.IsAlive && enemy != target && Distance(enemy, target) <= Math.Max(1f, skill.radius)).ToList();
+                        var selfLossDamages = selfLossTargets.Select(_ => Math.Max(1, damage)).ToList();
+                        DealAreaDamageSimultaneously(attacker, selfLossTargets, selfLossDamages, allies, enemies, random, events, elapsed, $"{attacker.Name} 触发范围攻击");
                         break;
                     case "on_attack_mark_target_next_round_forest_gem_on_death":
                         target.ForestGemDeathMarkSource = attacker;
@@ -606,7 +607,7 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private static int DealDamage(RealtimeBattleUnit source, RealtimeBattleUnit target, int damage, List<RealtimeBattleUnit> sourceAllies, List<RealtimeBattleUnit> targetAllies, Random random, List<BattleEvent> events, float elapsed, bool critical = false)
+        private static int DealDamage(RealtimeBattleUnit source, RealtimeBattleUnit target, int damage, List<RealtimeBattleUnit> sourceAllies, List<RealtimeBattleUnit> targetAllies, Random random, List<BattleEvent> events, float elapsed, bool critical = false, bool allowForcedCounterattack = true)
         {
             if (target == null || !target.IsAlive)
             {
@@ -638,6 +639,11 @@ namespace ProphecyCentury.Systems
             }
 
             AddEvent(events, elapsed, critical ? "critical_damage" : "damage", source, target, actual, $"{source?.Name ?? "Effect"} deals {actual} damage to {target.Name}");
+            if (actual > 0 && source != null && allowForcedCounterattack)
+            {
+                ResolveFirstHitsCounterattack(target, source, targetAllies, sourceAllies, random, events, elapsed);
+            }
+
             if ((target.Hp <= 0 || target.CurrentCount <= 0) && before > 0)
             {
                 if (source != null)
@@ -1251,19 +1257,85 @@ namespace ProphecyCentury.Systems
                 if (effect.TickTimer <= 0f)
                 {
                     effect.TickTimer += Math.Max(0.1f, effect.TickInterval);
-                    foreach (var target in enemies.Where(enemy => enemy.IsAlive && Distance(effect.CenterX, effect.CenterY, enemy.X, enemy.Y) <= effect.Radius).ToList())
+                    var targets = enemies.Where(enemy => enemy.IsAlive && Distance(effect.CenterX, effect.CenterY, enemy.X, enemy.Y) <= effect.Radius).ToList();
+                    var damages = targets.Select(target =>
                     {
                         var unitDamage = (Math.Max(1, effect.DamageMin) + Math.Max(Math.Max(1, effect.DamageMin), effect.DamageMax)) * 0.5f;
                         var factor = (20f + Math.Max(0, effect.Attack)) / Math.Max(1f, 20f + Math.Max(0, target.Defense));
-                        var damage = Math.Max(1, (int)Math.Round(Math.Max(1, effect.CurrentCount) * unitDamage * factor * Math.Max(0.1f, effect.AttackMultiplier)));
-                        AddEvent(events, elapsed, "skill", effect.Source, target, 0, $"{effect.Source.Name} 火雨命中 {target.Name}");
-                        DealDamage(effect.Source, target, damage, sourceAllies, enemies, random, events, elapsed);
-                    }
+                        return Math.Max(1, (int)Math.Round(Math.Max(1, effect.CurrentCount) * unitDamage * factor * Math.Max(0.1f, effect.AttackMultiplier)));
+                    }).ToList();
+                    DealAreaDamageSimultaneously(effect.Source, targets, damages, sourceAllies, enemies, random, events, elapsed, $"{effect.Source.Name} 火雨命中");
                 }
 
                 if (effect.Remaining <= 0f)
                 {
                     areaEffects.RemoveAt(i);
+                }
+            }
+        }
+
+        private static void ResolveInstantFireRain(RealtimeBattleUnit source, RealtimeBattleUnit centerTarget, List<RealtimeBattleUnit> sourceAllies, List<RealtimeBattleUnit> enemies, Random random, SkillDefinition skill, List<BattleEvent> events, float elapsed)
+        {
+            if (source == null || centerTarget == null || skill == null)
+            {
+                return;
+            }
+
+            AddEvent(events, elapsed, "skill", source, centerTarget, 0, $"{source.Name} 召唤火雨");
+            var radius = Math.Max(1f, skill.radius) * 80f;
+            var targets = enemies.Where(enemy => enemy.IsAlive && Distance(centerTarget.X, centerTarget.Y, enemy.X, enemy.Y) <= radius).ToList();
+            var damages = targets.Select(target => Math.Max(1, (int)Math.Round(CalculateDamage(source, target, random) * Math.Max(1f, skill.attackMultiplier)))).ToList();
+            DealAreaDamageSimultaneously(source, targets, damages, sourceAllies, enemies, random, events, elapsed, $"{source.Name} 火雨命中");
+        }
+
+        private static void DealAreaDamageSimultaneously(RealtimeBattleUnit source, List<RealtimeBattleUnit> targets, List<int> damages, List<RealtimeBattleUnit> sourceAllies, List<RealtimeBattleUnit> targetAllies, Random random, List<BattleEvent> events, float elapsed, string message)
+        {
+            if (source == null || targets == null || damages == null)
+            {
+                return;
+            }
+
+            var count = Math.Min(targets.Count, damages.Count);
+            for (var index = 0; index < count; index += 1)
+            {
+                var target = targets[index];
+                if (target != null && target.IsAlive)
+                {
+                    AddEvent(events, elapsed, "skill", source, target, 0, $"{message} {target.Name}");
+                }
+            }
+
+            for (var index = 0; index < count; index += 1)
+            {
+                var target = targets[index];
+                if (target != null && target.IsAlive)
+                {
+                    DealDamage(source, target, Math.Max(1, damages[index]), sourceAllies, targetAllies, random, events, elapsed);
+                }
+            }
+        }
+
+        private static void ResolveFirstHitsCounterattack(RealtimeBattleUnit target, RealtimeBattleUnit attacker, List<RealtimeBattleUnit> targetAllies, List<RealtimeBattleUnit> attackerAllies, Random random, List<BattleEvent> events, float elapsed)
+        {
+            if (target == null || attacker == null || !target.IsAlive || !attacker.IsAlive)
+            {
+                return;
+            }
+
+            foreach (var skill in GetBattleSkills(target).Where(skill => skill.kind == "first_hits_counterattack"))
+            {
+                var limit = skill.count > 0 ? skill.count : int.MaxValue;
+                if (target.ForcedCounterattackTriggers >= limit)
+                {
+                    continue;
+                }
+
+                target.ForcedCounterattackTriggers += 1;
+                var repeat = Math.Max(1, skill.repeat);
+                for (var index = 0; index < repeat && target.IsAlive && attacker.IsAlive; index += 1)
+                {
+                    ResolveAttackDamage(target, attacker, targetAllies, attackerAllies, random, events, elapsed, $"{target.Name} counter {attacker.Name}", false);
+                    target.CounterCount += 1;
                 }
             }
         }
@@ -1348,7 +1420,9 @@ namespace ProphecyCentury.Systems
             public int DamageDone;
             public int AttackCount;
             public int Kills;
+            public int CounterCount;
             public int MoraleExtraCount;
+            public int ForcedCounterattackTriggers;
             public bool HasStartedAttacking;
             public bool HasAttackAnchor;
             public float AttackAnchorX;

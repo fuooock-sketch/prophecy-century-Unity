@@ -1066,14 +1066,14 @@
         "battleSkills": [
             {
                 "kind": "first_hits_counterattack",
-                "count": 3,
+                "count": 0,
                 "repeat": 1
             }
         ],
         "goldBattleSkills": [
             {
                 "kind": "first_hits_counterattack",
-                "count": 3,
+                "count": 0,
                 "repeat": 2
             }
         ],
@@ -3929,19 +3929,19 @@
         "battleSkills": [
             {
                 "kind": "on_attack_count_fire_rain_area_dot",
-                "count": 3,
-                "radius": 3,
-                "duration": 2,
-                "tick": 0.5
+                "count": 1,
+                "radius": 2,
+                "duration": 0,
+                "tick": 0
             }
         ],
         "goldBattleSkills": [
             {
                 "kind": "on_attack_count_fire_rain_area_dot",
-                "count": 2,
+                "count": 1,
                 "radius": 3,
-                "duration": 2,
-                "tick": 0.5
+                "duration": 0,
+                "tick": 0
             }
         ],
         "limit": 5,
