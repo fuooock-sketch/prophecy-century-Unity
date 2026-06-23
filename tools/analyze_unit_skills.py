@@ -70,7 +70,7 @@ print("  本系统的底层设计哲学是将技能严格划分为两个互不�
 print()
 print("  【阶段A — 运营阶段 Operations Phase】(talent_1 / talent_2)")
 print("    触发时机：在准备回合/商店阶段生效，属于经济与成长层。")
-print("    设计目标：影响资源获取（金币/手牌）、数量成长（补员）、")
+print("    设计目标：影响资源获取（金币/手牌）、数量成长（获得数量）、")
 print("              种族协同、进阶解锁、商店操控。")
 print("    对应列：U列 talent_1（普通形态）, V列 talent_2（金色升级形态）")
 print()
@@ -209,7 +209,7 @@ def classify_effects(units):
         "潜行 (Stealth)": [],
         "反击 (Counter)": [],
         "连续攻击 (Multi-attack)": [],
-        "补员 (Reinforce)": [],
+        "获得数量 (Gain Count)": [],
         "吞噬商店 (Devour Shop)": [],
         "进阶/变身 (Evolve/Transform)": [],
         "商店操控 (Shop Manip)": [],
@@ -254,8 +254,8 @@ def classify_effects(units):
                 effects["反击 (Counter)"].append((unit, col, text))
             if "连续攻击" in text:
                 effects["连续攻击 (Multi-attack)"].append((unit, col, text))
-            if "补员" in text:
-                effects["补员 (Reinforce)"].append((unit, col, text))
+            if "获得数量" in text:
+                effects["获得数量 (Gain Count)"].append((unit, col, text))
             if "吞噬" in text and "商店" in text:
                 effects["吞噬商店 (Devour Shop)"].append((unit, col, text))
             if "进阶" in text or "变为" in text or "变成" in text:
@@ -339,8 +339,8 @@ for faith, members in faith_groups.items():
         keywords.append("法师标签")
     if "战士" in all_text:
         keywords.append("战士标签")
-    if "补员" in all_text:
-        keywords.append("补员机制")
+    if "获得数量" in all_text:
+        keywords.append("获得数量机制")
     if "入场" in all_text:
         keywords.append("入场效果")
     if keywords:
@@ -457,7 +457,7 @@ unique_mechanics = {
     "冲锋 (Charge)": "战斗开始瞬间位移到敌人面前，打破阵型",
     "骑乘变身 (Mount Transform)": "邪恶女巫骑上格尔兽变为巫兽师，战斗内形态切换",
     "临时数量 (Temp Count)": "战斗中临时获得的增益，战后不保留",
-    "补员 (Reinforce)": "触发友军数量增长的机制",
+    "获得数量 (Gain Count)": "触发友军数量增长的机制",
     "连续攻击 (Multi-Attack)": "一回合内攻击多次，极大提升DPS",
     "火雨AOE (Rain of Fire)": "以敌人位置为中心的范围伤害",
     "爆炸亡语 (Deathrattle Explosion)": "阵亡时产生范围爆炸",
@@ -481,7 +481,7 @@ print()
 print("  2. 【种族即机制 (Race = Mechanic)】")
 print("     每个信仰/种族定义了一套独特的资源循环机制：")
 print("       · 甘地 → 部队数量计数触发链")
-print("       · 莱特 → 信仰者协同补员")
+print("       · 莱特 → 信仰者协同获得数量")
 print("       · 元素 → 种族内数量/离场链")
 print("       · 林地 → 密林宝钻赐予经济系统")
 print("       · 格尔 → 吞噬商店资源转化")

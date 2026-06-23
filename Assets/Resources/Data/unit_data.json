@@ -187,8 +187,8 @@
         "tags": [],
         "talentText": "—",
         "goldTalentText": "—",
-        "battleText": "每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+1；自身数量少于等于1或场上没有其他友军时，技能失效。",
-        "goldBattleText": "每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+2；自身数量少于等于1或场上没有其他友军时，技能失效。",
+        "battleText": "每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+1；自身数量少于等于1时，技能失效。",
+        "goldBattleText": "每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+2；自身数量少于等于1时，技能失效。",
         "talents": [
             {
                 "kind": "while_on_board_on_entry_race_gain_stats",
@@ -233,7 +233,7 @@
         "attackRange": 8.0,
         "firstPurchaseHp": 105,
         "firstPurchaseAverageDamage": 52,
-        "skillText": "—\n—\n每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+1；自身数量少于等于1或场上没有其他友军时，技能失效。\n每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+2；自身数量少于等于1或场上没有其他友军时，技能失效。",
+        "skillText": "—\n—\n每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+1；自身数量少于等于1时，技能失效。\n每轮损失25%的数量（至少为1）；同时其他友方部队临时攻击+2；自身数量少于等于1时，技能失效。",
         "designOnlyInitialBaseDamage": 52
     },
     {
@@ -1544,8 +1544,8 @@
         "tags": [],
         "talentText": "每离场4支魔灵部队，全体元素获得+4数量。",
         "goldTalentText": "每离场2支魔灵部队，全体元素获得+4数量。",
-        "battleText": "开战后，当前数量最低的友方部队临时获得固定数量+3。",
-        "goldBattleText": "开战后，当前数量最低的友方部队临时获得固定数量+6。",
+        "battleText": "—",
+        "goldBattleText": "—",
         "talents": [
             {
                 "kind": "on_leave_tag_count_tagged_units_gain_power",
@@ -1566,22 +1566,8 @@
                 "value": 4
             }
         ],
-        "battleSkills": [
-            {
-                "kind": "battle_start_lowest_power_ally_gain_source_power",
-                "multiplier": 1,
-                "value": 3,
-                "temporary": true
-            }
-        ],
-        "goldBattleSkills": [
-            {
-                "kind": "battle_start_lowest_power_ally_gain_source_power",
-                "multiplier": 2,
-                "value": 6,
-                "temporary": true
-            }
-        ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
         "sizeTier": 3,
         "limit": 5,
         "startCount": 6,
@@ -1595,7 +1581,7 @@
         "attackRange": 6.0,
         "firstPurchaseHp": 84,
         "firstPurchaseAverageDamage": 42,
-        "skillText": "每离场4支魔灵部队，全体元素获得+4数量。\n每离场2支魔灵部队，全体元素获得+4数量。\n开战后，当前数量最低的友方部队临时获得固定数量+3。\n开战后，当前数量最低的友方部队临时获得固定数量+6。",
+        "skillText": "每离场4支魔灵部队，全体元素获得+4数量。\n每离场2支魔灵部队，全体元素获得+4数量。\n—\n—",
         "designOnlyInitialBaseDamage": 42
     },
     {
@@ -1915,28 +1901,30 @@
         "tags": [],
         "talentText": "—",
         "goldTalentText": "—",
-        "battleText": "开战后，在最近3个格子分别召唤1支临时火元素部队，每支固定数量为22。",
-        "goldBattleText": "开战后，在最近3个格子分别召唤1支临时火元素部队，每支固定数量为26。",
+        "battleText": "开战后，在最近3个格子分别召唤1支临时火元素部队，每支数量与场上数量最多的火元素一致，至少为10。",
+        "goldBattleText": "开战后，在最近3个格子分别召唤1支临时火元素部队，每支数量比场上数量最多的火元素多20%，至少为10。",
         "talents": [],
         "goldTalents": [],
         "battleSkills": [
             {
-                "kind": "battle_start_summon_and_buff_type",
+                "kind": "battle_start_summon_units",
                 "count": 3,
-                "targetId": "fire_elemental",
-                "value": 22,
-                "power": 1,
+                "targetUnitId": "fire_elemental",
+                "mode": "highest_unit_count",
+                "threshold": 10,
+                "ratio": 1.0,
                 "summonUnitId": "fire_elemental",
                 "temporary": true
             }
         ],
         "goldBattleSkills": [
             {
-                "kind": "battle_start_summon_and_buff_type",
+                "kind": "battle_start_summon_units",
                 "count": 3,
-                "targetId": "fire_elemental",
-                "value": 26,
-                "power": 2,
+                "targetUnitId": "fire_elemental",
+                "mode": "highest_unit_count",
+                "threshold": 10,
+                "ratio": 1.2,
                 "summonUnitId": "fire_elemental",
                 "temporary": true
             }
@@ -1954,7 +1942,7 @@
         "attackRange": 1.0,
         "firstPurchaseHp": 40,
         "firstPurchaseAverageDamage": 29,
-        "skillText": "—\n—\n开战后，在最近3个格子分别召唤1支临时火元素部队，每支固定数量为22。\n开战后，在最近3个格子分别召唤1支临时火元素部队，每支固定数量为26。",
+        "skillText": "—\n—\n开战后，在最近3个格子分别召唤1支临时火元素部队，每支数量与场上数量最多的火元素一致，至少为10。\n开战后，在最近3个格子分别召唤1支临时火元素部队，每支数量比场上数量最多的火元素多20%，至少为10。",
         "designOnlyInitialBaseDamage": 29
     },
     {
@@ -2599,16 +2587,14 @@
         ],
         "battleSkills": [
             {
-                "kind": "battle_start_delay_snipe_backline",
-                "delay": 2,
+                "kind": "first_attack_backline_snipe",
                 "distance": 8,
                 "critMultiplier": 3
             }
         ],
         "goldBattleSkills": [
             {
-                "kind": "battle_start_delay_snipe_backline",
-                "delay": 2,
+                "kind": "first_attack_backline_snipe",
                 "distance": 6,
                 "critMultiplier": 6
             }
@@ -4547,6 +4533,8 @@
         "damageMax": 1,
         "initiative": 0,
         "attackRange": 0.1,
+        "firstPurchaseHp": 10,
+        "firstPurchaseAverageDamage": 1,
         "skillText": "",
         "designOnlyInitialBaseDamage": 0
     }

@@ -140,12 +140,9 @@ for i in range(3, ws.max_row + 1):
         json_norm = json_val.replace("\n", "").replace("\r", "")
 
         if excel_norm != json_norm:
-            # 检测是否是 sanitize 导致的变化
-            is_sanitize = any(kw in excel_val for kw in [
-                "获得其当前数量", "50%", "25%", "30%", "100%",
-                "数量与场上数量最多的火元素一致", "比场上数量最多的火元素多20%",
-                "补员"
-            ])
+            # unit_data.xlsx now tracks player-visible wording directly.
+            # Historical sanitize differences should be fixed in the table or JSON instead of ignored.
+            is_sanitize = False
             if is_sanitize:
                 ignored_sanitize += 1
                 continue
@@ -163,7 +160,7 @@ if text_issues:
 else:
     print("  PASS: 所有技能文本一致")
 if ignored_sanitize > 0:
-    print(f"  ℹ 已静默 {ignored_sanitize} 个 sanitize 预期替换（补员→获得数量、百分比→固定值等）")
+    print(f"  ℹ 已静默 {ignored_sanitize} 个 sanitize 预期替换")
 
 issue_counts["Step2_文本差异"] = len(text_issues)
 
@@ -336,6 +333,9 @@ def extract_kinds_from_cs(filepath):
     # 模式3: talent.kind == "kindname"
     for m in re.finditer(r'talent\.kind\s*==\s*"([^"]+)"', code):
         kinds.add(m.group(1))
+    # 模式4: const string XxxKind = "kindname"
+    for m in re.finditer(r'\b\w*Kind\s*=\s*"([^"]+)"', code):
+        kinds.add(m.group(1))
     return kinds
 
 csharp_files = [
@@ -460,7 +460,7 @@ print()
 if total == 0:
     print("  ✓✓✓ ALL PASS — 所有检查项通过 ✓✓✓")
 elif total <= 10:
-    print("  ⚠ 少量问题 ({total}个)，建议尽快修复")
+    print(f"  ⚠ 少量问题 ({total}个)，建议尽快修复")
 else:
     print(f"  ⚠ 问题较多 ({total}个)，需要逐项修复")
 

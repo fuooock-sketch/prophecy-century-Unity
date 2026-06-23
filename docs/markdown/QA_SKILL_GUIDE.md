@@ -3,7 +3,7 @@
 > 适用项目：prophecy_century  
 > 生效日期：2026-06-04  
 > 版本：v1.0  
-> 数据链路：Excel(unit_data.xlsx) → Python(import_unit_excel.py) → JSON(unit_data.json) → Unity C#(UnitDefinition.cs / ManageEventResolver.cs / BattleStubSystem.cs / BattleRealtimeSystem.cs)
+> 数据链路：Excel(unit_data.xlsx) → JSON(unit_data.json) → Unity C#(UnitDefinition.cs / ManageEventResolver.cs / BattleStubSystem.cs / BattleRealtimeSystem.cs)
 
 ---
 
@@ -30,7 +30,7 @@
 Excel 策划配置表                      JSON 运行时数据                     C# 代码执行层
 ┌──────────────────┐     ┌──────────────────┐     ┌────────────────────────┐
 │ unit_data.xlsx   │ ──► │ unit_data.json   │ ──► │ UnitDefinition.cs       │
-│  71 个单位       │     │  73 个定义       │     │ SkillDefinition.cs      │
+│  72 个单位       │     │  73 个定义       │     │ SkillDefinition.cs      │
 │  25 列           │     │                  │     │ ManageEventResolver.cs  │
 │  Sheet: 单位数值设定 │  │  96 种 skill kind │     │ BattleStubSystem.cs     │
 └──────────────────┘     └──────────────────┘     │ BattleRealtimeSystem.cs │
@@ -50,7 +50,7 @@ Excel 策划配置表                      JSON 运行时数据                 
 ### 1.3 执行频率
 
 - **每次 Excel 修改后**：执行完整 5 步检查
-- **每次 import_unit_excel.py 修改后**：重点关注 Step 2（sanitize 影响）
+- **每次单位数据导入/同步脚本修改后**：重点关注 Step 2（文本一致性）
 - **每次 C# 技能新增后**：重点关注 Step 3、Step 4（kind 覆盖率）
 - **发版前**：全量 + 手动抽查 10 个重点单位
 
@@ -69,7 +69,7 @@ pip install openpyxl
 在执行 QA 前，请确认以下文件存在且是最新版本：
 
 - [ ] `docs/excel/unit_data.xlsx` — Excel 策划表
-- [ ] `Assets/Resources/Data/unit_data.json` — 由 `tools/import_unit_excel.py` 生成
+- [ ] `Assets/Resources/Data/unit_data.json` — Unity 运行时单位数据，需与 Excel 玩家可见文案保持一致
 - [ ] `Assets/Scripts/Data/UnitDefinition.cs` — 单位数据结构定义
 - [ ] `Assets/Scripts/Systems/ManageEventResolver.cs` — 运营阶段技能实现
 - [ ] `Assets/Scripts/Systems/BattleStubSystem.cs` — 战斗阶段简化实现
@@ -132,24 +132,21 @@ Excel A~T 列（共 71 行数据行）与 JSON 中对应字段的逐值对比。
 
 U~X 列（talent_1, talent_2, battle_1, battle_2）的文本内容对比。
 
-### 4.2 Sanitize 预期差异
+### 4.2 文案一致性规则
 
-`import_unit_excel.py` 第 67~84 行定义了以下关键词替换，这些差异是**预期行为**：
+Excel 和 JSON 的玩家可见技能文案应直接一致，不再把旧导入脚本的 sanitize 替换视为预期差异。
 
-| Excel 原文 | JSON 替换后 | 原因 |
-|------------|-------------|------|
-| `补员` | `获得数量` | 术语统一（第 72 行） |
-| `获得其当前数量50%` | `获得固定数量+1` | 比例→固定值重构（第 73 行） |
-| `50%的额外数量` | `固定数量+3` | 同上（第 76 行） |
-| `100%的额外数量` | `固定数量+6` | 同上（第 77 行） |
-| `数量与场上数量最多的火元素一致` | `固定数量为22` | 动态→固定值重构（第 78 行） |
-| `比场上数量最多的火元素多20%` | `固定数量为26` | 同上（第 79 行） |
-| `25%/30% 的本驯兽师/兽骑兵数量` | `格尔兽默认数量` | 百分比→固定值重构（第 80~83 行） |
+| 规则 | 当前约定 |
+|------------|-------------|
+| 旧数量成长术语 | 统一改为 `获得数量` |
+| 驯兽师 / 兽骑兵召唤格尔兽数量 | 使用 `格尔兽默认数量` |
+| 魔法龙召唤火元素数量 | 使用场上最高火元素数量，金色为 120%，至少为 10 |
+| 土元素战斗技能 | Excel 表中移除，显示为 `—` |
 
 ### 4.3 验收标准
 
-- `PASS`：所有文本差异都是 sanitize 预期行为
-- `WARNING`：存在非 sanitize 的文本差异（可能是 Excel 版本比 JSON 新）
+- `PASS`：所有技能文本一致
+- `WARNING`：存在文本差异（可能是 Excel 或 JSON 未同步）
 - `FAIL`：核心技能描述（触发方式/效果类型）在 Excel 和 JSON 之间不一致
 
 ---
@@ -339,7 +336,7 @@ python tools/qa_unit_data.py --output report.json
 | 检查项 | 问题数 | 状态 |
 |--------|--------|------|
 | 基础数值不一致 | 25 | 🟡 均为 typeLabel `-` → `""` 转换，属于预期行为 |
-| 技能文本差异 | 14 | 🟡 均为 sanitize 预期替换或术语统一 |
+| 技能文本差异 | 0 | ✅ Excel 与 JSON 玩家可见文案应直接一致 |
 | kind 为空 | 0 | ✅ PASS |
 | 有文本无 kind | 10 | 🟠 需补充 SkillDefinition（卫戍协兵/莱特使者/莱特的回响/猎豹/血淤魔） |
 | 金色升级疑点 | 10 | 🟡 非标准比例需策划确认 |
@@ -347,7 +344,7 @@ python tools/qa_unit_data.py --output report.json
 | kind 仅 JSON 无 C# | 11 | 🟠 需确认是否在其他文件中实现 |
 | 数值范围异常 | 1 | 🟡 幻影 star=0 是召唤物，属于预期设计 |
 
-**有效问题数**：约 10~15 个（排除 typeLabel、sanitize、特殊单位后的真实问题）
+**有效问题数**：约 10~15 个（排除 typeLabel 与特殊单位后的真实问题）
 
 ---
 

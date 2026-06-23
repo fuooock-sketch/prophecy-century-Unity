@@ -16,6 +16,8 @@ namespace ProphecyCentury.Systems
         private const float LUCK_CRIT_CHANCE_PER_POINT = 0.06f;
         private const float LUCK_CRIT_DAMAGE_MULTIPLIER = 1.5f;
         private const float MORALE_EXTRA_ATTACK_CHANCE_PER_POINT = 0.04f;
+        private const float GridDistancePixels = 80f;
+        private const string FirstAttackBacklineSnipeKind = "first_attack_backline_snipe";
 
         public BattleRealtimeResult Resolve(IReadOnlyList<BattleUnitSnapshot> playerSnapshots, IReadOnlyList<BattleUnitSnapshot> enemySnapshots)
         {
@@ -175,6 +177,13 @@ namespace ProphecyCentury.Systems
                             unit.PreferLowestHp = skill.kind == "battle_start_stealth_assassinate_lowest_hp";
                             AddEvent(events, elapsed, "skill", unit, unit, 0, $"{unit.Name} enters stealth");
                             break;
+                        case FirstAttackBacklineSnipeKind:
+                            unit.FirstAttackBacklineSnipeTarget = PickBacklineSnipeTarget(unit, enemies);
+                            if (unit.FirstAttackBacklineSnipeTarget != null)
+                            {
+                                AddEvent(events, elapsed, "snipe_lock", unit, unit.FirstAttackBacklineSnipeTarget, Math.Max(1, (int)Math.Round(Math.Max(1f, skill.critMultiplier))), $"{unit.Name} locks {unit.FirstAttackBacklineSnipeTarget.Name}");
+                            }
+                            break;
                         case "battle_start_lowest_power_ally_gain_source_power":
                             var targetAlly = allies.Where(ally => ally.IsAlive).OrderBy(ally => ally.CurrentCount).FirstOrDefault();
                             if (targetAlly != null)
@@ -329,13 +338,21 @@ namespace ProphecyCentury.Systems
                 attacker.AttackAnchorX = attacker.X;
                 attacker.AttackAnchorY = attacker.Y;
                 ResolveAllyActionTempCountBonuses(attacker, attackers, events, elapsed);
-                var actual = ResolveAttackDamage(attacker, target, attackers, defenders, random, events, elapsed, $"{attacker.Name} 攻击 {target.Name}");
-                if (actual > 0)
+                var actualTarget = target;
+                var actual = TryResolveFirstAttackBacklineSnipe(attacker, attackers, defenders, random, events, elapsed, out var snipeTarget, out var snipeDamage)
+                    ? snipeDamage
+                    : ResolveAttackDamage(attacker, target, attackers, defenders, random, events, elapsed, $"{attacker.Name} 攻击 {target.Name}");
+                if (snipeTarget != null)
                 {
-                    ResolveOnAttack(attacker, target, attackers, defenders, random, areaEffects, actual, elapsed, events);
+                    actualTarget = snipeTarget;
                 }
 
-                var moraleExtraTarget = target.IsAlive ? target : PickTarget(attacker, defenders);
+                if (actual > 0)
+                {
+                    ResolveOnAttack(attacker, actualTarget, attackers, defenders, random, areaEffects, actual, elapsed, events);
+                }
+
+                var moraleExtraTarget = actualTarget != null && actualTarget.IsAlive ? actualTarget : PickTarget(attacker, defenders);
                 if (attacker.IsAlive && moraleExtraTarget != null && random.NextDouble() < MoraleChance(attacker.Morale, ProphecyGameSession.Instance.Data.Config?.moraleExtraAttackRate ?? 0.08f))
                 {
                     attacker.CurrentTarget = moraleExtraTarget;
@@ -358,6 +375,77 @@ namespace ProphecyCentury.Systems
                     }
                 }
             }
+        }
+
+        private static bool TryResolveFirstAttackBacklineSnipe(
+            RealtimeBattleUnit attacker,
+            List<RealtimeBattleUnit> allies,
+            List<RealtimeBattleUnit> enemies,
+            Random random,
+            List<BattleEvent> events,
+            float elapsed,
+            out RealtimeBattleUnit target,
+            out int actualDamage)
+        {
+            target = null;
+            actualDamage = 0;
+            if (attacker == null || attacker.AttackCount != 1 || attacker.SkillCounters.ContainsKey(FirstAttackBacklineSnipeKind))
+            {
+                return false;
+            }
+
+            var skill = GetBattleSkills(attacker).FirstOrDefault(item => item.kind == FirstAttackBacklineSnipeKind);
+            if (skill == null)
+            {
+                return false;
+            }
+
+            target = attacker.FirstAttackBacklineSnipeTarget != null && attacker.FirstAttackBacklineSnipeTarget.IsAlive
+                ? attacker.FirstAttackBacklineSnipeTarget
+                : PickBacklineSnipeTarget(attacker, enemies);
+            if (target == null)
+            {
+                return false;
+            }
+
+            attacker.SkillCounters[FirstAttackBacklineSnipeKind] = 1;
+            var threshold = Math.Max(0f, skill.distance) * GridDistancePixels;
+            var critical = threshold > 0f && Distance(attacker, target) >= threshold;
+            var multiplier = critical ? Math.Max(1f, skill.critMultiplier) : Math.Max(1f, skill.attackMultiplier);
+            var damage = Math.Max(1, (int)Math.Round(CalculateDamage(attacker, target, random) * multiplier));
+            if (critical)
+            {
+                AddEvent(events, elapsed, "snipe_charge", attacker, target, Math.Max(1, (int)Math.Round(multiplier)), $"{attacker.Name} charges a critical snipe");
+            }
+
+            AddEvent(events, elapsed, "attack", attacker, target, 0, $"{attacker.Name} first snipe {target.Name}");
+            if (critical)
+            {
+                var multiplierAmount = Math.Max(1, (int)Math.Round(multiplier));
+                AddEvent(events, elapsed, "crit_multiplier", attacker, target, multiplierAmount, $"{multiplierAmount}倍暴击！");
+                ResolveAllyCritTemporaryCount(attacker, allies, events, elapsed);
+            }
+
+            actualDamage = DealDamage(attacker, target, damage, allies, enemies, random, events, elapsed, critical);
+            return true;
+        }
+
+        private static RealtimeBattleUnit PickBacklineSnipeTarget(RealtimeBattleUnit attacker, IEnumerable<RealtimeBattleUnit> enemies)
+        {
+            var aliveEnemies = (enemies ?? Enumerable.Empty<RealtimeBattleUnit>())
+                .Where(enemy => enemy != null && enemy.IsAlive)
+                .ToList();
+            if (aliveEnemies.Count == 0)
+            {
+                return null;
+            }
+
+            var backRow = aliveEnemies.Max(enemy => enemy.Row);
+            return aliveEnemies
+                .Where(enemy => enemy.Row == backRow)
+                .OrderBy(enemy => Distance(attacker, enemy))
+                .ThenBy(enemy => enemy.Hp)
+                .FirstOrDefault();
         }
 
         private static void ResolveActionSelfShieldIfNone(RealtimeBattleUnit attacker, List<BattleEvent> events, float elapsed)
@@ -576,7 +664,7 @@ namespace ProphecyCentury.Systems
                     }
                     else if (skill.kind == "battle_round_self_hp_loss_team_temp_attack")
                     {
-                        if (unit.CurrentCount <= 1 || !units.Any(ally => ally.IsAlive && ally != unit) || !TickSkillTimer(unit, skill.kind, SkillIntervalSeconds(skill, 1f)))
+                        if (unit.CurrentCount <= 1 || !TickSkillTimer(unit, skill.kind, SkillIntervalSeconds(skill, 1f)))
                         {
                             continue;
                         }
@@ -943,7 +1031,7 @@ namespace ProphecyCentury.Systems
             {
                 var startCount = ResolveStartCount(definition);
                 var hpPerUnit = Math.Max(1, definition.hpPerUnit > 0 ? definition.hpPerUnit : definition.hp > 0 ? definition.hp : 1);
-                var summonCount = Math.Max(1, skill.value > 0 ? skill.value : startCount);
+                var summonCount = ResolveSummonUnitCount(allies, definition, skill, startCount);
                 var totalHp = Math.Max(1, summonCount * hpPerUnit);
                 var snapshot = new BattleUnitSnapshot
                 {
@@ -1274,6 +1362,33 @@ namespace ProphecyCentury.Systems
             }
         }
 
+        private static int ResolveSummonUnitCount(IReadOnlyList<RealtimeBattleUnit> allies, UnitDefinition definition, SkillDefinition skill, int fallbackStartCount)
+        {
+            if (skill == null || definition == null)
+            {
+                return Math.Max(1, fallbackStartCount);
+            }
+
+            if (skill.mode == "highest_unit_count")
+            {
+                var targetUnitId = !string.IsNullOrWhiteSpace(skill.targetUnitId)
+                    ? skill.targetUnitId
+                    : !string.IsNullOrWhiteSpace(skill.targetId)
+                        ? skill.targetId
+                        : skill.summonUnitId;
+                var highestCount = (allies ?? Array.Empty<RealtimeBattleUnit>())
+                    .Where(ally => ally != null && ally.IsAlive && ally.UnitId == targetUnitId)
+                    .Select(ally => Math.Max(0, ally.CurrentCount))
+                    .DefaultIfEmpty(0)
+                    .Max();
+                var multiplier = skill.ratio > 0f ? skill.ratio : 1f;
+                var scaledCount = (int)Math.Floor(highestCount * multiplier);
+                return Math.Max(Math.Max(1, skill.threshold), scaledCount);
+            }
+
+            return Math.Max(1, skill.value > 0 ? skill.value : fallbackStartCount);
+        }
+
         private static void ResolveInstantFireRain(RealtimeBattleUnit source, RealtimeBattleUnit centerTarget, List<RealtimeBattleUnit> sourceAllies, List<RealtimeBattleUnit> enemies, Random random, SkillDefinition skill, List<BattleEvent> events, float elapsed)
         {
             if (source == null || centerTarget == null || skill == null)
@@ -1442,6 +1557,7 @@ namespace ProphecyCentury.Systems
             public bool FirstAttackForceCrit;
             public float FirstAttackCritMultiplier;
             public bool PreferLowestHp;
+            public RealtimeBattleUnit FirstAttackBacklineSnipeTarget;
             public bool PreferBackline;
             public float DelayedSnipeTimer;
             public float DelayedSnipeAttackMultiplier;

@@ -3,7 +3,7 @@
     "id": "james",
     "name": "詹姆士",
     "title": "增援统帅",
-    "epithet": "让每一次补员更有效率",
+    "epithet": "让每一次获得数量更有效率",
     "faction": "中立",
     "portrait_glyph": "J",
     "portrait_icon": "Lance",
@@ -27,10 +27,10 @@
     "threshold": 0,
     "battle_start_attack": 0,
     "primary_label": "离场",
-    "secondary_label": "补员",
+    "secondary_label": "获得数量",
     "passive_text": "经营阶段，我方已上阵部队出售并离场时，场上随机3个我方部队获得+1数量。",
     "active_text": "被动技能，每局选择后固定生效。",
-    "short_text": "棋盘单位出售时随机补员。",
+    "short_text": "棋盘单位出售时随机获得数量。",
     "story": "临时英雄设定。"
   },
   {

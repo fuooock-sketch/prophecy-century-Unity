@@ -65,6 +65,7 @@ namespace ProphecyCentury.UI
         private const float TargetSearchInterval = 1f;
         private const float VisualAttackRangeSlack = 36f;
         private const float BattleFloatingTextDuration = 0.75f;
+        private const float CriticalMultiplierFloatingTextDuration = BattleFloatingTextDuration + 1f;
         private const float CountLossFloatingTextDelay = 0.62f;
         private const float CountLossActionPauseDuration = 1.34f;
         private const float RoundEndFeedbackBudgetSeconds = 2.55f;
@@ -219,6 +220,7 @@ namespace ProphecyCentury.UI
             public float StunRemaining;
             public float MoveLockRemaining;
             public float AttackLockRemaining;
+            public GameObject SnipeLockMarker;
         }
 
         private sealed class BattleProjectileView
@@ -3922,15 +3924,30 @@ namespace ProphecyCentury.UI
                 .Where(item => item.Kind == "lucky_crit")
                 .OrderBy(item => item.Time)
                 .ToList();
+            var pendingSnipeLockEvents = (result?.Events ?? new List<BattleEvent>())
+                .Where(item => item.Kind == "snipe_lock")
+                .OrderBy(item => item.Time)
+                .ToList();
+            var pendingSnipeChargeEvents = (result?.Events ?? new List<BattleEvent>())
+                .Where(item => item.Kind == "snipe_charge")
+                .OrderBy(item => item.Time)
+                .ToList();
             var pendingCriticalDamageEvents = (result?.Events ?? new List<BattleEvent>())
                 .Where(item => item.Kind == "critical_damage")
+                .OrderBy(item => item.Time)
+                .ToList();
+            var pendingCritMultiplierEvents = (result?.Events ?? new List<BattleEvent>())
+                .Where(item => item.Kind == "crit_multiplier")
                 .OrderBy(item => item.Time)
                 .ToList();
             var summonIndex = 0;
             var controlIndex = 0;
             var pounceIndex = 0;
             var luckyCritIndex = 0;
+            var snipeLockIndex = 0;
+            var snipeChargeIndex = 0;
             var criticalIndex = 0;
+            var critMultiplierIndex = 0;
             var projectiles = new List<BattleProjectileView>();
             var floatingTexts = new List<BattleFloatingTextView>();
             var bursts = new List<BattleEffectBurstView>();
@@ -3987,6 +4004,26 @@ namespace ProphecyCentury.UI
                     ApplyBattleSourceCue(views, pendingLuckyCritEvents[luckyCritIndex], "幸运！", new Color32(255, 226, 112, 255), floatingTexts);
                     _visualBattleActionPauseRemaining = Mathf.Max(_visualBattleActionPauseRemaining, 0.18f);
                     luckyCritIndex += 1;
+                }
+
+                while (snipeLockIndex < pendingSnipeLockEvents.Count && pendingSnipeLockEvents[snipeLockIndex].Time <= elapsed)
+                {
+                    ApplySnipeLockFeedback(pendingSnipeLockEvents[snipeLockIndex], views, floatingTexts, bursts);
+                    snipeLockIndex += 1;
+                }
+
+                while (snipeChargeIndex < pendingSnipeChargeEvents.Count && pendingSnipeChargeEvents[snipeChargeIndex].Time <= elapsed)
+                {
+                    ApplySnipeChargeFeedback(pendingSnipeChargeEvents[snipeChargeIndex], views, floatingTexts, bursts);
+                    _visualBattleActionPauseRemaining = Mathf.Max(_visualBattleActionPauseRemaining, 0.32f);
+                    snipeChargeIndex += 1;
+                }
+
+                while (critMultiplierIndex < pendingCritMultiplierEvents.Count && pendingCritMultiplierEvents[critMultiplierIndex].Time <= elapsed)
+                {
+                    ApplyCritMultiplierFeedback(pendingCritMultiplierEvents[critMultiplierIndex], views, floatingTexts, bursts);
+                    _visualBattleActionPauseRemaining = Mathf.Max(_visualBattleActionPauseRemaining, 0.18f);
+                    critMultiplierIndex += 1;
                 }
 
                 while (criticalIndex < pendingCriticalDamageEvents.Count && pendingCriticalDamageEvents[criticalIndex].Time <= elapsed)
@@ -4079,6 +4116,18 @@ namespace ProphecyCentury.UI
                         break;
                     case "lucky_crit":
                         ApplyBattleSourceCue(views, battleEvent, "幸运！", new Color32(255, 226, 112, 255), floatingTexts);
+                        yield return WaitAndUpdateBattleEffects(0.18f, floatingTexts, bursts);
+                        break;
+                    case "snipe_lock":
+                        ApplySnipeLockFeedback(battleEvent, views, floatingTexts, bursts);
+                        yield return WaitAndUpdateBattleEffects(0.12f, floatingTexts, bursts);
+                        break;
+                    case "snipe_charge":
+                        ApplySnipeChargeFeedback(battleEvent, views, floatingTexts, bursts);
+                        yield return WaitAndUpdateBattleEffects(0.32f, floatingTexts, bursts);
+                        break;
+                    case "crit_multiplier":
+                        ApplyCritMultiplierFeedback(battleEvent, views, floatingTexts, bursts);
                         yield return WaitAndUpdateBattleEffects(0.18f, floatingTexts, bursts);
                         break;
                     case "damage":
@@ -4533,6 +4582,11 @@ namespace ProphecyCentury.UI
             var critical = battleEvent.Kind == "critical_damage";
             if (battleEvent.Kind == "block" || battleEvent.Kind == "immune")
             {
+                if (battleEvent.SourceUnitId == "phantom_archer")
+                {
+                    ClearSnipeLockMarker(target);
+                }
+
                 AddFloatingText(battleEvent.Kind == "block" ? "格挡" : "免疫", target.Rect.anchoredPosition + new Vector2(0f, 60f), new Color32(150, 210, 255, 255), 20, floatingTexts);
                 SpawnEffectBurst(target.Rect.anchoredPosition, new Color32(150, 210, 255, 130), bursts);
                 target.ShieldLayers = Mathf.Max(0, battleEvent.TargetShieldLayers);
@@ -4549,6 +4603,11 @@ namespace ProphecyCentury.UI
             UpdateBattleStageLabel(target, battleEvent.TargetName, target.Hp, target.MaxHp);
             if (target.Rect != null)
             {
+                if (battleEvent.SourceUnitId == "phantom_archer")
+                {
+                    ClearSnipeLockMarker(target);
+                }
+
                 var damageAmount = Mathf.Max(1, battleEvent.Amount);
                 if (critical && damageAmount >= 15)
                 {
@@ -4576,6 +4635,104 @@ namespace ProphecyCentury.UI
             }
 
             return countLoss > 0 ? CountLossActionPauseDuration : 0.16f;
+        }
+
+        private void ApplySnipeLockFeedback(BattleEvent battleEvent, Dictionary<string, BattleStageUnitView> views, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            if (battleEvent == null || views == null)
+            {
+                return;
+            }
+
+            var target = FindBattleStageView(views, battleEvent.TargetPlayerSide, battleEvent.TargetSlotId, battleEvent.TargetName);
+            if (target?.Rect == null || target.Dead)
+            {
+                return;
+            }
+
+            ClearSnipeLockMarker(target);
+            var marker = new GameObject("SnipeLockMarker", typeof(Text), typeof(Outline));
+            marker.transform.SetParent(target.Rect, false);
+            var rect = marker.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = new Vector2(0f, 6f);
+            rect.sizeDelta = new Vector2(150f, 34f);
+
+            var text = marker.GetComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.alignment = TextAnchor.MiddleCenter;
+            text.fontSize = 18;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = 12;
+            text.resizeTextMaxSize = 18;
+            text.color = new Color32(255, 210, 95, 255);
+            text.text = "狙击锁定";
+
+            var outline = marker.GetComponent<Outline>();
+            outline.effectColor = new Color32(52, 18, 86, 245);
+            outline.effectDistance = new Vector2(2f, -2f);
+            outline.useGraphicAlpha = true;
+
+            target.SnipeLockMarker = marker;
+            AddFloatingText("狙击锁定", target.Rect.anchoredPosition + new Vector2(0f, 92f), new Color32(255, 220, 130, 255), 18, floatingTexts, false, 1.25f);
+            SpawnEffectBurst(target.Rect.anchoredPosition, new Color32(255, 220, 130, 120), bursts);
+        }
+
+        private void ApplySnipeChargeFeedback(BattleEvent battleEvent, Dictionary<string, BattleStageUnitView> views, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            if (battleEvent == null || views == null)
+            {
+                return;
+            }
+
+            var source = FindBattleStageView(views, battleEvent.SourcePlayerSide, battleEvent.SourceSlotId, battleEvent.SourceName);
+            var target = FindBattleStageView(views, battleEvent.TargetPlayerSide, battleEvent.TargetSlotId, battleEvent.TargetName);
+            if (source?.Rect != null && !source.Dead)
+            {
+                StartCoroutine(PulseAttacker(source, 0.28f));
+                AddFloatingText("蓄力", source.Rect.anchoredPosition + new Vector2(0f, 92f), new Color32(196, 132, 255, 255), 26, floatingTexts, true, 0.95f);
+                SpawnEffectBurst(source.Rect.anchoredPosition, new Color32(164, 92, 255, 155), bursts);
+                SpawnEffectBurst(source.Rect.anchoredPosition, new Color32(255, 226, 112, 120), bursts);
+            }
+
+            if (target?.Rect != null && !target.Dead)
+            {
+                AddFloatingText("锁定即将命中", target.Rect.anchoredPosition + new Vector2(0f, 102f), new Color32(255, 226, 112, 255), 18, floatingTexts, false, 0.95f);
+            }
+        }
+
+        private static void ClearSnipeLockMarker(BattleStageUnitView target)
+        {
+            if (target?.SnipeLockMarker == null)
+            {
+                return;
+            }
+
+            Destroy(target.SnipeLockMarker);
+            target.SnipeLockMarker = null;
+        }
+
+        private void ApplyCritMultiplierFeedback(BattleEvent battleEvent, Dictionary<string, BattleStageUnitView> views, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            if (battleEvent == null || views == null)
+            {
+                return;
+            }
+
+            var target = FindBattleStageView(views, battleEvent.TargetPlayerSide, battleEvent.TargetSlotId, battleEvent.TargetName);
+            if (target?.Rect == null || target.Dead)
+            {
+                return;
+            }
+
+            var message = !string.IsNullOrWhiteSpace(battleEvent.Message)
+                ? battleEvent.Message
+                : $"{Mathf.Max(1, battleEvent.Amount)}倍暴击！";
+            ClearSnipeLockMarker(target);
+            AddFloatingText(message, target.Rect.anchoredPosition + new Vector2(0f, 86f), new Color32(255, 226, 112, 255), 28, floatingTexts, true, CriticalMultiplierFloatingTextDuration);
+            SpawnEffectBurst(target.Rect.anchoredPosition, new Color32(255, 196, 78, 165), bursts);
         }
 
         private void ApplyBattleShieldFeedback(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
@@ -4757,6 +4914,7 @@ namespace ProphecyCentury.UI
             }
 
             var position = target.Rect != null ? target.Rect.anchoredPosition : Vector2.zero;
+            ClearSnipeLockMarker(target);
             UpdateBattleStageLabel(target, battleEvent.TargetName, 0, Mathf.Max(1, battleEvent.TargetMaxHp));
             MarkBattleStageDead(target);
             RuntimeSfxPlayer.PlayDeath();
@@ -5979,7 +6137,7 @@ namespace ProphecyCentury.UI
         private static readonly Queue<GameObject> __floatingTextPool = new Queue<GameObject>(FloatingTextPoolCapacity);
         private const int FloatingTextPoolCapacity = 24;
 
-        private void AddFloatingText(string text, Vector2 position, Color color, int fontSize, List<BattleFloatingTextView> floatingTexts, bool useScaleAnimation = false, [CallerMemberName] string source = null)
+        private void AddFloatingText(string text, Vector2 position, Color color, int fontSize, List<BattleFloatingTextView> floatingTexts, bool useScaleAnimation = false, float duration = BattleFloatingTextDuration, [CallerMemberName] string source = null)
         {
             if (_battleFieldRoot == null || string.IsNullOrWhiteSpace(text))
             {
@@ -6035,7 +6193,7 @@ namespace ProphecyCentury.UI
                 Text = label,
                 Start = position,
                 Life = 0f,
-                Duration = BattleFloatingTextDuration,
+                Duration = Mathf.Max(0.1f, duration),
                 UseScaleAnimation = useScaleAnimation
             });
         }
@@ -6632,6 +6790,11 @@ namespace ProphecyCentury.UI
                 return;
             }
 
+            if (damageEvent.SourceUnitId == "phantom_archer")
+            {
+                ClearSnipeLockMarker(target);
+            }
+
             AddFloatingText($"-{Mathf.Max(1, damageEvent.Amount)}❤️", target.Rect.anchoredPosition + new Vector2(0f, 64f), new Color32(255, 226, 112, 255), 28, floatingTexts, true);
             StartCoroutine(ShakeHitTarget(target, true));
             SpawnEffectBurst(target.Rect.anchoredPosition, new Color32(255, 196, 78, 150), bursts);
@@ -6898,6 +7061,9 @@ namespace ProphecyCentury.UI
                 case "attack":
                 case "morale_extra":
                 case "lucky_crit":
+                case "snipe_lock":
+                case "snipe_charge":
+                case "crit_multiplier":
                 case "block":
                 case "immune":
                 case "death":
@@ -8544,7 +8710,7 @@ namespace ProphecyCentury.UI
                 case "james":
                     return "  数量获得+1";
                 case "magic":
-                    return "  离场补员";
+                    return "  离场获得数量";
                 default:
                     return string.Empty;
             }
@@ -9188,7 +9354,20 @@ namespace ProphecyCentury.UI
             progress = new BoardSkillProgress();
             foreach (var skill in GetActiveBoardCountSkills(definition, card))
             {
-                if (skill == null || skill.threshold <= 0)
+                if (skill == null)
+                {
+                    continue;
+                }
+
+                if (skill.kind == "forest_gem_gift_count_bonus_aura")
+                {
+                    var countLimit = Mathf.Max(1, skill.count > 0 ? skill.count : 3);
+                    var current = Mathf.Clamp(card.manageRoundForestGemGiftBonusCount, 0, countLimit);
+                    progress = new BoardSkillProgress("宝钻", current, countLimit, current >= countLimit);
+                    return true;
+                }
+
+                if (skill.threshold <= 0)
                 {
                     continue;
                 }
@@ -9202,6 +9381,9 @@ namespace ProphecyCentury.UI
                     case "while_on_board_attack_gain_threshold_evolve":
                         progress = new BoardSkillProgress("进阶", card.manageAttackGainBucket, threshold, false);
                         return true;
+                    case "while_on_board_count_gain_events_evolve":
+                        progress = new BoardSkillProgress("进阶", card.manageAttackGainBucket, threshold, false);
+                        return true;
                     case "while_on_board_every_n_entry_race_add_random_unit_to_hand":
                         progress = new BoardSkillProgress(BoardCountLabel(string.IsNullOrWhiteSpace(skill.race) ? definition.race : skill.race), card.manageEntryEffectTriggerCount, threshold, false);
                         return true;
@@ -9212,6 +9394,11 @@ namespace ProphecyCentury.UI
                         var giftActions = Run?.manageResources == null ? 0 : Mathf.Max(0, Run.manageResources.forestGiftActions);
                         var giftCurrent = giftActions - Mathf.Max(0, card.manageGiftActionBucket) * threshold;
                         progress = new BoardSkillProgress("赐宝", giftCurrent, threshold, false);
+                        return true;
+                    case "on_gift_action_self_gain_count_every_n":
+                        var selfGiftActions = Run?.manageResources == null ? 0 : Mathf.Max(0, Run.manageResources.forestGiftActions);
+                        var selfGiftCurrent = selfGiftActions - Mathf.Max(0, card.manageGiftActionBucket) * threshold;
+                        progress = new BoardSkillProgress("赐宝", selfGiftCurrent, threshold, false);
                         return true;
                     case "on_receive_gift_total_team_gain_power_every_n":
                         var receiveCurrent = card.forestGemsReceived - Mathf.Max(0, card.manageReceiveGiftPowerBucket) * threshold;
