@@ -12,10 +12,11 @@ namespace ProphecyCentury.UI
 {
     public sealed class WorldMapView : MonoBehaviour, IDragHandler, IScrollHandler
     {
-        private const float NodeWidth = 128f;
-        private const float NodeHeight = 72f;
-        private const float LayerSpacing = 260f;
-        private const float RowSpacing = 122f;
+        private const float WorldMapUiScale = 3f;
+        private const float NodeWidth = 128f * WorldMapUiScale;
+        private const float NodeHeight = 72f * WorldMapUiScale;
+        private const float LayerSpacing = 260f * WorldMapUiScale;
+        private const float RowSpacing = 122f * WorldMapUiScale;
 
         private readonly WorldMapSystem _worldMapSystem = new WorldMapSystem();
         private readonly Dictionary<string, Vector2> _nodePositions = new Dictionary<string, Vector2>();
@@ -96,7 +97,7 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            _contentRoot.anchoredPosition += new Vector2(eventData.scrollDelta.x * 44f, eventData.scrollDelta.y * 44f);
+            _contentRoot.anchoredPosition += new Vector2(eventData.scrollDelta.x * 44f * WorldMapUiScale, eventData.scrollDelta.y * 44f * WorldMapUiScale);
             ClampContentPosition();
         }
 
@@ -116,8 +117,8 @@ namespace ProphecyCentury.UI
 
             var maxLayerCount = layers.Max(layer => nodes.Count(node => node.layer == layer));
             _contentSize = new Vector2(
-                Mathf.Max(viewportSize.x, 220f + Mathf.Max(1, layers.Count - 1) * LayerSpacing + NodeWidth),
-                Mathf.Max(viewportSize.y, 220f + Mathf.Max(1, maxLayerCount - 1) * RowSpacing + NodeHeight));
+                Mathf.Max(viewportSize.x, 220f * WorldMapUiScale + Mathf.Max(1, layers.Count - 1) * LayerSpacing + NodeWidth),
+                Mathf.Max(viewportSize.y, 220f * WorldMapUiScale + Mathf.Max(1, maxLayerCount - 1) * RowSpacing + NodeHeight));
 
             _contentRoot.sizeDelta = _contentSize;
             _lineRoot.sizeDelta = _contentSize;
@@ -134,7 +135,7 @@ namespace ProphecyCentury.UI
                     .ThenBy(node => node.id)
                     .ToList();
                 var columnIndex = layerIndexByValue[layer];
-                var x = -_contentSize.x * 0.5f + 110f + columnIndex * LayerSpacing;
+                var x = -_contentSize.x * 0.5f + 110f * WorldMapUiScale + columnIndex * LayerSpacing;
                 var firstY = (layerNodes.Count - 1) * RowSpacing * 0.5f;
                 for (var i = 0; i < layerNodes.Count; i += 1)
                 {
@@ -158,7 +159,7 @@ namespace ProphecyCentury.UI
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0f, 0.5f);
             rect.anchoredPosition = start;
-            rect.sizeDelta = new Vector2(delta.magnitude, 4f);
+            rect.sizeDelta = new Vector2(delta.magnitude, 4f * WorldMapUiScale);
             rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
             lineObject.GetComponent<Image>().color = new Color32(104, 118, 150, 180);
         }
@@ -176,7 +177,7 @@ namespace ProphecyCentury.UI
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = _nodePositions.TryGetValue(node.id, out var position) ? position : Vector2.zero;
-            rect.sizeDelta = isCurrent ? new Vector2(NodeWidth + 18f, NodeHeight + 8f) : new Vector2(NodeWidth, NodeHeight);
+            rect.sizeDelta = isCurrent ? new Vector2(NodeWidth + 18f * WorldMapUiScale, NodeHeight + 8f * WorldMapUiScale) : new Vector2(NodeWidth, NodeHeight);
 
             var image = nodeObject.GetComponent<Image>();
             image.color = ResolveNodeColor(visible, available, cleared, isCurrent, node.type);
@@ -185,11 +186,11 @@ namespace ProphecyCentury.UI
             button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
             button.onClick.AddListener(() => _controller.SelectWorldMapNode(node.id));
 
-            var label = CreateText(nodeObject.transform, "Label", visible ? $"{FormatNodeType(node.type)}\n{node.name}" : "???", 16, TextAnchor.MiddleCenter);
+            var label = CreateText(nodeObject.transform, "Label", visible ? $"{FormatNodeType(node.type)}\n{node.name}" : "???", ScaleFont(16), TextAnchor.MiddleCenter);
             label.color = visible ? Color.white : new Color32(160, 164, 176, 255);
             label.resizeTextForBestFit = true;
-            label.resizeTextMinSize = 10;
-            label.resizeTextMaxSize = 16;
+            label.resizeTextMinSize = ScaleFont(10);
+            label.resizeTextMaxSize = ScaleFont(16);
         }
 
         private static Color32 ResolveNodeColor(bool visible, bool available, bool cleared, bool current, string type)
@@ -218,24 +219,24 @@ namespace ProphecyCentury.UI
             image.color = new Color32(12, 17, 28, 252);
             image.raycastTarget = true;
 
-            _titleLabel = CreateText(transform, "WorldMapTitle", string.Empty, 30, TextAnchor.MiddleLeft);
-            SetAnchors(_titleLabel.rectTransform, new Vector2(0.04f, 0.9f), new Vector2(0.7f, 0.98f));
-            _detailLabel = CreateText(transform, "WorldMapDetail", string.Empty, 20, TextAnchor.MiddleLeft);
-            SetAnchors(_detailLabel.rectTransform, new Vector2(0.04f, 0.83f), new Vector2(0.7f, 0.9f));
+            _titleLabel = CreateText(transform, "WorldMapTitle", string.Empty, ScaleFont(30), TextAnchor.MiddleLeft);
+            SetAnchors(_titleLabel.rectTransform, new Vector2(0.04f, 0.9f), new Vector2(0.54f, 0.98f));
+            _detailLabel = CreateText(transform, "WorldMapDetail", string.Empty, ScaleFont(20), TextAnchor.MiddleLeft);
+            SetAnchors(_detailLabel.rectTransform, new Vector2(0.04f, 0.8f), new Vector2(0.96f, 0.9f));
 
             var nightObject = new GameObject("EnterNightButton", typeof(Image), typeof(Button));
             nightObject.transform.SetParent(transform, false);
-            SetAnchors(nightObject.GetComponent<RectTransform>(), new Vector2(0.82f, 0.9f), new Vector2(0.96f, 0.97f));
+            SetAnchors(nightObject.GetComponent<RectTransform>(), new Vector2(0.54f, 0.9f), new Vector2(0.96f, 0.98f));
             nightObject.GetComponent<Image>().color = new Color32(76, 66, 132, 245);
             _nightButton = nightObject.GetComponent<Button>();
             _nightButton.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
             _nightButton.onClick.AddListener(() => _controller.EnterNightFromWorldMap());
-            CreateText(nightObject.transform, "Label", "入夜经营", 20, TextAnchor.MiddleCenter);
+            CreateText(nightObject.transform, "Label", "入夜经营", ScaleFont(20), TextAnchor.MiddleCenter);
 
             var viewportObject = new GameObject("WorldMapViewport", typeof(Image), typeof(RectMask2D));
             viewportObject.transform.SetParent(transform, false);
             _viewport = viewportObject.GetComponent<RectTransform>();
-            SetAnchors(_viewport, new Vector2(0.04f, 0.08f), new Vector2(0.96f, 0.8f));
+            SetAnchors(_viewport, new Vector2(0.04f, 0.04f), new Vector2(0.96f, 0.78f));
             var viewportImage = viewportObject.GetComponent<Image>();
             viewportImage.color = new Color32(8, 12, 22, 90);
             viewportImage.raycastTarget = true;
@@ -285,6 +286,11 @@ namespace ProphecyCentury.UI
             _contentRoot.anchoredPosition = new Vector2(
                 Mathf.Clamp(position.x, -maxX, maxX),
                 Mathf.Clamp(position.y, -maxY, maxY));
+        }
+
+        private static int ScaleFont(int fontSize)
+        {
+            return Mathf.RoundToInt(fontSize * WorldMapUiScale);
         }
 
         private void CenterContentOnNode(string nodeId)
