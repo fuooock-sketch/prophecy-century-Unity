@@ -259,3 +259,27 @@ $env:PYTHONIOENCODING='utf-8'
 2. 再扩 `BattleStubSystem` 生成敌方阵容的逻辑。
 3. 再扩 QA。
 4. 最后扩 UI 表现。
+
+## 11. 2026-07-06 update: `testmap_paladin`
+
+`testmap_paladin` is the fixed enemy preset used by the `testmap` campaign/map.
+
+Preset contract:
+- Preset id: `testmap_paladin`.
+- Unit list contains exactly one unit.
+- Unit id: `bright_warrior`.
+- Count: `1`.
+- Star: `1`.
+- Slot: `2-2`.
+
+Map usage:
+- `Assets/Resources/Data/world_maps.json` assigns `testmap_paladin` to every battle node in `testmap`.
+- R01-R19 are `normal_battle`; R20 is `boss`.
+
+Runtime rule:
+- `BattleStubSystem.IsFixedCapturedPreset()` includes the `testmap_` prefix.
+- Because of that fixed-prefix rule, `testmap_paladin` is not auto-filled with fallback enemies and is not scaled by day-based world-map difficulty.
+
+Naming note:
+- The unit table does not currently contain a literal `paladin` or `圣武士` id.
+- `bright_warrior` is the existing light warrior unit used for this test preset.

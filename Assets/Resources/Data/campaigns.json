@@ -34,5 +34,11 @@
     "name": "Shadow Challenge: Elemental Battle",
     "desc": "A 20-round challenge built from the latest complete captured elemental battle snapshots.",
     "mapId": "shadow_elemental_battle_map"
+  },
+  {
+    "id": "testmap",
+    "name": "testmap",
+    "desc": "Default test map. Every battle uses one count-1 bright warrior.",
+    "mapId": "testmap"
   }
 ]

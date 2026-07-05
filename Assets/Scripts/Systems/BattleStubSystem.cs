@@ -1042,7 +1042,8 @@ namespace ProphecyCentury.Systems
                 && !string.IsNullOrWhiteSpace(preset.id)
                 && (preset.id.StartsWith("shadow_elemental_", StringComparison.Ordinal)
                     || preset.id.StartsWith("shadow_light_", StringComparison.Ordinal)
-                    || preset.id.StartsWith("snow_peak_defense_", StringComparison.Ordinal));
+                    || preset.id.StartsWith("snow_peak_defense_", StringComparison.Ordinal)
+                    || preset.id.StartsWith("testmap_", StringComparison.Ordinal));
         }
 
         private static void FillWorldMapPresetLineup(List<BattleRuntimeUnit> enemies, HashSet<string> usedSlots, RunState runState)

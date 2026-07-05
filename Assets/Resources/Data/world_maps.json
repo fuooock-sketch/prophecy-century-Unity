@@ -2656,5 +2656,368 @@
         "toNodeId": "snow_peak_defense_map_r20"
       }
     ]
+  },
+  {
+    "id": "testmap",
+    "name": "testmap",
+    "startNodeId": "testmap_start",
+    "layers": [
+      {
+        "index": 0,
+        "name": "Start"
+      },
+      {
+        "index": 1,
+        "name": "R01"
+      },
+      {
+        "index": 2,
+        "name": "R02"
+      },
+      {
+        "index": 3,
+        "name": "R03"
+      },
+      {
+        "index": 4,
+        "name": "R04"
+      },
+      {
+        "index": 5,
+        "name": "R05"
+      },
+      {
+        "index": 6,
+        "name": "R06"
+      },
+      {
+        "index": 7,
+        "name": "R07"
+      },
+      {
+        "index": 8,
+        "name": "R08"
+      },
+      {
+        "index": 9,
+        "name": "R09"
+      },
+      {
+        "index": 10,
+        "name": "R10"
+      },
+      {
+        "index": 11,
+        "name": "R11"
+      },
+      {
+        "index": 12,
+        "name": "R12"
+      },
+      {
+        "index": 13,
+        "name": "R13"
+      },
+      {
+        "index": 14,
+        "name": "R14"
+      },
+      {
+        "index": 15,
+        "name": "R15"
+      },
+      {
+        "index": 16,
+        "name": "R16"
+      },
+      {
+        "index": 17,
+        "name": "R17"
+      },
+      {
+        "index": 18,
+        "name": "R18"
+      },
+      {
+        "index": 19,
+        "name": "R19"
+      },
+      {
+        "index": 20,
+        "name": "R20"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "testmap_start",
+        "name": "Start",
+        "layer": 0,
+        "type": "start",
+        "x": 0.5,
+        "y": 0.03
+      },
+      {
+        "id": "testmap_r01",
+        "name": "R01",
+        "layer": 1,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.076,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r02",
+        "name": "R02",
+        "layer": 2,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.122,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r03",
+        "name": "R03",
+        "layer": 3,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.168,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r04",
+        "name": "R04",
+        "layer": 4,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.214,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r05",
+        "name": "R05",
+        "layer": 5,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.26,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r06",
+        "name": "R06",
+        "layer": 6,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.306,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r07",
+        "name": "R07",
+        "layer": 7,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.352,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r08",
+        "name": "R08",
+        "layer": 8,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.398,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r09",
+        "name": "R09",
+        "layer": 9,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.444,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r10",
+        "name": "R10",
+        "layer": 10,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.49,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r11",
+        "name": "R11",
+        "layer": 11,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.536,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r12",
+        "name": "R12",
+        "layer": 12,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.582,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r13",
+        "name": "R13",
+        "layer": 13,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.628,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r14",
+        "name": "R14",
+        "layer": 14,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.674,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r15",
+        "name": "R15",
+        "layer": 15,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.72,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r16",
+        "name": "R16",
+        "layer": 16,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.766,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r17",
+        "name": "R17",
+        "layer": 17,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.812,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r18",
+        "name": "R18",
+        "layer": 18,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.858,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r19",
+        "name": "R19",
+        "layer": 19,
+        "type": "normal_battle",
+        "x": 0.5,
+        "y": 0.904,
+        "enemyPresetId": "testmap_paladin"
+      },
+      {
+        "id": "testmap_r20",
+        "name": "R20",
+        "layer": 20,
+        "type": "boss",
+        "x": 0.5,
+        "y": 0.95,
+        "enemyPresetId": "testmap_paladin"
+      }
+    ],
+    "connections": [
+      {
+        "fromNodeId": "testmap_start",
+        "toNodeId": "testmap_r01"
+      },
+      {
+        "fromNodeId": "testmap_r01",
+        "toNodeId": "testmap_r02"
+      },
+      {
+        "fromNodeId": "testmap_r02",
+        "toNodeId": "testmap_r03"
+      },
+      {
+        "fromNodeId": "testmap_r03",
+        "toNodeId": "testmap_r04"
+      },
+      {
+        "fromNodeId": "testmap_r04",
+        "toNodeId": "testmap_r05"
+      },
+      {
+        "fromNodeId": "testmap_r05",
+        "toNodeId": "testmap_r06"
+      },
+      {
+        "fromNodeId": "testmap_r06",
+        "toNodeId": "testmap_r07"
+      },
+      {
+        "fromNodeId": "testmap_r07",
+        "toNodeId": "testmap_r08"
+      },
+      {
+        "fromNodeId": "testmap_r08",
+        "toNodeId": "testmap_r09"
+      },
+      {
+        "fromNodeId": "testmap_r09",
+        "toNodeId": "testmap_r10"
+      },
+      {
+        "fromNodeId": "testmap_r10",
+        "toNodeId": "testmap_r11"
+      },
+      {
+        "fromNodeId": "testmap_r11",
+        "toNodeId": "testmap_r12"
+      },
+      {
+        "fromNodeId": "testmap_r12",
+        "toNodeId": "testmap_r13"
+      },
+      {
+        "fromNodeId": "testmap_r13",
+        "toNodeId": "testmap_r14"
+      },
+      {
+        "fromNodeId": "testmap_r14",
+        "toNodeId": "testmap_r15"
+      },
+      {
+        "fromNodeId": "testmap_r15",
+        "toNodeId": "testmap_r16"
+      },
+      {
+        "fromNodeId": "testmap_r16",
+        "toNodeId": "testmap_r17"
+      },
+      {
+        "fromNodeId": "testmap_r17",
+        "toNodeId": "testmap_r18"
+      },
+      {
+        "fromNodeId": "testmap_r18",
+        "toNodeId": "testmap_r19"
+      },
+      {
+        "fromNodeId": "testmap_r19",
+        "toNodeId": "testmap_r20"
+      }
+    ]
   }
 ]

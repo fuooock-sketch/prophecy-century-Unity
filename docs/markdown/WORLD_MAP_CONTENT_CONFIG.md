@@ -261,3 +261,26 @@ powershell -ExecutionPolicy Bypass -File tools\validate_world_map_mvp.ps1
 - 再扩 `RunFlowController` 节点结算。
 - 最后扩 `WorldMapView` 表现。
 - 每新增一种节点类型，必须补 QA 检查。
+
+## 13. 2026-07-06 update: `testmap`
+
+`testmap` is a default test campaign/map entry shown in the campaign selection list after login.
+
+Configured files:
+- `Assets/Resources/Data/campaigns.json`: campaign id `testmap`, display name `testmap`, `mapId` `testmap`.
+- `Assets/Resources/Data/world_maps.json`: world map id `testmap`, start node `testmap_start`.
+- `Assets/Resources/Data/boss_enemies.json`: enemy preset `testmap_paladin`.
+
+Map shape:
+- Linear 20-round route: `testmap_start -> testmap_r01 -> ... -> testmap_r20`.
+- `testmap_r01` through `testmap_r19` use `normal_battle`.
+- `testmap_r20` uses `boss`, so clearing it completes the map through the existing boss victory path.
+- Every battle node uses the same `enemyPresetId`: `testmap_paladin`.
+
+Enemy expectation:
+- `testmap_paladin` contains exactly one `bright_warrior`.
+- Count is fixed at `1`.
+- Star is `1`.
+
+Runtime note:
+- `BattleStubSystem.IsFixedCapturedPreset()` treats `testmap_` presets as fixed, so exploration battle auto-fill and day-based scaling do not add extra enemies or increase the count.

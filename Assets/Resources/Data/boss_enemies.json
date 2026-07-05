@@ -6071,5 +6071,18 @@
         "star": 6
       }
     ]
+  },
+  {
+    "id": "testmap_paladin",
+    "name": "testmap paladin",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "2-2",
+        "unitId": "bright_warrior",
+        "count": 1,
+        "star": 1
+      }
+    ]
   }
 ]
