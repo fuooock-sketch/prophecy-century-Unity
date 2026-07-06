@@ -89,6 +89,7 @@ namespace ProphecyCentury.UI
         private static GameObject _cachedShopPrefab;
         private static GameObject _cachedHandPrefab;
         private static GameObject _cachedBoardPrefab;
+        private static readonly Color32 GoldenNameColor = new Color32(255, 216, 107, 255);
 
         public Image BackgroundImage => backgroundImage;
         public Image RaceBackgroundImage => raceBackgroundImage;
@@ -334,6 +335,7 @@ namespace ProphecyCentury.UI
             if (!useScriptedLayout)
             {
                 ApplyPrefabImages(style, golden, hasUnit);
+                ApplyLabelColors(style, golden);
                 return;
             }
 
@@ -397,7 +399,12 @@ namespace ProphecyCentury.UI
                 }
             }
 
-            SetColor(nameLabel, golden ? new Color32(255, 216, 107, 255) : style?.titleColor ?? Color.white);
+            ApplyLabelColors(style, golden);
+        }
+
+        private void ApplyLabelColors(UnitCardRaceStyle style, bool golden)
+        {
+            SetColor(nameLabel, golden ? GoldenNameColor : style?.titleColor ?? Color.white);
             SetColor(statsLabel, style?.statsColor ?? Color.white);
             SetColor(tagsLabel, style?.tagsColor ?? new Color32(220, 228, 236, 255));
             SetColor(starsLabel, new Color32(255, 220, 96, 255));

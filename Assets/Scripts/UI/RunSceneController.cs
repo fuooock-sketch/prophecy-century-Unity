@@ -221,6 +221,7 @@ namespace ProphecyCentury.UI
             public float MoveLockRemaining;
             public float AttackLockRemaining;
             public GameObject SnipeLockMarker;
+            public GameObject ControlLockMarker;
         }
 
         private sealed class BattleProjectileView
@@ -1175,6 +1176,7 @@ namespace ProphecyCentury.UI
             }
 
             var before = CaptureUnitNumberSnapshots();
+            var expectedCountGain = ResolveCurrentForestGemReinforceCount();
             var success = _flow.UseForestGemCard(index, boardSlotId);
             var feedbackEvents = success ? _flow.ConsumeManageFeedbackEvents() : null;
             if (success)
@@ -1184,8 +1186,8 @@ namespace ProphecyCentury.UI
                 RuntimeSfxPlayer.PlayAbilityTrigger();
                 PlayAbilitySfxIfNeeded();
                 PlaySynthesisSfxIfNeeded();
-                ShowUnitNumberFloatingText(GetBoardSlotRect(boardSlotId), $"获得数量+{ManageEventResolver.ForestGemReinforceCount}", new Color32(112, 236, 166, 255));
-                WriteLog($"已对 {target.name} 使用密林宝钻，获得数量 +{ManageEventResolver.ForestGemReinforceCount}。");
+                ShowUnitNumberFloatingText(GetBoardSlotRect(boardSlotId), $"获得数量+{expectedCountGain}", new Color32(112, 236, 166, 255));
+                WriteLog($"已对 {target.name} 使用密林宝钻，获得数量 +{expectedCountGain}。");
             }
             else
             {
@@ -1195,6 +1197,36 @@ namespace ProphecyCentury.UI
 
             PlayFeedbackThenRefresh(null, FilterForestGemUseFeedback(feedbackEvents), before);
             return success;
+        }
+
+        private int ResolveCurrentForestGemReinforceCount()
+        {
+            var count = ManageEventResolver.ForestGemReinforceCount;
+            if (Run?.boardUnits == null)
+            {
+                return count;
+            }
+
+            foreach (var unit in Run.boardUnits)
+            {
+                if (unit == null)
+                {
+                    continue;
+                }
+
+                var definition = ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
+                foreach (var skill in GetActiveBoardCountSkills(definition, unit))
+                {
+                    if (skill?.kind != "forest_gem_gift_count_bonus_aura")
+                    {
+                        continue;
+                    }
+
+                    count += Mathf.Max(0, unit.manageRoundForestGemGiftBonusCount) * Mathf.Max(1, skill.value);
+                }
+            }
+
+            return Mathf.Max(1, count);
         }
 
         private void MoveBoardUnitToSlot(string fromSlotId, string toSlotId)
@@ -2341,6 +2373,7 @@ namespace ProphecyCentury.UI
                 manageRoundStatRetriggerTriggered = card.manageRoundStatRetriggerTriggered,
                 manageGiftActionBucket = card.manageGiftActionBucket,
                 manageAttackGainBucket = card.manageAttackGainBucket,
+                manageSellCountBucket = card.manageSellCountBucket,
                 manageReceiveGiftPowerBucket = card.manageReceiveGiftPowerBucket,
                 manageReceiveGiftDiscoverTriggered = card.manageReceiveGiftDiscoverTriggered,
                 manageRoundAttackRewardTriggered = card.manageRoundAttackRewardTriggered,
@@ -4714,6 +4747,56 @@ namespace ProphecyCentury.UI
             target.SnipeLockMarker = null;
         }
 
+        private static void EnsureControlLockMarker(BattleStageUnitView target)
+        {
+            if (target?.Rect == null || target.Dead)
+            {
+                return;
+            }
+
+            if (target.ControlLockMarker != null)
+            {
+                return;
+            }
+
+            var marker = new GameObject("ControlLockMarker", typeof(Text), typeof(Outline));
+            marker.transform.SetParent(target.Rect, false);
+            var rect = marker.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = new Vector2(0f, 38f);
+            rect.sizeDelta = new Vector2(150f, 32f);
+
+            var text = marker.GetComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.alignment = TextAnchor.MiddleCenter;
+            text.fontSize = 17;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = 11;
+            text.resizeTextMaxSize = 17;
+            text.color = new Color32(150, 210, 255, 255);
+            text.text = "\u79fb\u52a8\u9501\u5b9a";
+
+            var outline = marker.GetComponent<Outline>();
+            outline.effectColor = new Color32(18, 36, 74, 245);
+            outline.effectDistance = new Vector2(2f, -2f);
+            outline.useGraphicAlpha = true;
+
+            target.ControlLockMarker = marker;
+        }
+
+        private static void ClearControlLockMarker(BattleStageUnitView target)
+        {
+            if (target?.ControlLockMarker == null)
+            {
+                return;
+            }
+
+            Destroy(target.ControlLockMarker);
+            target.ControlLockMarker = null;
+        }
+
         private void ApplyCritMultiplierFeedback(BattleEvent battleEvent, Dictionary<string, BattleStageUnitView> views, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
         {
             if (battleEvent == null || views == null)
@@ -4915,6 +4998,7 @@ namespace ProphecyCentury.UI
 
             var position = target.Rect != null ? target.Rect.anchoredPosition : Vector2.zero;
             ClearSnipeLockMarker(target);
+            ClearControlLockMarker(target);
             UpdateBattleStageLabel(target, battleEvent.TargetName, 0, Mathf.Max(1, battleEvent.TargetMaxHp));
             MarkBattleStageDead(target);
             RuntimeSfxPlayer.PlayDeath();
@@ -5731,6 +5815,11 @@ namespace ProphecyCentury.UI
             view.StunRemaining = Mathf.Max(0f, view.StunRemaining - deltaTime);
             view.MoveLockRemaining = Mathf.Max(0f, view.MoveLockRemaining - deltaTime);
             view.AttackLockRemaining = Mathf.Max(0f, view.AttackLockRemaining - deltaTime);
+            if (view.MoveLockRemaining <= 0f)
+            {
+                ClearControlLockMarker(view);
+            }
+
             if (view.Label != null && (view.StunRemaining > 0f || view.MoveLockRemaining > 0f || view.AttackLockRemaining > 0f))
             {
                 view.Label.color = new Color32(150, 210, 255, 255);
@@ -6775,11 +6864,36 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            var duration = Mathf.Max(0.2f, controlEvent.Amount / 1000f);
+            var isMoveLockOnly = string.Equals(controlEvent.SourceUnitId, "blood_mire_fiend", System.StringComparison.Ordinal)
+                || (!string.IsNullOrWhiteSpace(controlEvent.Message) && controlEvent.Message.IndexOf("move locked", System.StringComparison.OrdinalIgnoreCase) >= 0);
+            var duration = ResolveControlEventDuration(controlEvent, isMoveLockOnly);
+            if (isMoveLockOnly)
+            {
+                target.MoveLockRemaining = Mathf.Max(target.MoveLockRemaining, duration);
+                EnsureControlLockMarker(target);
+                AddFloatingText("\u79fb\u52a8\u9501\u5b9a", target.Rect.anchoredPosition + new Vector2(0f, 88f), new Color32(150, 210, 255, 255), 18, floatingTexts);
+                return;
+            }
+
             target.StunRemaining = Mathf.Max(target.StunRemaining, duration);
             target.MoveLockRemaining = Mathf.Max(target.MoveLockRemaining, duration);
             target.AttackLockRemaining = Mathf.Max(target.AttackLockRemaining, duration);
             AddFloatingText("锁定", target.Rect.anchoredPosition + new Vector2(0f, 88f), new Color32(150, 210, 255, 255), 18, floatingTexts);
+        }
+
+        private static float ResolveControlEventDuration(BattleEvent controlEvent, bool moveLockOnly)
+        {
+            if (controlEvent == null)
+            {
+                return 0.2f;
+            }
+
+            if (moveLockOnly && controlEvent.Amount > 0 && controlEvent.Amount <= 20)
+            {
+                return Mathf.Max(0.2f, controlEvent.Amount);
+            }
+
+            return Mathf.Max(0.2f, controlEvent.Amount / 1000f);
         }
 
         private void ApplyCriticalDamageFeedback(BattleEvent damageEvent, Dictionary<string, BattleStageUnitView> views, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
@@ -9106,7 +9220,7 @@ namespace ProphecyCentury.UI
             if (ManageEventResolver.IsForestGemCard(card))
             {
                 var gemTitle = string.IsNullOrWhiteSpace(prefix) ? ManageEventResolver.ForestGemCardName : $"{prefix}  {ManageEventResolver.ForestGemCardName}";
-                return $"{gemTitle}\n使用：阵上单位获得数量 +{ManageEventResolver.ForestGemReinforceCount}\n计为被赐予1颗";
+                return $"{gemTitle}\n使用：阵上单位获得数量 +{ResolveCurrentForestGemReinforceCount()}\n计为被赐予1颗";
             }
 
             var unit = ProphecyGameSession.Instance.Data.FindUnit(card.unitId);
@@ -9313,11 +9427,11 @@ namespace ProphecyCentury.UI
             var root = new GameObject("BoardSkillProgress", typeof(Image));
             root.transform.SetParent(parent, false);
             var rect = root.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.14f, 0f);
-            rect.anchorMax = new Vector2(0.86f, 0f);
+            rect.anchorMin = new Vector2(0.06f, 0f);
+            rect.anchorMax = new Vector2(0.94f, 0f);
             rect.pivot = new Vector2(0.5f, 0f);
-            rect.anchoredPosition = new Vector2(0f, 31f);
-            rect.sizeDelta = new Vector2(0f, 12f);
+            rect.anchoredPosition = new Vector2(0f, 28f);
+            rect.sizeDelta = new Vector2(0f, 20f);
 
             var background = root.GetComponent<Image>();
             background.color = new Color32(12, 18, 26, 205);
@@ -9334,11 +9448,14 @@ namespace ProphecyCentury.UI
             fill.color = progress.Triggered ? new Color32(82, 218, 118, 210) : new Color32(236, 164, 56, 210);
             fill.raycastTarget = false;
 
-            var label = CreateChildText(root.transform, FormatBoardSkillProgressLabel(progress), 9, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
+            var label = CreateChildText(root.transform, FormatBoardSkillProgressLabel(progress), 14, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
             label.color = Color.white;
             label.resizeTextForBestFit = true;
-            label.resizeTextMinSize = 7;
-            label.resizeTextMaxSize = 9;
+            label.resizeTextMinSize = 10;
+            label.resizeTextMaxSize = 14;
+            var outline = label.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color32(0, 0, 0, 190);
+            outline.effectDistance = new Vector2(1f, -1f);
             root.transform.SetAsLastSibling();
         }
 
@@ -9387,17 +9504,18 @@ namespace ProphecyCentury.UI
                     case "while_on_board_every_n_entry_race_add_random_unit_to_hand":
                         progress = new BoardSkillProgress(BoardCountLabel(string.IsNullOrWhiteSpace(skill.race) ? definition.race : skill.race), card.manageEntryEffectTriggerCount, threshold, false);
                         return true;
+                    case "on_sell_every_n_self_gain_count":
+                        progress = new BoardSkillProgress("出售", card.manageSellCountBucket, threshold, false);
+                        return true;
                     case "on_any_entry_effect_count_evolve":
                         progress = new BoardSkillProgress("入场", card.manageEntryEffectTriggerCount, threshold, false);
                         return true;
                     case "on_gift_action_team_gain_attack_every_n":
-                        var giftActions = Run?.manageResources == null ? 0 : Mathf.Max(0, Run.manageResources.forestGiftActions);
-                        var giftCurrent = giftActions - Mathf.Max(0, card.manageGiftActionBucket) * threshold;
+                        var giftCurrent = Mathf.Clamp(card.manageGiftActionBucket, 0, threshold);
                         progress = new BoardSkillProgress("赐宝", giftCurrent, threshold, false);
                         return true;
                     case "on_gift_action_self_gain_count_every_n":
-                        var selfGiftActions = Run?.manageResources == null ? 0 : Mathf.Max(0, Run.manageResources.forestGiftActions);
-                        var selfGiftCurrent = selfGiftActions - Mathf.Max(0, card.manageGiftActionBucket) * threshold;
+                        var selfGiftCurrent = Mathf.Clamp(card.manageGiftActionBucket, 0, threshold);
                         progress = new BoardSkillProgress("赐宝", selfGiftCurrent, threshold, false);
                         return true;
                     case "on_receive_gift_total_team_gain_power_every_n":

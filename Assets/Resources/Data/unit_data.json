@@ -18,26 +18,26 @@
         "range": 8.0,
         "size": 1,
         "tags": [],
-        "talentText": "—",
-        "goldTalentText": "—",
-        "battleText": "造成追击后，下回合开始时获得+2金币（每场战斗仅生效1次）",
-        "goldBattleText": "造成追击后，下回合开始时获得+4金币（每场战斗仅生效1次）",
-        "talents": [],
-        "goldTalents": [],
-        "battleSkills": [
+        "talentText": "每出售2个单位，获得+2数量。",
+        "goldTalentText": "每出售1个单位，获得+2数量。",
+        "battleText": "—",
+        "goldBattleText": "—",
+        "talents": [
             {
-                "kind": "on_extra_attack_once_next_round_gold",
-                "value": 2,
-                "oncePerBattle": true
+                "kind": "on_sell_every_n_self_gain_count",
+                "threshold": 2,
+                "value": 2
             }
         ],
-        "goldBattleSkills": [
+        "goldTalents": [
             {
-                "kind": "on_extra_attack_once_next_round_gold",
-                "value": 4,
-                "oncePerBattle": true
+                "kind": "on_sell_every_n_self_gain_count",
+                "threshold": 1,
+                "value": 2
             }
         ],
+        "battleSkills": [],
+        "goldBattleSkills": [],
         "sizeTier": 1,
         "limit": 2,
         "startCount": 18,
@@ -51,7 +51,7 @@
         "attackRange": 8.0,
         "firstPurchaseHp": 72,
         "firstPurchaseAverageDamage": 36,
-        "skillText": "—\n—\n造成追击后，下回合开始时获得+2金币（每场战斗仅生效1次）\n造成追击后，下回合开始时获得+4金币（每场战斗仅生效1次）",
+        "skillText": "每出售2个单位，获得+2数量。\n每出售1个单位，获得+2数量。\n—\n—",
         "designOnlyInitialBaseDamage": 36
     },
     {
@@ -470,15 +470,15 @@
         "range": 4.0,
         "size": 1,
         "tags": [],
-        "talentText": "每入场5支甘地部队，随机获得1支甘地部队",
-        "goldTalentText": "每入场5支甘地部队，随机获得2支甘地部队",
+        "talentText": "每入场10支甘地部队，随机获得1支甘地部队",
+        "goldTalentText": "每入场8支甘地部队，随机获得1支甘地部队",
         "battleText": "开战后，给队伍最前面存在友方部队的1排的所有友方部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
         "goldBattleText": "开战后，给队伍最前面存在友方部队的2排的所有友方部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
         "talents": [
             {
                 "kind": "while_on_board_every_n_entry_race_add_random_unit_to_hand",
                 "race": "甘地",
-                "threshold": 5,
+                "threshold": 10,
                 "count": 1
             }
         ],
@@ -486,8 +486,8 @@
             {
                 "kind": "while_on_board_every_n_entry_race_add_random_unit_to_hand",
                 "race": "甘地",
-                "threshold": 5,
-                "count": 2
+                "threshold": 8,
+                "count": 1
             }
         ],
         "battleSkills": [
@@ -517,7 +517,7 @@
         "attackRange": 4.0,
         "firstPurchaseHp": 72,
         "firstPurchaseAverageDamage": 45,
-        "skillText": "每入场5支甘地部队，随机获得1支甘地部队\n每入场5支甘地部队，随机获得2支甘地部队\n开战后，给队伍最前面存在友方部队的1排的所有友方部队增加一个护盾，护盾可以完全抵挡最多1次的伤害\n开战后，给队伍最前面存在友方部队的2排的所有友方部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
+        "skillText": "每入场10支甘地部队，随机获得1支甘地部队\n每入场8支甘地部队，随机获得1支甘地部队\n开战后，给队伍最前面存在友方部队的1排的所有友方部队增加一个护盾，护盾可以完全抵挡最多1次的伤害\n开战后，给队伍最前面存在友方部队的2排的所有友方部队增加一个护盾，护盾可以完全抵挡最多1次的伤害",
         "designOnlyInitialBaseDamage": 45
     },
     {
@@ -3149,6 +3149,7 @@
             {
                 "kind": "forest_gem_gift_count_bonus_aura",
                 "value": 1,
+                "targetMode": "any",
                 "count": 5
             }
         ],
@@ -3156,6 +3157,7 @@
             {
                 "kind": "forest_gem_gift_count_bonus_aura",
                 "value": 2,
+                "targetMode": "any",
                 "count": 5
             }
         ],

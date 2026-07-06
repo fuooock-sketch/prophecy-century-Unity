@@ -71,7 +71,7 @@ namespace ProphecyCentury.UI
 
             if (Input.GetKeyDown(KeyCode.F6))
             {
-                TestSmallMerchantMoraleExtra();
+                TestSmallMerchantSellCount();
             }
 
             if (Input.GetKeyDown(KeyCode.G))
@@ -296,13 +296,13 @@ namespace ProphecyCentury.UI
             RefreshView();
         }
 
-        [ContextMenu("Test Small Merchant Morale Extra")]
-        public void TestSmallMerchantMoraleExtra()
+        [ContextMenu("Test Small Merchant Sell Count")]
+        public void TestSmallMerchantSellCount()
         {
             var session = ProphecyGameSession.Instance;
             if (session == null)
             {
-                Debug.LogWarning("[ProphecyCentury] Cannot test small merchant morale: session missing.");
+                Debug.LogWarning("[ProphecyCentury] Cannot test small merchant sell count: session missing.");
                 return;
             }
 
@@ -314,85 +314,39 @@ namespace ProphecyCentury.UI
             var merchant = session.Data.FindUnit("small_merchant");
             if (merchant == null)
             {
-                Debug.LogWarning("[ProphecyCentury] Cannot test small merchant morale: unit small_merchant missing.");
+                Debug.LogWarning("[ProphecyCentury] Cannot test small merchant sell count: unit small_merchant missing.");
                 return;
             }
 
-            const int simulations = 200;
             var originalRun = session.CurrentRun;
-            var battle = new BattleStubSystem();
             var flow = new RunFlowController();
-            var totalAttacks = 0;
-            var totalExtras = 0;
-            var battlesWithExtra = 0;
-            var battlesWithPendingGold = 0;
-            var battlesWithAppliedGold = 0;
-            var totalPendingGold = 0;
-            var totalAppliedBonusGold = 0;
+            var startCount = ResolveDefinitionStartCount(merchant);
+            var testRun = CreateSmallMerchantSellTestRun(merchant);
+            var successFirst = false;
+            var successSecond = false;
+            var finalCount = 0;
+            var finalBucket = -1;
 
             try
             {
-                for (var i = 0; i < simulations; i += 1)
-                {
-                    var testRun = CreateSmallMerchantRewardTestRun(merchant, i + 1);
-                    session.RestoreRun(testRun);
-
-                    var result = battle.Resolve(testRun);
-                    var attacks = result.Events.Count(item => item.Kind == "attack" && item.SourceUnitId == "small_merchant");
-                    var extras = result.Events.Count(item => item.Kind == "morale_extra" && item.SourceUnitId == "small_merchant");
-                    var pendingGold = testRun.pendingBattleRewards?.nextRoundGold ?? 0;
-
-                    flow.FinishBattlePhase();
-                    flow.ResolveBattleOutcome(result);
-                    var income = ResolveRoundIncome(session.Data.Config, testRun.round);
-                    var appliedBonusGold = Mathf.Max(0, testRun.gold - income);
-
-                    totalAttacks += attacks;
-                    totalExtras += extras;
-                    totalPendingGold += pendingGold;
-                    totalAppliedBonusGold += appliedBonusGold;
-                    if (extras > 0)
-                    {
-                        battlesWithExtra += 1;
-                    }
-
-                    if (pendingGold > 0)
-                    {
-                        battlesWithPendingGold += 1;
-                    }
-
-                    if (appliedBonusGold > 0)
-                    {
-                        battlesWithAppliedGold += 1;
-                    }
-                }
+                session.RestoreRun(testRun);
+                successFirst = flow.SellHandUnit(0);
+                successSecond = flow.SellHandUnit(0);
+                var merchantState = session.CurrentRun.boardUnits.FirstOrDefault(unit => unit.unitId == "small_merchant");
+                finalCount = merchantState?.baseCount ?? 0;
+                finalBucket = merchantState?.manageSellCountBucket ?? -1;
             }
             finally
             {
                 session.RestoreRun(originalRun);
             }
 
-            var rate = session.Data.Config?.moraleExtraAttackRate ?? 0.08f;
-            var expectedChance = Mathf.Min(0.95f, Mathf.Max(0f, merchant.morale * Mathf.Max(0f, rate)));
-            var observedChance = totalAttacks > 0 ? totalExtras / (float)totalAttacks : 0f;
+            var expected = startCount + 2;
             Debug.Log(
-                $"[ProphecyCentury] Small merchant settlement test: simulations={simulations}, " +
-                $"attacks={totalAttacks}, morale_extra={totalExtras}, " +
-                $"battles_with_extra={battlesWithExtra}, battles_with_pending_gold={battlesWithPendingGold}, " +
-                $"battles_with_applied_gold={battlesWithAppliedGold}, pending_gold={totalPendingGold}, " +
-                $"applied_bonus_gold={totalAppliedBonusGold}, " +
-                $"expected_per_attack={expectedChance:P1}, observed_per_attack={observedChance:P1}.");
-        }
-
-        private static int ResolveRoundIncome(GameConfigData config, int round)
-        {
-            if (config?.roundIncomeByRound != null && config.roundIncomeByRound.Length > 0)
-            {
-                var index = Mathf.Clamp(round - 1, 0, config.roundIncomeByRound.Length - 1);
-                return Mathf.Max(0, config.roundIncomeByRound[index]);
-            }
-
-            return (config?.roundIncomeBase ?? 2) + round;
+                $"[ProphecyCentury] Small merchant sell-count test: sells=2, " +
+                $"success_first={successFirst}, success_second={successSecond}, " +
+                $"count={finalCount}, expected={expected}, bucket={finalBucket}, " +
+                $"passed={successFirst && successSecond && finalCount == expected && finalBucket == 0}.");
         }
 
         private void EnsureToolbar()
@@ -447,7 +401,7 @@ namespace ProphecyCentury.UI
             CreateToolbarButton("GM\u6218\u6597 F10", ResolveOneBattle);
             CreateToolbarButton("\u5237\u65b0 F8", RefreshView);
             CreateToolbarButton("\u5b9e\u65f6 F7", ToggleRealtimeBattlePreview);
-            CreateToolbarButton("\u8ffd\u51fb\u6d4b\u8bd5 F6", TestSmallMerchantMoraleExtra);
+            CreateToolbarButton("出售测试 F6", TestSmallMerchantSellCount);
             CreateToolbarButton("\u91d1\u5e01 +10 G", AddGold);
             CreateToolbarButton("\u5e78\u8fd0 B", MaximizeLuck);
             CreateToolbarButton("\u58eb\u6c14 N", MaximizeMorale);
@@ -507,20 +461,26 @@ namespace ProphecyCentury.UI
             };
         }
 
-        private static RunState CreateSmallMerchantRewardTestRun(UnitDefinition definition, int round)
+        private static RunState CreateSmallMerchantSellTestRun(UnitDefinition definition)
         {
+            var startCount = ResolveDefinitionStartCount(definition);
             return new RunState
             {
                 campaignId = "south_town_adventure",
-                heroId = "james",
-                state = "battle",
+                heroId = "playtest",
+                state = "manage",
                 gold = 0,
-                round = Mathf.Max(1, round),
+                round = 1,
                 playerHp = 9999,
                 shopLevel = 1,
                 shopUpgradeAnchorRound = 1,
                 campaignRoundLimit = 9999,
                 pendingBattleRewards = new BattleRewardState(),
+                handCards =
+                {
+                    CreateCard("bright_warrior"),
+                    CreateCard("elf")
+                },
                 boardUnits =
                 {
                     new BoardUnitState
@@ -529,12 +489,20 @@ namespace ProphecyCentury.UI
                         name = definition.name,
                         star = definition.star,
                         boardSlotId = "4-1",
-                        shopBuffHp = 9999,
-                        shopBuffAttack = 1 - definition.attack,
-                        shopBuffDefense = 9999
+                        baseCount = startCount
                     }
                 }
             };
+        }
+
+        private static int ResolveDefinitionStartCount(UnitDefinition definition)
+        {
+            if (definition == null)
+            {
+                return 1;
+            }
+
+            return Mathf.Max(1, definition.defaultCount > 0 ? definition.defaultCount : definition.startCount > 0 ? definition.startCount : definition.baseCount > 0 ? definition.baseCount : 1);
         }
 
         private static BoardUnitState CloneToBoard(UnitCardState card, string slotId)
@@ -555,6 +523,7 @@ namespace ProphecyCentury.UI
                 boardAuraAttack = card.boardAuraAttack,
                 baseCount = card.baseCount,
                 maxCount = card.maxCount,
+                manageSellCountBucket = card.manageSellCountBucket,
                 boardSlotId = slotId
             };
         }

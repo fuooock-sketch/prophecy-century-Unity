@@ -641,11 +641,12 @@ namespace ProphecyCentury.Systems
                 case "on_gift_action_team_gain_attack_every_n":
                     if (eventType == "on_gift_action" && talent.threshold > 0)
                     {
-                        var bucket = runState.manageResources.forestGiftActions / talent.threshold;
-                        if (bucket > owner.manageGiftActionBucket)
+                        var threshold = Math.Max(1, talent.threshold);
+                        owner.manageGiftActionBucket += 1;
+                        while (owner.manageGiftActionBucket >= threshold)
                         {
-                            var gain = (bucket - owner.manageGiftActionBucket) * Attack(talent, owner, 0);
-                            owner.manageGiftActionBucket = bucket;
+                            owner.manageGiftActionBucket -= threshold;
+                            var gain = Attack(talent, owner, 0);
                             foreach (var unit in runState.boardUnits)
                             {
                                 GainCount(runState, unit, gain, owner, processed, depth);
@@ -656,11 +657,12 @@ namespace ProphecyCentury.Systems
                 case "on_gift_action_self_gain_count_every_n":
                     if (eventType == "on_gift_action" && talent.threshold > 0)
                     {
-                        var bucket = runState.manageResources.forestGiftActions / talent.threshold;
-                        if (bucket > owner.manageGiftActionBucket)
+                        var threshold = Math.Max(1, talent.threshold);
+                        owner.manageGiftActionBucket += 1;
+                        while (owner.manageGiftActionBucket >= threshold)
                         {
-                            var gain = (bucket - owner.manageGiftActionBucket) * Value(talent, owner, Attack(talent, owner, 0));
-                            owner.manageGiftActionBucket = bucket;
+                            owner.manageGiftActionBucket -= threshold;
+                            var gain = Value(talent, owner, Attack(talent, owner, 0));
                             GainCount(runState, owner, gain, owner, processed, depth);
                         }
                     }
@@ -676,6 +678,18 @@ namespace ProphecyCentury.Systems
                         }
 
                         GainCount(runState, owner, Value(talent, owner), owner, processed, depth);
+                    }
+                    break;
+                case "on_sell_every_n_self_gain_count":
+                    if (eventType == "on_sell" && target != null)
+                    {
+                        var threshold = Math.Max(1, talent.threshold);
+                        owner.manageSellCountBucket += 1;
+                        while (owner.manageSellCountBucket >= threshold)
+                        {
+                            owner.manageSellCountBucket -= threshold;
+                            GainCount(runState, owner, Value(talent, owner), target, processed, depth);
+                        }
                     }
                     break;
                 case "on_receive_gift_total_team_gain_power_every_n":
@@ -1041,6 +1055,12 @@ namespace ProphecyCentury.Systems
                 manageFaithCountGainBucket = card.manageFaithCountGainBucket,
                 manageRoundForestGemGiftBonusCount = card.manageRoundForestGemGiftBonusCount,
                 manageRoundStatRetriggerTriggered = card.manageRoundStatRetriggerTriggered,
+                manageGiftActionBucket = card.manageGiftActionBucket,
+                manageAttackGainBucket = card.manageAttackGainBucket,
+                manageSellCountBucket = card.manageSellCountBucket,
+                manageReceiveGiftPowerBucket = card.manageReceiveGiftPowerBucket,
+                manageReceiveGiftDiscoverTriggered = card.manageReceiveGiftDiscoverTriggered,
+                manageRoundAttackRewardTriggered = card.manageRoundAttackRewardTriggered,
                 pendingNextRoundTempCount = card.pendingNextRoundTempCount
             };
         }
@@ -1099,18 +1119,49 @@ namespace ProphecyCentury.Systems
             {
                 foreach (var talent in GetTalents(owner).Where(talent => talent.kind == "forest_gem_gift_count_bonus_aura"))
                 {
-                    if (owner.manageRoundForestGemGiftBonusCount >= Math.Max(1, talent.count > 0 ? talent.count : 5))
+                    bonus += Math.Max(0, owner.manageRoundForestGemGiftBonusCount) * Math.Max(1, Value(talent, owner));
+                }
+            }
+
+            return bonus;
+        }
+
+        private void TriggerForestGemGiftCountBonusAuras(RunState runState, UnitCardState target)
+        {
+            if (runState?.boardUnits == null || target == null)
+            {
+                return;
+            }
+
+            foreach (var owner in runState.boardUnits.Where(unit => unit != null))
+            {
+                foreach (var talent in GetTalents(owner).Where(talent => talent.kind == "forest_gem_gift_count_bonus_aura"))
+                {
+                    if (!ForestGemGiftCountBonusAuraAcceptsTarget(runState, talent, target))
+                    {
+                        continue;
+                    }
+
+                    var limit = Math.Max(1, talent.count > 0 ? talent.count : 5);
+                    if (owner.manageRoundForestGemGiftBonusCount >= limit)
                     {
                         continue;
                     }
 
                     owner.manageRoundForestGemGiftBonusCount += 1;
-                    bonus += Math.Max(1, Value(talent, owner));
                     _abilityTriggered = true;
                 }
             }
+        }
 
-            return bonus;
+        private static bool ForestGemGiftCountBonusAuraAcceptsTarget(RunState runState, SkillDefinition talent, UnitCardState target)
+        {
+            if (string.Equals(talent?.targetMode, "any", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return target is BoardUnitState boardTarget && runState.boardUnits.Contains(boardTarget);
         }
 
         public void ResolveHeroBoardLeave(RunState runState, BoardUnitState leavingUnit)
@@ -1288,6 +1339,7 @@ namespace ProphecyCentury.Systems
             }
 
             var totalGain = ApplyHeroCountGainBonuses(runState, target, amount, source, suppressFeedback);
+            TriggerForestGemGiftCountBonusAuras(runState, target);
             Dispatch(runState, "on_gain_count", target, "gain_count", source, totalGain, processed, depth + 1);
         }
 
@@ -1642,6 +1694,7 @@ namespace ProphecyCentury.Systems
                 case "on_gift_action_self_gain_count_every_n":
                     return eventType == "on_gift_action";
                 case "on_other_sell_absorb_attached_gems_and_gain_attack":
+                case "on_sell_every_n_self_gain_count":
                     return eventType == "on_sell";
                 case "on_instant_evolve_self_gift_and_gain_attack":
                     return eventType == "on_instant_evolve";

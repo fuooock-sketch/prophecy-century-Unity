@@ -94,6 +94,7 @@ namespace ProphecyCentury.Model
         public bool manageRoundStatRetriggerTriggered;
         public int manageGiftActionBucket;
         public int manageAttackGainBucket;
+        public int manageSellCountBucket;
         public int manageReceiveGiftPowerBucket;
         public bool manageReceiveGiftDiscoverTriggered;
         public bool manageRoundAttackRewardTriggered;
