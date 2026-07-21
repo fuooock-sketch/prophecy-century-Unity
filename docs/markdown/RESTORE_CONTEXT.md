@@ -1561,7 +1561,7 @@ Use the already-open Unity Editor. Do not start a second Unity batchmode process
   - Excel units: 71.
   - Unity units: 73.
   - Matched scalar/text diffs: 0.
-  - Extra Unity units retained: `精锐羽卫`, `幻影`.
+  - Extra Unity unit retained: `幻影`; removed deprecated `精锐羽卫`.
 - Updated `Assets/Resources/Data/unit_data.json` skill structures to follow the confirmed Excel text for the divergent units:
   - `精灵`: entry attack gain is now `+20/+40`.
   - `僧侣`: same-row units count as `甘地`; battle start gains `+50` attack per `莱特` believer, golden also gains `+50` morale per believer.
@@ -1834,3 +1834,14 @@ Completed from the previous roadmap:
 - Runtime tooltip restoration: shop, hand, and board unit hover tips with stats and talent/battle text.
 
 Risk note: remaining battle steps 1-2 are the largest and may split further because original combat and skill code has many trigger-specific edge cases.
+### 2026-07-19 - Element Skill Audit Follow-up
+
+- 水元素当前不符合文案预期：
+  - 管理阶段会把旧制 `attack: 20/40` 归一化为 `+2/+4`，且能按 `typeLabel` 识别元素单位。
+  - 权威战斗没有归一化 `20/40`，并且战斗侧 `HasTag` 只检查空的 `tags` 数组，通常导致光环没有目标。
+  - 实时战斗尚未实现 `while_on_board_per_ally_id_buff_type_attack`。
+- 后续修复应统一管理、权威战斗、实时战斗三端的数值归一化、元素目标识别及死亡后光环撤销行为。
+- 低级元素使审计：
+  - 管理阶段的元素入场与同名单位 `+1/+2` 数量逻辑符合文案。
+  - 战斗配置缺少 `mode: highest_unit_count` 和 `threshold: 10`，召唤火元素会错误退回默认数量，而不是继承场上最高火元素数量且至少为 10。
+  - 权威战斗会寻找最近空格；实时战斗使用固定邻近坐标，未验证占格和真正的最近空格。

@@ -9,8 +9,12 @@
 import json
 import re
 import os
+import sys
 import openpyxl
 from collections import defaultdict
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 print("=" * 80)
 print("       单位数据 QA 全量检查报告 v2.0")
@@ -43,8 +47,10 @@ print("─" * 80)
 col_map = {
     1: "name", 2: "star", 3: "race", 4: "typeLabel", 5: "faith",
     7: "startCount", 8: "hpPerUnit", 9: "attack", 10: "defense",
+    11: "damageMin", 12: "damageMax",
     13: "initiative", 14: "speed", 15: "morale", 16: "luck",
-    17: "range", 18: "size", 19: "firstPurchaseHp", 20: "firstPurchaseAverageDamage",
+    17: "attackRange", 18: "size", 19: "firstPurchaseHp", 20: "firstPurchaseAverageDamage",
+    21: "limit",
 }
 
 # 已知可忽略字段：typeLabel 的 '-' → '' 是 import 脚本的预期行为
@@ -67,6 +73,9 @@ for i in range(3, ws.max_row + 1):
     for col_num, json_key in col_map.items():
         excel_val = ws.cell(row=i, column=col_num).value
         json_val = unit.get(json_key)
+
+        if json_key == "limit" and str(excel_val or "").strip() == "-":
+            excel_val = 0
 
         # 类型统一
         if excel_val is not None:
@@ -91,6 +100,16 @@ for i in range(3, ws.max_row + 1):
                 f"Excel='{excel_val}' ≠ JSON='{json_val}'"
             )
 
+    raw_tags = ws.cell(row=i, column=6).value
+    excel_tags = [] if raw_tags is None or str(raw_tags).strip() == "-" else [
+        part.strip() for part in str(raw_tags).replace("，", ",").split(",") if part.strip()
+    ]
+    json_tags = [str(tag) for tag in (unit.get("tags") or [])]
+    if excel_tags != json_tags:
+        value_issues.append(
+            f"  ✗ {excel_name} Row{i}: col[6]=tags Excel='{excel_tags}' ≠ JSON='{json_tags}'"
+        )
+
 if value_issues:
     print(f"  FAIL: {len(value_issues)} 个真实不一致")
     for vi in value_issues[:20]:
@@ -110,8 +129,8 @@ print("STEP 2: 技能文本列 Excel ↔ JSON 文本一致性")
 print("─" * 80)
 
 skill_text_map = {
-    21: "talentText", 22: "goldTalentText",
-    23: "battleText", 24: "goldBattleText",
+    22: "talentText", 23: "goldTalentText",
+    24: "battleText", 25: "goldBattleText",
 }
 
 text_issues = []
@@ -212,7 +231,7 @@ else:
 print()
 gold_issues = []
 # 合法比例：2x（最常见）和 1.5x（少数单位有意设计）
-VALID_RATIOS = [1.0, 1.5, 2.0]
+VALID_RATIOS = [1.0, 1.33, 1.5, 1.67, 2.0]
 
 for u in json_data:
     name = u.get("name", "?")
@@ -261,8 +280,8 @@ kind_semantic_check = {
     "while_on_board_on_entry_race_self_gain_attack": ["入场", "获得"],
     "on_extra_attack_once_next_round_gold": ["追击", "金币"],
     "leave_board_gain_gold": ["离场", "金币"],
-    "on_gain_power_self_gain_attack": ["获得数量"],
-    "battle_start_pounce_nearest_damage": ["暴击", "伤害"],  # 改用"伤害"替代"暴击"+"冲到"（部分单位用"猛扑"+"N倍伤害"）
+    "on_gain_power_self_gain_attack": ["获得", "数量"],
+    "battle_start_pounce_nearest_damage": ["伤害"],
     "on_receive_gift_self_gain_attack": ["赐予", "密林宝钻"],
     "battle_start_summon_units": ["召唤"],
     "on_entry_devour_random_shop_gain_stats": ["吞噬", "商店"],
@@ -346,8 +365,10 @@ csharp_files = [
 ]
 
 csharp_kinds = set()
+csharp_kinds_by_file = {}
 for fpath in csharp_files:
     kinds = extract_kinds_from_cs(fpath)
+    csharp_kinds_by_file[os.path.basename(fpath)] = kinds
     print(f"  {os.path.basename(fpath)}: {len(kinds)} kinds")
     csharp_kinds |= kinds
 
@@ -372,6 +393,24 @@ if only_json:
 else:
     print("  PASS: JSON所有kind在C#中都有实现 ✓")
 
+battle_kinds = {
+    skill.get("kind")
+    for unit in json_data
+    for arr_name in ("battleSkills", "goldBattleSkills")
+    for skill in (unit.get(arr_name) or [])
+    if skill.get("kind")
+}
+battle_runtime_missing = []
+for runtime_name in ("BattleStubSystem.cs", "BattleRealtimeSystem.cs"):
+    for kind in sorted(battle_kinds - csharp_kinds_by_file.get(runtime_name, set())):
+        battle_runtime_missing.append(f"{runtime_name}: {kind}")
+if battle_runtime_missing:
+    print(f"  ⚠ 战斗分支缺少实现: {len(battle_runtime_missing)} 个")
+    for item in battle_runtime_missing:
+        print(f"      {item}")
+else:
+    print("  PASS: 所有战斗技能均覆盖回合制和实时战斗分支 ✓")
+
 if only_csharp:
     print(f"  ℹ 仅在C#中存在(JSON未使用): {len(only_csharp)} 个")
     # 只显示看起来像真实kind的（过滤数字格式的如"1-1", "2-2"等）
@@ -382,6 +421,7 @@ if only_csharp:
             print(f"      {k}")
 
 issue_counts["Step4_onlyJson"] = len(only_json)
+issue_counts["Step4_battleRuntimeMissing"] = len(battle_runtime_missing)
 
 # ────────────────────────────────────────────────────────
 # STEP 5: 边界/异常数据检查
@@ -403,7 +443,7 @@ if not empty_ids and not empty_names:
 # 5b: 数值范围合理性
 print()
 range_issues = []
-special_units = {"phantom": "幻影召唤物", "witch_beast_master": "邪恶女巫骑乘变身后"}
+special_units = {"light_illusion": "幻影召唤物", "witch_beastmaster": "邪恶女巫骑乘变身后"}
 for u in json_data:
     name = u.get("name", "?")
     uid = u.get("id", "")

@@ -47,11 +47,16 @@ assert(manageResolver.includes('HasSelfEntryTalent(target, reason)'), 'entry-eff
 assert(manageResolver.includes('HasSelfEntryTalent(unit, "retrigger")'), 'leave retrigger should only target self entry effects');
 assert(!manageResolver.includes('HasEntryTalent(target)'), 'broad target entry filtering should not remain in listener paths');
 
+const murlocServant = unit(units, 'murloc_servant');
+assert(murlocServant.startCount === 10, 'murloc servant startCount should remain 10');
+assert(manageResolver.includes('AddUnitToHand(runState, talent.unitId, owner, false, true);'), 'entry-created cards should use startCount');
+assert(manageResolver.includes('unit.startCount > 0 ? unit.startCount : ResolveStartCount(unit)'), 'startCount card creation should retain a safe fallback');
+
 const laborer = unit(units, 'laborer');
 const laborerPriceTalents = [...laborer.talents, ...laborer.goldTalents].filter((skill) => skill.kind.includes('on_sell_price'));
 assert(laborerPriceTalents.every((skill) => skill.kind === 'on_sell_price_if_count_threshold'), 'laborer sell price should use count threshold');
 assert(laborerPriceTalents.some((skill) => skill.threshold === 30 && skill.price === 2), 'normal laborer should sell for 2 at count 30');
-assert(laborerPriceTalents.some((skill) => skill.threshold === 30 && skill.price === 3), 'gold laborer should sell for 3 at count 30');
+assert(laborerPriceTalents.some((skill) => skill.threshold === 30 && skill.price === 4), 'gold laborer should sell for 4 at count 30');
 assert(boardSystem.includes('on_sell_price_if_count_threshold'), 'BoardSystem should resolve count-threshold sell price');
 assert(!boardSystem.includes('on_sell_price_if_attack_threshold'), 'BoardSystem should not use attack-threshold sell price');
 

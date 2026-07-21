@@ -23,11 +23,12 @@ namespace ProphecyCentury.Systems
 
         public void RefreshShop(RunState runState)
         {
+            InitializeShopPool(runState);
             var session = ProphecyGameSession.Instance;
             var config = session.Data.Config;
             var slots = ResolveShopSlots(config?.shopSlots, runState.shopLevel);
             var maxStar = ResolveShopMaxStar(config?.shopMaxStar, runState.shopLevel);
-            ReleaseShopCardReservations(runState.shopCards);
+            ReleaseShopCardReservations(runState, runState.shopCards);
             var pool = session.Data.Units
                 .Where(unit => IsAvailableForShop(runState, unit, maxStar))
                 .ToList();
@@ -82,7 +83,7 @@ namespace ProphecyCentury.Systems
                 return null;
             }
 
-            ReleaseShopCardPool(card);
+            ReleaseShopCardPool(runState, card);
             runState.shopCards[index] = null;
             return card;
         }
@@ -163,6 +164,7 @@ namespace ProphecyCentury.Systems
 
         private void PreserveAndFillShop(RunState runState)
         {
+            InitializeShopPool(runState);
             var session = ProphecyGameSession.Instance;
             var config = session.Data.Config;
             var slots = ResolveShopSlots(config?.shopSlots, runState.shopLevel);
@@ -187,16 +189,54 @@ namespace ProphecyCentury.Systems
                 return;
             }
 
-            AdjustShopPoolRemain(unit.unitId, unit.shopPoolContribution);
+            AdjustShopPoolRemain(ProphecyGameSession.Instance.CurrentRun, unit.unitId, unit.shopPoolContribution);
             unit.shopPoolContribution = 0;
             unit.fromShopPurchase = false;
         }
 
+        public bool IsUnitAvailableInPool(RunState runState, string unitId, int count = 1)
+        {
+            if (runState == null || string.IsNullOrWhiteSpace(unitId) || count <= 0)
+            {
+                return false;
+            }
+
+            InitializeShopPool(runState);
+            return GetShopPoolRemain(runState, unitId) >= count;
+        }
+
+        public bool TryTakeDiscoveredCardFromPool(RunState runState, UnitCardState card)
+        {
+            if (runState == null || card == null || string.IsNullOrWhiteSpace(card.unitId))
+            {
+                return false;
+            }
+
+            InitializeShopPool(runState);
+            var cost = GetShopCardPoolCost(card);
+            if (cost <= 0 || GetShopPoolRemain(runState, card.unitId) < cost)
+            {
+                return false;
+            }
+
+            AdjustShopPoolRemain(runState, card.unitId, -cost);
+            card.shopPoolCost = cost;
+            card.shopPoolReserved = false;
+            card.shopPoolContribution = cost;
+            card.fromShopPurchase = false;
+            return true;
+        }
+
         private void InitializeShopPool(RunState runState)
         {
-            if (runState.shopPool.Count > 0)
+            if (runState == null)
             {
                 return;
+            }
+
+            if (runState.shopPool == null)
+            {
+                runState.shopPool = new List<ShopPoolEntryState>();
             }
 
             foreach (var unit in ProphecyGameSession.Instance.Data.Units)
@@ -212,12 +252,24 @@ namespace ProphecyCentury.Systems
                     continue;
                 }
 
-                runState.shopPool.Add(new ShopPoolEntryState
+                var entry = FindShopPoolEntry(runState, unit.id);
+                if (entry == null)
                 {
-                    unitId = unit.id,
-                    baseLimit = limit,
-                    remain = limit
-                });
+                    runState.shopPool.Add(new ShopPoolEntryState
+                    {
+                        unitId = unit.id,
+                        baseLimit = limit,
+                        remain = limit
+                    });
+                    continue;
+                }
+
+                if (entry.baseLimit != limit)
+                {
+                    var checkedOut = Math.Max(0, entry.baseLimit - entry.remain);
+                    entry.baseLimit = limit;
+                    entry.remain = Clamp(limit - checkedOut, 0, limit);
+                }
             }
         }
 
@@ -239,12 +291,16 @@ namespace ProphecyCentury.Systems
         private static int GetShopPoolRemain(RunState runState, string unitId)
         {
             var entry = FindShopPoolEntry(runState, unitId);
-            return entry == null ? int.MaxValue : Math.Max(0, entry.remain);
+            return entry == null ? 0 : Math.Max(0, entry.remain);
         }
 
-        private static void AdjustShopPoolRemain(string unitId, int delta)
+        private static void AdjustShopPoolRemain(RunState runState, string unitId, int delta)
         {
-            var runState = ProphecyGameSession.Instance.CurrentRun;
+            if (runState == null)
+            {
+                return;
+            }
+
             var entry = FindShopPoolEntry(runState, unitId);
             if (entry == null)
             {
@@ -292,13 +348,13 @@ namespace ProphecyCentury.Systems
                 return false;
             }
 
-            AdjustShopPoolRemain(card.unitId, -cost);
+            AdjustShopPoolRemain(runState, card.unitId, -cost);
             card.shopPoolCost = cost;
             card.shopPoolReserved = true;
             return true;
         }
 
-        private static void ReleaseShopCardPool(UnitCardState card)
+        private static void ReleaseShopCardPool(RunState runState, UnitCardState card)
         {
             if (card == null || string.IsNullOrWhiteSpace(card.unitId) || !card.shopPoolReserved)
             {
@@ -306,14 +362,14 @@ namespace ProphecyCentury.Systems
             }
 
             card.shopPoolReserved = false;
-            AdjustShopPoolRemain(card.unitId, GetShopCardPoolCost(card));
+            AdjustShopPoolRemain(runState, card.unitId, GetShopCardPoolCost(card));
         }
 
-        private static void ReleaseShopCardReservations(IEnumerable<UnitCardState> cards)
+        private static void ReleaseShopCardReservations(RunState runState, IEnumerable<UnitCardState> cards)
         {
             foreach (var card in cards)
             {
-                ReleaseShopCardPool(card);
+                ReleaseShopCardPool(runState, card);
             }
         }
 

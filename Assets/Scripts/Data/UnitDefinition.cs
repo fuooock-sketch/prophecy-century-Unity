@@ -47,6 +47,8 @@ namespace ProphecyCentury.Data
         public SkillDefinition[] battleSkills;
         public SkillDefinition[] goldBattleSkills;
         public int sizeTier;
+
+        public float EffectiveRange => attackRange > 0f ? attackRange : range;
     }
 
     [Serializable]
@@ -126,6 +128,7 @@ namespace ProphecyCentury.Data
         public float tick;
         public string summonUnitId;
         public string transformUnitId;
+        public string[] unitIds;
         public string[] targetTags;
         public string[] excludeUnitIds;
         public StatDeltaDefinition stats;
@@ -133,6 +136,7 @@ namespace ProphecyCentury.Data
         public bool forceCrit;
         public bool temporary;
         public bool disableAttack;
+        public bool disableMovement;
         public bool byFaith;
         public bool allowEvents;
     }

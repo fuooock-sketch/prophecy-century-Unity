@@ -120,6 +120,8 @@ namespace ProphecyCentury.UI
         private RectTransform _dragIndicatorRect;
         private RectTransform _dragArrowBody;
         private RectTransform _dragArrowHead;
+        private GameObject _dragPreviewRoot;
+        private RectTransform _dragPreviewRect;
         private Canvas _dragCanvas;
         private Camera _dragEventCamera;
         private Vector2 _dragArrowStartScreen;
@@ -155,6 +157,7 @@ namespace ProphecyCentury.UI
             public Color BaseColor;
             public Color AvailableColor;
             public Color HoverColor;
+            public Color InvalidColor;
         }
 
         private struct BattleRectTransformState
@@ -216,6 +219,8 @@ namespace ProphecyCentury.UI
             public bool PlayerSide;
             public bool Dead;
             public bool IsSummon;
+            public bool VisuallyAttached;
+            public Text AttachmentBadge;
             public float SummonDuration;
             public float StunRemaining;
             public float MoveLockRemaining;
@@ -296,11 +301,15 @@ namespace ProphecyCentury.UI
             public int Count;
         }
 
+        private ConfirmDialog _confirmDialog;
+        private const float PanelCrossFadeDuration = 0.3f;
+
         private void Start()
         {
             ProphecyGameSession.EnsureInstance();
             var canvas = GetComponentInParent<Canvas>();
-            RuntimeUiBootstrap.WirePrefabButtons(canvas != null ? canvas.gameObject : gameObject);
+            var root = canvas != null ? canvas.gameObject : gameObject;
+            RuntimeUiBootstrap.WirePrefabButtons(root);
 
             if (ProphecyGameSession.Instance == null)
             {
@@ -308,7 +317,90 @@ namespace ProphecyCentury.UI
                 return;
             }
 
+            _confirmDialog = ConfirmDialog.FindOrCreate(root.transform);
             ShowTitle();
+        }
+
+        /// <summary>
+        /// 从标题界面读取存档继续游戏。无存档时提示。
+        /// </summary>
+        public void ContinueGame()
+        {
+            if (!File.Exists(_saveGame.SavePath))
+            {
+                ShowFloatingText("没有找到存档");
+                RuntimeSfxPlayer.PlayError();
+                return;
+            }
+
+            _saveGame.LoadCurrentRun();
+            ShowRun();
+            WriteLog("已读取存档。");
+            RefreshView();
+        }
+
+        /// <summary>
+        /// 在标题界面点击"退出游戏"时弹出确认对话框。
+        /// </summary>
+        public void ShowExitConfirmDialog()
+        {
+            if (_confirmDialog == null) return;
+            _confirmDialog.Show("退出游戏", "确定要退出预言世纪吗？", QuitGame);
+        }
+
+        private static void QuitGame()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
+        /// <summary>
+        /// 在两个面板之间执行淡入淡出过渡。
+        /// </summary>
+        private void CrossFadePanels(GameObject from, GameObject to)
+        {
+            StartCoroutine(CrossFadePanelsCoroutine(from, to, PanelCrossFadeDuration));
+        }
+
+        private static IEnumerator CrossFadePanelsCoroutine(GameObject from, GameObject to, float duration)
+        {
+            if (to != null)
+            {
+                to.SetActive(true);
+                to.transform.SetAsLastSibling();
+            }
+
+            var fromGroup = from != null ? EnsureCanvasGroup(from) : null;
+            var toGroup = to != null ? EnsureCanvasGroup(to) : null;
+
+            if (fromGroup != null) fromGroup.alpha = 1f;
+            if (toGroup != null) toGroup.alpha = 0f;
+
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                if (fromGroup != null) fromGroup.alpha = 1f - t;
+                if (toGroup != null) toGroup.alpha = t;
+                yield return null;
+            }
+
+            if (from != null) from.SetActive(false);
+            if (fromGroup != null) fromGroup.alpha = 1f;
+            if (toGroup != null) toGroup.alpha = 1f;
+        }
+
+        private static CanvasGroup EnsureCanvasGroup(GameObject obj)
+        {
+            var group = obj.GetComponent<CanvasGroup>();
+            if (group == null) group = obj.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = true;
+            group.interactable = true;
+            return group;
         }
 
         public void ShowTitle()
@@ -987,7 +1079,8 @@ namespace ProphecyCentury.UI
 
             if (IsForestGemHandCard(index))
             {
-                var selectedGemTargetSlot = Run?.boardUnits.Any(unit => unit.boardSlotId == _selectedBoardSlotId) == true ? _selectedBoardSlotId : null;
+                var selectedGemTarget = FindBoardUnitAtSlot(_selectedBoardSlotId);
+                var selectedGemTargetSlot = selectedGemTarget?.boardSlotId;
                 if (UseForestGemCardOnSlot(index, selectedGemTargetSlot))
                 {
                     return;
@@ -998,7 +1091,7 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            var targetSlot = GetSelectedEmptyBoardSlot();
+            var targetSlot = GetSelectedEmptyBoardSlot(index);
             var deployedGoldenCard = IsGoldenHandCard(index);
             var needsTargetSelection = IsTargetedEntryPowerHandCard(index);
             var noBoardSlot = string.IsNullOrWhiteSpace(targetSlot);
@@ -1053,7 +1146,7 @@ namespace ProphecyCentury.UI
 
             var deployedGoldenCard = IsGoldenHandCard(index);
             var needsTargetSelection = IsTargetedEntryPowerHandCard(index);
-            var slotOccupied = Run != null && Run.boardUnits.Any(unit => unit.boardSlotId == boardSlotId);
+            var slotOccupied = FindBoardUnitAtSlot(boardSlotId) != null;
             var before = CaptureUnitNumberSnapshots();
             ClearPendingSynthesisSfx();
             var success = _flow.DeployUnit(index, boardSlotId, needsTargetSelection);
@@ -1122,7 +1215,7 @@ namespace ProphecyCentury.UI
                 return false;
             }
 
-            var target = Run?.boardUnits.FirstOrDefault(unit => unit.boardSlotId == targetSlotId);
+            var target = FindBoardUnitAtSlot(targetSlotId);
             if (target == null)
             {
                 RuntimeSfxPlayer.PlayError();
@@ -1134,7 +1227,7 @@ namespace ProphecyCentury.UI
             var sourceSlotId = _pendingTargetedEntrySourceSlotId;
             var before = CaptureUnitNumberSnapshots();
             ClearPendingSynthesisSfx();
-            var value = _flow.ResolveTargetedEntryPower(sourceSlotId, targetSlotId);
+            var value = _flow.ResolveTargetedEntryPower(sourceSlotId, target.boardSlotId);
             var feedbackEvents = _flow.ConsumeManageFeedbackEvents();
             var openGoldReward = _pendingTargetedEntryGoldReward;
             _pendingTargetedEntrySourceSlotId = null;
@@ -1167,7 +1260,7 @@ namespace ProphecyCentury.UI
 
         private bool UseForestGemCardOnSlot(int index, string boardSlotId)
         {
-            var target = Run?.boardUnits.FirstOrDefault(unit => unit.boardSlotId == boardSlotId);
+            var target = FindBoardUnitAtSlot(boardSlotId);
             if (target == null)
             {
                 RuntimeSfxPlayer.PlayError();
@@ -1177,7 +1270,7 @@ namespace ProphecyCentury.UI
 
             var before = CaptureUnitNumberSnapshots();
             var expectedCountGain = ResolveCurrentForestGemReinforceCount();
-            var success = _flow.UseForestGemCard(index, boardSlotId);
+            var success = _flow.UseForestGemCard(index, target.boardSlotId);
             var feedbackEvents = success ? _flow.ConsumeManageFeedbackEvents() : null;
             if (success)
             {
@@ -1186,7 +1279,7 @@ namespace ProphecyCentury.UI
                 RuntimeSfxPlayer.PlayAbilityTrigger();
                 PlayAbilitySfxIfNeeded();
                 PlaySynthesisSfxIfNeeded();
-                ShowUnitNumberFloatingText(GetBoardSlotRect(boardSlotId), $"获得数量+{expectedCountGain}", new Color32(112, 236, 166, 255));
+                ShowUnitNumberFloatingText(GetBoardSlotRect(target.boardSlotId), $"获得数量+{expectedCountGain}", new Color32(112, 236, 166, 255));
                 WriteLog($"已对 {target.name} 使用密林宝钻，获得数量 +{expectedCountGain}。");
             }
             else
@@ -1277,7 +1370,7 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            var unit = Run.boardUnits.FirstOrDefault(item => item.boardSlotId == boardSlotId);
+            var unit = FindBoardUnitAtSlot(boardSlotId);
             if (!string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId))
             {
                 ResolvePendingTargetedEntryOnSlot(boardSlotId);
@@ -1290,7 +1383,9 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(_selectedBoardSlotId) && _selectedBoardSlotId != boardSlotId)
+            if (!string.IsNullOrWhiteSpace(_selectedBoardSlotId)
+                && _selectedBoardSlotId != boardSlotId
+                && unit?.boardSlotId != _selectedBoardSlotId)
             {
                 MoveBoardUnitToSlot(_selectedBoardSlotId, boardSlotId);
                 return;
@@ -1320,6 +1415,7 @@ namespace ProphecyCentury.UI
                 ? RectTransformUtility.WorldToScreenPoint(GetRuntimeDragCamera(), originRect.TransformPoint(originRect.rect.center))
                 : eventData != null ? eventData.pressPosition : (Vector2)Input.mousePosition;
             _dragSnapBoardSlotId = null;
+            CreateRuntimeDragPreview(originRect);
             RuntimeSfxPlayer.PlayCardSelect();
             RuntimeUnitTooltip.SetSuppressed(true);
             CacheRuntimeDragBoardSlots();
@@ -1343,6 +1439,7 @@ namespace ProphecyCentury.UI
             }
 
             var targetScreenPosition = ResolveRuntimeDragTarget(pointerScreenPosition);
+            UpdateRuntimeDragPreview(pointerScreenPosition);
             UpdateRuntimeDragIndicator(targetScreenPosition);
         }
 
@@ -1476,8 +1573,110 @@ namespace ProphecyCentury.UI
             headText.raycastTarget = false;
         }
 
+        private void CreateRuntimeDragPreview(RectTransform originRect)
+        {
+            ClearRuntimeDragPreview();
+            if (_dragIndicatorRoot == null || Run == null)
+            {
+                return;
+            }
+
+            UnitCardState card = null;
+            UnitDefinition definition = null;
+            var displayZone = "hand";
+            var displayIndex = _dragHandIndex;
+            var displaySlotId = _dragBoardSlotId;
+            var previewMode = UnitCardPresentationMode.List;
+
+            if (_dragSource == "hand")
+            {
+                if (_dragHandIndex < 0 || _dragHandIndex >= Run.handCards.Count)
+                {
+                    return;
+                }
+
+                card = Run.handCards[_dragHandIndex];
+            }
+            else if (_dragSource == "board")
+            {
+                card = FindBoardUnitAtSlot(_dragBoardSlotId);
+                displayZone = "board";
+                displayIndex = -1;
+                displaySlotId = (card as BoardUnitState)?.boardSlotId ?? _dragBoardSlotId;
+                previewMode = UnitCardPresentationMode.Board;
+            }
+
+            if (card == null)
+            {
+                return;
+            }
+
+            definition = ProphecyGameSession.Instance.Data.FindUnit(card.unitId);
+            var displayCard = CreateDisplayCountCard(definition, card, displayZone, displayIndex, displaySlotId);
+
+            _dragPreviewRoot = new GameObject("DragCardPreview", typeof(RectTransform), typeof(CanvasGroup));
+            _dragPreviewRoot.transform.SetParent(_dragIndicatorRoot.transform, false);
+            _dragPreviewRoot.transform.SetAsLastSibling();
+            _dragPreviewRect = _dragPreviewRoot.GetComponent<RectTransform>();
+            _dragPreviewRect.anchorMin = new Vector2(0.5f, 0.5f);
+            _dragPreviewRect.anchorMax = new Vector2(0.5f, 0.5f);
+            _dragPreviewRect.pivot = new Vector2(0.5f, 0.5f);
+            var previewSize = originRect != null && originRect.rect.size.sqrMagnitude > 1f
+                ? originRect.rect.size
+                : previewMode == UnitCardPresentationMode.Board ? new Vector2(112f, 136f) : new Vector2(180f, 82f);
+            _dragPreviewRect.sizeDelta = previewSize;
+
+            var group = _dragPreviewRoot.GetComponent<CanvasGroup>();
+            group.alpha = 0.92f;
+            group.blocksRaycasts = false;
+            group.interactable = false;
+
+            var view = UnitCardView.Instantiate(_dragPreviewRoot.transform, previewMode);
+            var viewRect = view.GetComponent<RectTransform>();
+            viewRect.anchorMin = Vector2.zero;
+            viewRect.anchorMax = Vector2.one;
+            viewRect.offsetMin = Vector2.zero;
+            viewRect.offsetMax = Vector2.zero;
+            view.Bind(definition, displayCard, previewMode, GetUnitCardRaceStyles(), null, false);
+            if (displayZone == "board")
+            {
+                ApplyBoardCountBadge(view, definition, displayCard);
+            }
+
+            foreach (var graphic in _dragPreviewRoot.GetComponentsInChildren<Graphic>(true))
+            {
+                graphic.raycastTarget = false;
+            }
+        }
+
+        private void UpdateRuntimeDragPreview(Vector2 pointerScreenPosition)
+        {
+            if (_dragIndicatorRect == null || _dragPreviewRect == null)
+            {
+                return;
+            }
+
+            var camera = GetRuntimeDragCamera();
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(_dragIndicatorRect, pointerScreenPosition, camera, out var localPoint))
+            {
+                _dragPreviewRect.anchoredPosition = localPoint;
+            }
+        }
+
+        private void ClearRuntimeDragPreview()
+        {
+            if (_dragPreviewRoot != null)
+            {
+                Destroy(_dragPreviewRoot);
+            }
+
+            _dragPreviewRoot = null;
+            _dragPreviewRect = null;
+        }
+
         private void ClearRuntimeDragIndicator()
         {
+            ClearRuntimeDragPreview();
             if (_dragIndicatorRoot != null)
             {
                 Destroy(_dragIndicatorRoot);
@@ -1508,7 +1707,7 @@ namespace ProphecyCentury.UI
                     continue;
                 }
 
-                var occupied = Run != null && Run.boardUnits.Any(unit => unit.boardSlotId == target.BoardSlotId);
+                var occupied = FindBoardUnitAtSlot(target.BoardSlotId) != null;
                 var visual = new RuntimeDragBoardSlotVisual
                 {
                     SlotId = target.BoardSlotId,
@@ -1517,7 +1716,8 @@ namespace ProphecyCentury.UI
                     Occupied = occupied,
                     BaseColor = image.color,
                     AvailableColor = new Color32(72, 114, 96, 235),
-                    HoverColor = new Color32(100, 178, 130, 255)
+                    HoverColor = new Color32(100, 178, 130, 255),
+                    InvalidColor = new Color32(142, 64, 58, 245)
                 };
 
                 _dragBoardSlots.Add(visual);
@@ -1555,12 +1755,6 @@ namespace ProphecyCentury.UI
                     continue;
                 }
 
-                if (!IsValidRuntimeDragBoardTarget(visual.SlotId))
-                {
-                    visual.Image.color = visual.BaseColor;
-                    continue;
-                }
-
                 var center = RectTransformUtility.WorldToScreenPoint(camera, visual.Rect.TransformPoint(visual.Rect.rect.center));
                 var containsPointer = RectTransformUtility.RectangleContainsScreenPoint(visual.Rect, pointerScreenPosition, camera);
                 var distance = Vector2.Distance(pointerScreenPosition, center);
@@ -1573,7 +1767,7 @@ namespace ProphecyCentury.UI
                     }
                 }
 
-                visual.Image.color = visual.AvailableColor;
+                visual.Image.color = IsValidRuntimeDragBoardTarget(visual.SlotId) ? visual.AvailableColor : visual.BaseColor;
             }
 
             if (best == null)
@@ -1581,9 +1775,64 @@ namespace ProphecyCentury.UI
                 return pointerScreenPosition;
             }
 
-            best.Image.color = best.HoverColor;
-            _dragSnapBoardSlotId = best.SlotId;
+            var bestValid = IsValidRuntimeDragBoardTarget(best.SlotId);
+            var previewSlots = ResolveRuntimeDragAffectedSlots(best.SlotId).ToList();
+            if (previewSlots.Count == 0)
+            {
+                previewSlots.Add(best.SlotId);
+            }
+
+            var previewSet = new HashSet<string>(previewSlots);
+            foreach (var visual in _dragBoardSlots)
+            {
+                if (visual?.Image != null && previewSet.Contains(visual.SlotId))
+                {
+                    visual.Image.color = bestValid ? visual.HoverColor : visual.InvalidColor;
+                }
+            }
+
+            if (bestValid)
+            {
+                _dragSnapBoardSlotId = best.SlotId;
+            }
+
             return RectTransformUtility.WorldToScreenPoint(camera, best.Rect.TransformPoint(best.Rect.rect.center));
+        }
+
+        private IEnumerable<string> ResolveRuntimeDragAffectedSlots(string boardSlotId)
+        {
+            if (Run == null || string.IsNullOrWhiteSpace(boardSlotId))
+            {
+                return Enumerable.Empty<string>();
+            }
+
+            if (_dragSource == "hand")
+            {
+                if (IsForestGemHandCard(_dragHandIndex))
+                {
+                    var target = FindBoardUnitAtSlot(boardSlotId);
+                    return target == null ? Enumerable.Empty<string>() : BoardSystem.GetOccupiedBoardSlots(target);
+                }
+
+                var card = _dragHandIndex >= 0 && _dragHandIndex < Run.handCards.Count ? Run.handCards[_dragHandIndex] : null;
+                var definition = card == null ? null : ProphecyGameSession.Instance.Data.FindUnit(card.unitId);
+                return BoardSystem.GetOccupiedBoardSlots(definition, boardSlotId);
+            }
+
+            if (_dragSource == "board")
+            {
+                var affectedSlots = _flow.BoardSystem.GetMoveAffectedBoardSlots(Run, _dragBoardSlotId, boardSlotId);
+                if (affectedSlots.Count > 0)
+                {
+                    return affectedSlots;
+                }
+
+                var moving = FindBoardUnitAtSlot(_dragBoardSlotId);
+                var definition = moving == null ? null : ProphecyGameSession.Instance.Data.FindUnit(moving.unitId);
+                return BoardSystem.GetOccupiedBoardSlots(definition, boardSlotId);
+            }
+
+            return Enumerable.Empty<string>();
         }
 
         private void UpdateRuntimeDragIndicator(Vector2 targetScreenPosition)
@@ -1620,13 +1869,13 @@ namespace ProphecyCentury.UI
             if (_dragSource == "hand")
             {
                 return IsForestGemHandCard(_dragHandIndex)
-                    ? Run.boardUnits.Any(unit => unit.boardSlotId == boardSlotId)
-                    : !Run.boardUnits.Any(unit => unit.boardSlotId == boardSlotId);
+                    ? FindBoardUnitAtSlot(boardSlotId) != null
+                    : CanDeployHandCardToSlot(_dragHandIndex, boardSlotId);
             }
 
             if (_dragSource == "board")
             {
-                return boardSlotId != _dragBoardSlotId;
+                return _flow.BoardSystem.CanMoveBoardUnit(Run, _dragBoardSlotId, boardSlotId);
             }
 
             return false;
@@ -2373,6 +2622,7 @@ namespace ProphecyCentury.UI
                 manageRoundStatRetriggerTriggered = card.manageRoundStatRetriggerTriggered,
                 manageGiftActionBucket = card.manageGiftActionBucket,
                 manageAttackGainBucket = card.manageAttackGainBucket,
+                manageCountGainEventProgress = card.manageCountGainEventProgress,
                 manageSellCountBucket = card.manageSellCountBucket,
                 manageReceiveGiftPowerBucket = card.manageReceiveGiftPowerBucket,
                 manageReceiveGiftDiscoverTriggered = card.manageReceiveGiftDiscoverTriggered,
@@ -2380,6 +2630,7 @@ namespace ProphecyCentury.UI
                 pendingNextRoundTempCount = card.pendingNextRoundTempCount,
                 pendingNextRoundTempAttack = card.pendingNextRoundTempAttack,
                 pendingNextRoundTempPower = card.pendingNextRoundTempPower,
+                pendingNextRoundPermanentCount = card.pendingNextRoundPermanentCount,
                 pendingNextRoundPermanentHp = card.pendingNextRoundPermanentHp,
                 pendingNextRoundPermanentPower = card.pendingNextRoundPermanentPower,
                 pendingNextRoundPermanentLuck = card.pendingNextRoundPermanentLuck,
@@ -3813,7 +4064,7 @@ namespace ProphecyCentury.UI
                 Speed = Mathf.Max(1, definition.speed),
                 Luck = Mathf.Max(0, definition.luck),
                 Morale = Mathf.Max(0, definition.morale),
-                Range = Mathf.Max(1f, definition.range),
+                Range = Mathf.Max(1f, definition.EffectiveRange),
                 Size = Mathf.Max(20, definition.size),
                 AttackInterval = Mathf.Max(0.2f, definition.attackInterval)
             };
@@ -3949,6 +4200,10 @@ namespace ProphecyCentury.UI
                 .Where(IsPounceSkillEvent)
                 .OrderBy(item => item.Time)
                 .ToList();
+            var attachmentEvents = (result?.Events ?? new List<BattleEvent>())
+                .Where(item => item.Kind == "attach" || item.Kind == "attached_attack" || item.Kind == "attached_death")
+                .OrderBy(item => item.Time)
+                .ToList();
             var pendingMoraleExtraEvents = (result?.Events ?? new List<BattleEvent>())
                 .Where(item => item.Kind == "morale_extra")
                 .OrderBy(item => item.Time)
@@ -3976,6 +4231,7 @@ namespace ProphecyCentury.UI
             var summonIndex = 0;
             var controlIndex = 0;
             var pounceIndex = 0;
+            var attachmentIndex = 0;
             var luckyCritIndex = 0;
             var snipeLockIndex = 0;
             var snipeChargeIndex = 0;
@@ -4018,6 +4274,24 @@ namespace ProphecyCentury.UI
                     }
 
                     pounceIndex += 1;
+                }
+
+                while (attachmentIndex < attachmentEvents.Count && attachmentEvents[attachmentIndex].Time <= elapsed)
+                {
+                    var attachmentEvent = attachmentEvents[attachmentIndex];
+                    if (attachmentEvent.Kind == "attach")
+                    {
+                        ApplyBattleAttachmentFeedback(views, attachmentEvent, floatingTexts, bursts);
+                    }
+                    else if (attachmentEvent.Kind == "attached_attack")
+                    {
+                        yield return PlayBattleAttachedAttackEffect(views, attachmentEvent, floatingTexts, bursts);
+                    }
+                    else
+                    {
+                        ApplyBattleAttachmentDeathFeedback(views, attachmentEvent, floatingTexts, bursts);
+                    }
+                    attachmentIndex += 1;
                 }
 
                 while (controlIndex < controlEvents.Count && controlEvents[controlIndex].Time <= elapsed)
@@ -4143,6 +4417,17 @@ namespace ProphecyCentury.UI
                     case "skill":
                         yield return PlayBattleAttackEffect(views, battleEvent, floatingTexts, bursts);
                         break;
+                    case "attach":
+                        ApplyBattleAttachmentFeedback(views, battleEvent, floatingTexts, bursts);
+                        yield return WaitAndUpdateBattleEffects(0.24f, floatingTexts, bursts);
+                        break;
+                    case "attached_attack":
+                        yield return PlayBattleAttachedAttackEffect(views, battleEvent, floatingTexts, bursts);
+                        break;
+                    case "attached_death":
+                        ApplyBattleAttachmentDeathFeedback(views, battleEvent, floatingTexts, bursts);
+                        yield return WaitAndUpdateBattleEffects(0.2f, floatingTexts, bursts);
+                        break;
                     case "morale_extra":
                         ApplyBattleSourceCue(views, battleEvent, "士气高涨！", new Color32(255, 218, 96, 255), floatingTexts);
                         yield return WaitAndUpdateBattleEffects(0.18f, floatingTexts, bursts);
@@ -4161,6 +4446,10 @@ namespace ProphecyCentury.UI
                         break;
                     case "crit_multiplier":
                         ApplyCritMultiplierFeedback(battleEvent, views, floatingTexts, bursts);
+                        yield return WaitAndUpdateBattleEffects(0.18f, floatingTexts, bursts);
+                        break;
+                    case "stealth_exit":
+                        ApplyBattleSourceCue(views, battleEvent, "潜行解除", new Color32(170, 190, 210, 255), floatingTexts);
                         yield return WaitAndUpdateBattleEffects(0.18f, floatingTexts, bursts);
                         break;
                     case "damage":
@@ -4350,6 +4639,80 @@ namespace ProphecyCentury.UI
             }
 
             return rect;
+        }
+
+        private void ApplyBattleAttachmentFeedback(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            var source = FindBattleStageView(views, battleEvent.SourcePlayerSide, battleEvent.SourceSlotId, battleEvent.SourceName);
+            var host = FindBattleStageView(views, battleEvent.TargetPlayerSide, battleEvent.TargetSlotId, battleEvent.TargetName);
+            if (source?.Rect == null || host?.Rect == null)
+            {
+                return;
+            }
+
+            source.VisuallyAttached = true;
+            source.Rect.localScale = Vector3.one * 0.34f;
+            source.Rect.anchoredPosition = host.Rect.anchoredPosition + new Vector2(0f, 52f);
+            if (source.Backing != null)
+            {
+                var color = source.Backing.color;
+                color.a = 0.22f;
+                source.Backing.color = color;
+            }
+            if (source.Label != null)
+            {
+                var color = source.Label.color;
+                color.a = 0.28f;
+                source.Label.color = color;
+            }
+
+            if (host.AttachmentBadge == null)
+            {
+                host.AttachmentBadge = CreateChildText(host.Rect, "双塔附体", 18, TextAnchor.UpperCenter, new Vector2(0f, -8f), new Vector2(0f, -8f));
+                host.AttachmentBadge.color = new Color32(186, 126, 255, 255);
+                host.AttachmentBadge.raycastTarget = false;
+            }
+
+            AddFloatingText("附体", host.Rect.anchoredPosition + new Vector2(0f, 92f), new Color32(206, 150, 255, 255), 28, floatingTexts);
+            SpawnEffectBurst(host.Rect.anchoredPosition, new Color32(174, 94, 255, 175), bursts);
+        }
+
+        private IEnumerator PlayBattleAttachedAttackEffect(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            var host = FindBattleStageView(views, battleEvent.SourcePlayerSide, battleEvent.SourceSlotId, battleEvent.SourceName);
+            var target = FindBattleStageView(views, battleEvent.TargetPlayerSide, battleEvent.TargetSlotId, battleEvent.TargetName);
+            if (host?.Rect == null || target?.Rect == null)
+            {
+                yield break;
+            }
+
+            AddFloatingText("双塔追击", host.Rect.anchoredPosition + new Vector2(0f, 88f), new Color32(210, 154, 255, 255), 24, floatingTexts);
+            SpawnEffectBurst(host.Rect.anchoredPosition, new Color32(174, 94, 255, 150), bursts);
+            RuntimeSfxPlayer.PlayAttack(6f);
+            yield return PlayProjectileAttackEffect(host, target, floatingTexts, bursts, true);
+            if (battleEvent.Amount > 0)
+            {
+                AddFloatingText($"附伤 -{battleEvent.Amount}", target.Rect.anchoredPosition + new Vector2(0f, 88f), new Color32(224, 164, 255, 255), 24, floatingTexts);
+            }
+        }
+
+        private void ApplyBattleAttachmentDeathFeedback(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
+        {
+            var host = FindBattleStageView(views, battleEvent.SourcePlayerSide, battleEvent.SourceSlotId, battleEvent.SourceName);
+            var attached = FindBattleStageView(views, battleEvent.TargetPlayerSide, battleEvent.TargetSlotId, battleEvent.TargetName);
+            if (host?.AttachmentBadge != null)
+            {
+                Destroy(host.AttachmentBadge.gameObject);
+                host.AttachmentBadge = null;
+            }
+            if (attached?.Rect == null)
+            {
+                return;
+            }
+
+            AddFloatingText("附体消散", attached.Rect.anchoredPosition + new Vector2(0f, 82f), new Color32(218, 150, 255, 255), 26, floatingTexts);
+            SpawnEffectBurst(attached.Rect.anchoredPosition, new Color32(156, 82, 220, 180), bursts);
+            MarkBattleStageDead(attached);
         }
 
         private IEnumerator PlayBattleAttackEffect(Dictionary<string, BattleStageUnitView> views, BattleEvent battleEvent, List<BattleFloatingTextView> floatingTexts, List<BattleEffectBurstView> bursts)
@@ -5746,7 +6109,7 @@ namespace ProphecyCentury.UI
 
             foreach (var view in views)
             {
-                if (view?.Rect == null || view.Dead)
+                if (view?.Rect == null || view.Dead || view.VisuallyAttached)
                 {
                     continue;
                 }
@@ -5841,7 +6204,7 @@ namespace ProphecyCentury.UI
 
             foreach (var other in allUnits)
             {
-                if (other == null || other == unit || other == target || other.Dead || other.Rect == null)
+                if (other == null || other == unit || other == target || other.Dead || other.VisuallyAttached || other.Rect == null)
                 {
                     continue;
                 }
@@ -6404,7 +6767,7 @@ namespace ProphecyCentury.UI
             for (var i = 0; i < views.Count; i += 1)
             {
                 var left = views[i];
-                if (left?.Rect == null || left.Dead)
+                if (left?.Rect == null || left.Dead || left.VisuallyAttached)
                 {
                     continue;
                 }
@@ -6412,7 +6775,7 @@ namespace ProphecyCentury.UI
                 for (var j = i + 1; j < views.Count; j += 1)
                 {
                     var right = views[j];
-                    if (right?.Rect == null || right.Dead)
+                    if (right?.Rect == null || right.Dead || right.VisuallyAttached)
                     {
                         continue;
                     }
@@ -6457,7 +6820,7 @@ namespace ProphecyCentury.UI
             var bestDistance = float.MaxValue;
             foreach (var candidate in views)
             {
-                if (candidate == null || candidate.Dead || candidate.PlayerSide == source.PlayerSide || candidate.Rect == null || source.Rect == null)
+                if (candidate == null || candidate.Dead || candidate.VisuallyAttached || candidate.PlayerSide == source.PlayerSide || candidate.Rect == null || source.Rect == null)
                 {
                     continue;
                 }
@@ -6479,7 +6842,7 @@ namespace ProphecyCentury.UI
             var bestDistance = float.MaxValue;
             foreach (var candidate in views)
             {
-                if (candidate == null || candidate.Dead || candidate.PlayerSide == source.PlayerSide || candidate.Rect == null || source.Rect == null)
+                if (candidate == null || candidate.Dead || candidate.VisuallyAttached || candidate.PlayerSide == source.PlayerSide || candidate.Rect == null || source.Rect == null)
                 {
                     continue;
                 }
@@ -6500,7 +6863,7 @@ namespace ProphecyCentury.UI
         private static BattleStageUnitView ResolveVisualTarget(IReadOnlyList<BattleStageUnitView> views, BattleStageUnitView source, float deltaTime)
         {
             source.TargetSearchTimer = Mathf.Max(0f, source.TargetSearchTimer - deltaTime);
-            if (source.Target != null && !source.Target.Dead && source.Target.Rect != null)
+            if (source.Target != null && !source.Target.Dead && !source.Target.VisuallyAttached && source.Target.Rect != null)
             {
                 return source.Target;
             }
@@ -6826,7 +7189,7 @@ namespace ProphecyCentury.UI
                 Speed = Mathf.Max(1, definition.speed),
                 Luck = Mathf.Max(0, definition.luck),
                 Morale = Mathf.Max(0, definition.morale),
-                Range = Mathf.Max(1f, definition.range),
+                Range = Mathf.Max(1f, definition.EffectiveRange),
                 Size = Mathf.Max(20, definition.size),
                 AttackInterval = Mathf.Max(0.2f, definition.attackInterval),
                 Summoned = true
@@ -7178,6 +7541,7 @@ namespace ProphecyCentury.UI
                 case "snipe_lock":
                 case "snipe_charge":
                 case "crit_multiplier":
+                case "stealth_exit":
                 case "block":
                 case "immune":
                 case "death":
@@ -7948,7 +8312,7 @@ namespace ProphecyCentury.UI
             var rootSize = rootRect != null && rootRect.rect.size.sqrMagnitude > 1f ? rootRect.rect.size : new Vector2(720f, 340f);
             var definition = ProphecyGameSession.Instance.Data.FindUnit(unitId);
             var start = BattleStartPosition(rootSize, slotId, playerSide);
-            var range = Mathf.Max(1f, definition?.range ?? 1f);
+            var range = Mathf.Max(1f, definition?.EffectiveRange ?? 1f);
             var rangeHold = Mathf.Clamp(range * rootSize.x * 0.035f, rootSize.x * 0.05f, rootSize.x * 0.28f);
             var fight = start + new Vector2(playerSide ? rootSize.x * 0.38f - rangeHold : -rootSize.x * 0.38f + rangeHold, 0f);
             var unitView = CreateBattleUnitObject(root, label, star, iconName, playerSide);
@@ -9138,14 +9502,34 @@ namespace ProphecyCentury.UI
             return null;
         }
 
-        private string GetSelectedEmptyBoardSlot()
+        private string GetSelectedEmptyBoardSlot(int handIndex)
         {
             if (string.IsNullOrWhiteSpace(_selectedBoardSlotId))
             {
                 return null;
             }
 
-            return Run.boardUnits.Any(unit => unit.boardSlotId == _selectedBoardSlotId) ? null : _selectedBoardSlotId;
+            return CanDeployHandCardToSlot(handIndex, _selectedBoardSlotId) ? _selectedBoardSlotId : null;
+        }
+
+        private BoardUnitState FindBoardUnitAtSlot(string boardSlotId)
+        {
+            return BoardSystem.FindUnitOccupyingSlot(Run, boardSlotId);
+        }
+
+        private bool CanDeployHandCardToSlot(int handIndex, string boardSlotId)
+        {
+            if (Run == null || handIndex < 0 || handIndex >= Run.handCards.Count || string.IsNullOrWhiteSpace(boardSlotId))
+            {
+                return false;
+            }
+
+            if (IsForestGemHandCard(handIndex))
+            {
+                return FindBoardUnitAtSlot(boardSlotId) != null;
+            }
+
+            return _flow.BoardSystem.CanPlaceCard(Run, Run.handCards[handIndex], boardSlotId);
         }
 
         private void WriteLog(string message)
@@ -9499,7 +9883,7 @@ namespace ProphecyCentury.UI
                         progress = new BoardSkillProgress("进阶", card.manageAttackGainBucket, threshold, false);
                         return true;
                     case "while_on_board_count_gain_events_evolve":
-                        progress = new BoardSkillProgress("进阶", card.manageAttackGainBucket, threshold, false);
+                        progress = new BoardSkillProgress("进阶", card.manageCountGainEventProgress, threshold, false);
                         return true;
                     case "while_on_board_every_n_entry_race_add_random_unit_to_hand":
                         progress = new BoardSkillProgress(BoardCountLabel(string.IsNullOrWhiteSpace(skill.race) ? definition.race : skill.race), card.manageEntryEffectTriggerCount, threshold, false);
@@ -9738,6 +10122,7 @@ namespace ProphecyCentury.UI
                 Destroy(boardCardRoot.GetChild(i).gameObject);
             }
 
+            var boardSlotRects = new Dictionary<string, RectTransform>();
             if (boardCardRoot.name.Contains("V2"))
             {
                 const float slotSize = 146f;
@@ -9758,9 +10143,12 @@ namespace ProphecyCentury.UI
                 foreach (var slot in pixelSlots)
                 {
                     var cell = CreateBoardSlotCell(boardCardRoot, slot.Id);
-                    SetLocalTopLeft(cell.GetComponent<RectTransform>(), slot.Left, slot.Top, slotSize, slotSize);
+                    var rect = cell.GetComponent<RectTransform>();
+                    SetLocalTopLeft(rect, slot.Left, slot.Top, slotSize, slotSize);
+                    boardSlotRects[slot.Id] = rect;
                 }
 
+                CreateLargeBoardUnitOverlays(boardSlotRects);
                 return;
             }
 
@@ -9789,15 +10177,150 @@ namespace ProphecyCentury.UI
 
                 foreach (var slotId in column)
                 {
-                    CreateBoardSlotCell(columnObject.transform, slotId);
+                    var cell = CreateBoardSlotCell(columnObject.transform, slotId);
+                    boardSlotRects[slotId] = cell.GetComponent<RectTransform>();
                 }
             }
+
+            CreateLargeBoardUnitOverlays(boardSlotRects);
+        }
+
+        private void CreateLargeBoardUnitOverlays(IReadOnlyDictionary<string, RectTransform> boardSlotRects)
+        {
+            if (boardCardRoot == null || Run?.boardUnits == null || boardSlotRects == null)
+            {
+                return;
+            }
+
+            var boardRect = boardCardRoot as RectTransform;
+            if (boardRect == null)
+            {
+                return;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(boardRect);
+
+            var overlayObject = new GameObject("BoardLargeUnitOverlay", typeof(RectTransform), typeof(LayoutElement), typeof(CanvasGroup));
+            overlayObject.transform.SetParent(boardCardRoot, false);
+            overlayObject.transform.SetAsLastSibling();
+
+            var overlayLayout = overlayObject.GetComponent<LayoutElement>();
+            overlayLayout.ignoreLayout = true;
+
+            var overlayRect = overlayObject.GetComponent<RectTransform>();
+            overlayRect.anchorMin = Vector2.zero;
+            overlayRect.anchorMax = Vector2.one;
+            overlayRect.offsetMin = Vector2.zero;
+            overlayRect.offsetMax = Vector2.zero;
+
+            var overlayGroup = overlayObject.GetComponent<CanvasGroup>();
+            overlayGroup.blocksRaycasts = true;
+            overlayGroup.interactable = true;
+
+            foreach (var unit in Run.boardUnits.Where(unit => unit != null))
+            {
+                var definition = ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
+                if (!IsLargeBoardUnit(definition))
+                {
+                    continue;
+                }
+
+                var occupiedSlotRects = BoardSystem.GetOccupiedBoardSlots(unit)
+                    .Select(slot => boardSlotRects.TryGetValue(slot, out var rect) ? rect : null)
+                    .Where(rect => rect != null)
+                    .ToList();
+                if (occupiedSlotRects.Count == 0)
+                {
+                    continue;
+                }
+
+                var center = Vector2.zero;
+                var camera = GetCanvasCameraForRect(overlayRect);
+                foreach (var slotRect in occupiedSlotRects)
+                {
+                    var screenPoint = RectTransformUtility.WorldToScreenPoint(camera, slotRect.TransformPoint(slotRect.rect.center));
+                    if (RectTransformUtility.ScreenPointToLocalPointInRectangle(overlayRect, screenPoint, camera, out var localPoint))
+                    {
+                        center += localPoint;
+                    }
+                }
+
+                center /= occupiedSlotRects.Count;
+                CreateLargeBoardUnitCard(overlayRect, definition, unit, center, occupiedSlotRects[0].rect.size);
+            }
+        }
+
+        private void CreateLargeBoardUnitCard(RectTransform parent, UnitDefinition definition, BoardUnitState unit, Vector2 anchoredPosition, Vector2 baseSize)
+        {
+            if (parent == null || definition == null || unit == null)
+            {
+                return;
+            }
+
+            var view = UnitCardView.Instantiate(parent, UnitCardPresentationMode.Board);
+            var viewRect = view.GetComponent<RectTransform>();
+            viewRect.anchorMin = new Vector2(0.5f, 0.5f);
+            viewRect.anchorMax = new Vector2(0.5f, 0.5f);
+            viewRect.pivot = new Vector2(0.5f, 0.5f);
+            viewRect.anchoredPosition = anchoredPosition;
+            viewRect.sizeDelta = baseSize.sqrMagnitude > 1f ? baseSize : new Vector2(146f, 146f);
+
+            var displayUnit = CreateDisplayCountCard(definition, unit, "board", -1, unit.boardSlotId);
+            var selected = unit.boardSlotId == _selectedBoardSlotId;
+            view.Bind(definition, displayUnit, UnitCardPresentationMode.Board, GetUnitCardRaceStyles(), null, selected);
+            ApplyBoardCountBadge(view, definition, displayUnit);
+
+            foreach (var graphic in view.GetComponentsInChildren<Graphic>(true))
+            {
+                graphic.raycastTarget = true;
+            }
+
+            var cardObject = view.gameObject;
+            var button = cardObject.GetComponent<Button>();
+            if (button == null)
+            {
+                button = cardObject.AddComponent<Button>();
+            }
+
+            var background = view.BackgroundImage != null ? view.BackgroundImage : cardObject.GetComponent<Image>();
+            button.targetGraphic = background;
+            button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
+            button.onClick.AddListener(() => HandleBoardSlotClicked(unit.boardSlotId));
+
+            var tooltip = cardObject.GetComponent<RuntimeUnitTooltip>() ?? cardObject.AddComponent<RuntimeUnitTooltip>();
+            tooltip.Unit = unit;
+
+            var dragItem = cardObject.GetComponent<RuntimeUnitDragItem>() ?? cardObject.AddComponent<RuntimeUnitDragItem>();
+            dragItem.Controller = this;
+            dragItem.Source = "board";
+            dragItem.BoardSlotId = unit.boardSlotId;
+        }
+
+        private static bool IsLargeBoardUnit(UnitDefinition definition)
+        {
+            return definition != null && definition.size == 2;
+        }
+
+        private static Camera GetCanvasCameraForRect(RectTransform rect)
+        {
+            var canvas = rect != null ? rect.GetComponentInParent<Canvas>() : null;
+            if (canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                return null;
+            }
+
+            return canvas.worldCamera != null ? canvas.worldCamera : Camera.main;
         }
 
         private GameObject CreateBoardSlotCell(Transform parent, string slotId)
         {
-            var unit = Run.boardUnits.FirstOrDefault(item => item.boardSlotId == slotId);
-            var isSelected = _selectedBoardSlotId == slotId;
+            var unit = FindBoardUnitAtSlot(slotId);
+            var isAnchorSlot = unit != null && unit.boardSlotId == slotId;
+            var isSelected = _selectedBoardSlotId == slotId || (unit != null && unit.boardSlotId == _selectedBoardSlotId);
+            var unitDefinition = unit == null ? null : ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
+            var isLargeUnit = IsLargeBoardUnit(unitDefinition);
+            var isTargetHighlight = unit != null && IsBoardUnitTargetSelectionActive();
             var cellObject = new GameObject("BoardSlot_" + slotId, typeof(Image), typeof(Button), typeof(LayoutElement), typeof(RuntimeBoardSlotDropTarget));
             cellObject.transform.SetParent(parent, false);
             var layout = cellObject.GetComponent<LayoutElement>();
@@ -9808,9 +10331,11 @@ namespace ProphecyCentury.UI
             var image = cellObject.GetComponent<Image>();
             image.color = isSelected
                 ? new Color32(76, 92, 68, 255)
-                : unit == null
-                    ? new Color32(54, 38, 40, 210)
-                    : new Color32(60, 42, 43, 255);
+                : isTargetHighlight
+                    ? new Color32(72, 114, 96, 235)
+                    : unit == null
+                        ? new Color32(54, 38, 40, 210)
+                        : new Color32(60, 42, 43, 255);
 
             var button = cellObject.GetComponent<Button>();
             button.targetGraphic = image;
@@ -9826,24 +10351,33 @@ namespace ProphecyCentury.UI
                 var tooltip = cellObject.AddComponent<RuntimeUnitTooltip>();
                 tooltip.Unit = unit;
 
-                var view = UnitCardView.Instantiate(cellObject.transform, UnitCardPresentationMode.Board);
-                var viewRect = view.GetComponent<RectTransform>();
-                viewRect.anchorMin = Vector2.zero;
-                viewRect.anchorMax = Vector2.one;
-                viewRect.offsetMin = Vector2.zero;
-                viewRect.offsetMax = Vector2.zero;
-                var definition = ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
-                var displayUnit = CreateDisplayCountCard(definition, unit, "board", -1, slotId);
-                view.Bind(definition, displayUnit, UnitCardPresentationMode.Board, GetUnitCardRaceStyles(), null, isSelected);
-                ApplyBoardCountBadge(view, definition, displayUnit);
+                if (isAnchorSlot && !isLargeUnit)
+                {
+                    var view = UnitCardView.Instantiate(cellObject.transform, UnitCardPresentationMode.Board);
+                    var viewRect = view.GetComponent<RectTransform>();
+                    viewRect.anchorMin = Vector2.zero;
+                    viewRect.anchorMax = Vector2.one;
+                    viewRect.offsetMin = Vector2.zero;
+                    viewRect.offsetMax = Vector2.zero;
+                    var displayUnit = CreateDisplayCountCard(unitDefinition, unit, "board", -1, slotId);
+                    view.Bind(unitDefinition, displayUnit, UnitCardPresentationMode.Board, GetUnitCardRaceStyles(), null, isSelected);
+                    ApplyBoardCountBadge(view, unitDefinition, displayUnit);
+                }
+                else if (!isLargeUnit)
+                {
+                    var occupiedText = CreateChildText(cellObject.transform, $"{slotId}\n{unit.name}\n占用", 20, TextAnchor.MiddleCenter, new Vector2(4f, 8f), new Vector2(-4f, -26f));
+                    occupiedText.color = new Color32(220, 222, 230, 255);
+                    occupiedText.resizeTextForBestFit = true;
+                    occupiedText.resizeTextMinSize = 12;
+                    occupiedText.resizeTextMaxSize = 20;
+                }
 
                 var dragItem = cellObject.AddComponent<RuntimeUnitDragItem>();
                 dragItem.Controller = this;
                 dragItem.Source = "board";
-                dragItem.BoardSlotId = slotId;
+                dragItem.BoardSlotId = unit.boardSlotId;
             }
 
-            var unitDefinition = unit == null ? null : ProphecyGameSession.Instance.Data.FindUnit(unit.unitId);
             if (unit == null || unitDefinition == null)
             {
                 var text = CreateChildText(cellObject.transform, $"{slotId}\n空位", 24, TextAnchor.MiddleCenter, new Vector2(4f, 8f), new Vector2(-4f, -26f));
@@ -9855,16 +10389,26 @@ namespace ProphecyCentury.UI
             {
                 CreateSmallBoardActionButton(cellObject.transform, "祝福", () => ResolvePendingTargetedEntryOnSlot(slotId));
             }
-            else if (unit == null && _selectedHandIndex >= 0)
+            else if (unit != null && _selectedHandIndex >= 0 && IsForestGemHandCard(_selectedHandIndex))
+            {
+                CreateSmallBoardActionButton(cellObject.transform, "祝福", () => UseForestGemCardOnSlot(_selectedHandIndex, slotId));
+            }
+            else if (unit == null && _selectedHandIndex >= 0 && CanDeployHandCardToSlot(_selectedHandIndex, slotId))
             {
                 CreateSmallBoardActionButton(cellObject.transform, "部署", () => DeployHandCardToSlot(_selectedHandIndex, slotId));
             }
-            else if (!string.IsNullOrWhiteSpace(_selectedBoardSlotId))
+            else if (!string.IsNullOrWhiteSpace(_selectedBoardSlotId) && _flow.BoardSystem.CanMoveBoardUnit(Run, _selectedBoardSlotId, slotId))
             {
                 CreateSmallBoardActionButton(cellObject.transform, "移动", () => MoveBoardUnitToSlot(_selectedBoardSlotId, slotId));
             }
 
             return cellObject;
+        }
+
+        private bool IsBoardUnitTargetSelectionActive()
+        {
+            return !string.IsNullOrWhiteSpace(_pendingTargetedEntrySourceSlotId)
+                || (_selectedHandIndex >= 0 && IsForestGemHandCard(_selectedHandIndex));
         }
 
         private static void SetLocalTopLeft(RectTransform rect, float left, float top, float width, float height)

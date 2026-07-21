@@ -690,7 +690,7 @@ namespace ProphecyCentury.UI
             AddStatCard(row1, "\u5148\u673a", Mathf.Max(0, data.initiative).ToString(), null, StatIconType.Initiative, golden, false, 92f);
             AddStatCard(row1, "\u58eb\u6c14", morale.ToString(), null, StatIconType.Morale, golden, false, 92f);
             AddStatCard(row1, "\u5e78\u8fd0", luck.ToString(), null, StatIconType.Luck, golden, false, 92f);
-            AddStatCard(row1, "\u5c04\u7a0b", FormatRange(data.attackRange > 0f ? data.attackRange : data.range),
+            AddStatCard(row1, "\u5c04\u7a0b", FormatRange(data.EffectiveRange),
                 null, StatIconType.Range, golden, false, 104f);
         }
 

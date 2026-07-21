@@ -45,14 +45,28 @@ namespace ProphecyCentury.UI
 
         private static void EnsureEventSystem()
         {
-            if (Object.FindObjectOfType<EventSystem>() != null)
+            var eventSystem = Object.FindObjectOfType<EventSystem>();
+            if (eventSystem == null)
             {
-                return;
+                var eventSystemObject = new GameObject("EventSystem");
+                eventSystem = eventSystemObject.AddComponent<EventSystem>();
             }
 
-            var eventSystem = new GameObject("EventSystem");
-            eventSystem.AddComponent<EventSystem>();
-            eventSystem.AddComponent<StandaloneInputModule>();
+            // A scene can contain an EventSystem component without an enabled input
+            // module. In that state the UI renders normally, but no Button receives
+            // pointer or navigation events. Repair that partial setup at runtime.
+            eventSystem.enabled = true;
+            var inputModule = eventSystem.GetComponent<BaseInputModule>();
+            if (inputModule == null)
+            {
+                inputModule = eventSystem.gameObject.AddComponent<StandaloneInputModule>();
+            }
+
+            inputModule.enabled = true;
+            if (eventSystem.GetComponent<RuntimeUiClickDiagnostics>() == null)
+            {
+                eventSystem.gameObject.AddComponent<RuntimeUiClickDiagnostics>();
+            }
         }
 
         private static void BuildUi()
@@ -106,6 +120,7 @@ namespace ProphecyCentury.UI
 
             WireButton(root.transform, "StartSelectedRunButton", controller.OpenCampaignSelection);
             WireButton(root.transform, "StartGameButton", controller.OpenCampaignSelection);
+            WireButton(root.transform, "ContinueGameButton", controller.ContinueGame);
             WireButton(root.transform, ElementalBattleChallengeButtonName, controller.OpenElementalBattleChallenge);
             WireButton(root.transform, "RefreshShopButton", controller.RefreshShop);
             WireButton(root.transform, "UpgradeShopButton", controller.UpgradeShop);
@@ -326,7 +341,12 @@ namespace ProphecyCentury.UI
 
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
+            button.onClick.AddListener(() => Debug.Log($"[UI Button] onClick invoked: {RuntimeUiClickDiagnostics.GetHierarchyPath(button.gameObject)}"));
             button.onClick.AddListener(callback);
+            if (button.GetComponent<RuntimeButtonClickLogger>() == null)
+            {
+                button.gameObject.AddComponent<RuntimeButtonClickLogger>();
+            }
         }
 
         private static void SetButtonText(Transform root, string name, string text)
@@ -385,17 +405,41 @@ namespace ProphecyCentury.UI
             var controller = controllerObject.AddComponent<RunSceneController>();
             var encyclopedia = canvasObject.AddComponent<RuntimeEncyclopediaPanel>();
 
+            // ---- Title Panel ----
             var titlePanel = CreatePanel("TitlePanel", canvasObject.transform, new Color32(5, 9, 18, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            titlePanel.GetComponent<Image>().raycastTarget = false;
             CreateTitleAstrolabe(titlePanel.transform);
             CreateTitleText(titlePanel.transform);
 
-            CreateButton("StartGameButton", titlePanel.transform, "开始游戏", new Vector2(1280f, -380f), new Vector2(320f, 72f), controller.OpenCampaignSelection);
+            // 星盘动画
+            titlePanel.AddComponent<TitleAstrolabeAnimator>();
+
+            // 按钮：继续游戏 / 开始游戏 / 设置 / 退出游戏
+            var hasSaveFile = File.Exists(new SaveGameSystem().SavePath);
+            CreateButton("ContinueGameButton", titlePanel.transform, "继续游戏", new Vector2(1280f, -380f), new Vector2(320f, 72f), controller.ContinueGame);
+            StylePrimaryButton(titlePanel.transform.Find("ContinueGameButton"));
+            if (!hasSaveFile)
+            {
+                var continueBtn = titlePanel.transform.Find("ContinueGameButton")?.GetComponent<Button>();
+                if (continueBtn != null)
+                {
+                    continueBtn.interactable = false;
+                    var continueLabel = continueBtn.GetComponentInChildren<Text>();
+                    if (continueLabel != null) continueLabel.color = new Color32(120, 120, 120, 180);
+                }
+            }
+
+            CreateButton("StartGameButton", titlePanel.transform, "开始游戏", new Vector2(1280f, -472f), new Vector2(320f, 72f), controller.OpenCampaignSelection);
             StylePrimaryButton(titlePanel.transform.Find("StartGameButton"));
-            Debug.Log("StartGameButton created, finding: " + titlePanel.transform.Find("StartGameButton"));
-            CreateButton("SettingsButton", titlePanel.transform, "设置", new Vector2(1280f, -480f), new Vector2(320f, 56f), () => ShowSettingsModal(canvasObject.transform));
+            CreateButton("SettingsButton", titlePanel.transform, "设置", new Vector2(1280f, -564f), new Vector2(320f, 56f), () => ShowSettingsModal(canvasObject.transform));
             StyleSecondaryButton(titlePanel.transform.Find("SettingsButton"));
-            CreateButton("QuitGameButton", titlePanel.transform, "退出游戏", new Vector2(1280f, -560f), new Vector2(320f, 56f), QuitGame);
+            CreateButton("QuitGameButton", titlePanel.transform, "退出游戏", new Vector2(1280f, -640f), new Vector2(320f, 56f), controller.ShowExitConfirmDialog);
             StyleSecondaryButton(titlePanel.transform.Find("QuitGameButton"));
+
+            // 版本号
+            var versionText = CreateText("VersionText", titlePanel.transform, "v" + Application.version, 16, TextAnchor.LowerRight, Vector2.zero, Vector2.one, new Vector2(0f, 14f), new Vector2(-20f, 0f));
+            versionText.color = new Color32(120, 140, 160, 100);
+            versionText.raycastTarget = false;
 
             var campaignSelectionScreen = CreateCampaignSelectionScreen(canvasObject.transform, controller);
             var heroSelectionScreen = CreateHeroSelectionScreen(canvasObject.transform, controller);
@@ -409,6 +453,9 @@ namespace ProphecyCentury.UI
 
             var settingsModal = CreateSettingsModal(canvasObject.transform);
             settingsModal.SetActive(false);
+
+            // ConfirmDialog
+            ConfirmDialog.FindOrCreate(canvasObject.transform);
 
             var runPanel = CreatePanel("RunPanel", canvasObject.transform, new Color32(18, 24, 31, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var topBar = CreatePanel("TopBar", runPanel.transform, new Color32(25, 34, 44, 255), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -72f), Vector2.zero);
@@ -1031,7 +1078,9 @@ namespace ProphecyCentury.UI
             var button = buttonObject.GetComponent<Button>();
             button.targetGraphic = image;
             button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
+            button.onClick.AddListener(() => Debug.Log($"[UI Button] onClick invoked: {RuntimeUiClickDiagnostics.GetHierarchyPath(buttonObject)}"));
             button.onClick.AddListener(callback);
+            buttonObject.AddComponent<RuntimeButtonClickLogger>();
 
             if (!string.IsNullOrWhiteSpace(iconName))
             {
@@ -1491,6 +1540,9 @@ namespace ProphecyCentury.UI
             return input;
         }
 
+        /// <summary>
+        /// 从 GameDataRepository.Heroes 动态创建英雄选择界面。
+        /// </summary>
         private static GameObject CreateHeroSelectionScreen(Transform parent, RunSceneController controller)
         {
             var screen = CreatePanel("HeroSelectionScreen", parent, new Color32(5, 9, 18, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
@@ -1520,16 +1572,33 @@ namespace ProphecyCentury.UI
             layout.constraintCount = 3;
             layout.childAlignment = TextAnchor.MiddleCenter;
 
-            var heroes = new[]
+            // 从配置数据动态读取英雄列表
+            var heroes = ProphecyGameSession.Instance?.Data?.Heroes;
+            if (heroes != null && heroes.Count > 0)
             {
-                ("james", "詹姆士", "增援统帅", "Art/hero/James.jpg", "让每一次获得数量更有效率", "经营阶段，我方任意已上阵部队获得数量时，额外获得+1数量。"),
-                ("magic", "马吉克", "离阵术士", "Art/hero/Magic.jpg", "把退场转化为新的战力", "经营阶段，我方已上阵部队出售并离场时，场上随机3个我方部队获得+1数量。"),
-                ("shalame", "夏拉美", "征募财务官", "Art/hero/Shirmmy.jpg", "从扩军中整理出预算", "经营阶段，我方已上阵部队每累计获得20数量，额外获得+1金币。"),
-            };
-
-            foreach (var (id, name, title, portraitPath, epithet, passiveText) in heroes)
+                foreach (var hero in heroes)
+                {
+                    if (hero == null) continue;
+                    var portraitPath = !string.IsNullOrWhiteSpace(hero.portrait_glyph)
+                        ? hero.portrait_glyph
+                        : "Art/hero/" + hero.id + ".jpg";
+                    CreateHeroCard(cardContainer.transform, hero.id, hero.name, hero.title,
+                        portraitPath, hero.epithet, hero.passive_text, controller);
+                }
+            }
+            else
             {
-                CreateHeroCard(cardContainer.transform, id, name, title, portraitPath, epithet, passiveText, controller);
+                // 回退硬编码数据
+                var fallback = new[]
+                {
+                    ("james", "詹姆士", "增援统帅", "Art/hero/James.jpg", "让每一次获得数量更有效率", "经营阶段，我方任意已上阵部队获得数量时，额外获得+1数量。"),
+                    ("magic", "马吉克", "离阵术士", "Art/hero/Magic.jpg", "把退场转化为新的战力", "经营阶段，我方已上阵部队出售并离场时，场上随机3个我方部队获得+1数量。"),
+                    ("shalame", "夏拉美", "征募财务官", "Art/hero/Shalame.jpg", "从扩军中整理出预算", "经营阶段，我方已上阵部队每累计获得20数量，额外获得+1金币。"),
+                };
+                foreach (var (id, name, title, portraitPath, epithet, passiveText) in fallback)
+                {
+                    CreateHeroCard(cardContainer.transform, id, name, title, portraitPath, epithet, passiveText, controller);
+                }
             }
 
             return screen;
@@ -1619,15 +1688,6 @@ namespace ProphecyCentury.UI
                 modal.gameObject.SetActive(true);
                 modal.SetAsLastSibling();
             }
-        }
-
-        private static void QuitGame()
-        {
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-#else
-            Application.Quit();
-#endif
         }
     }
 }

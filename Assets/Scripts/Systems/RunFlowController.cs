@@ -325,7 +325,7 @@ namespace ProphecyCentury.Systems
         {
             var run = ProphecyGameSession.Instance.CurrentRun;
             var source = run?.boardUnits.FirstOrDefault(unit => unit.boardSlotId == sourceSlotId);
-            var target = run?.boardUnits.FirstOrDefault(unit => unit.boardSlotId == targetSlotId);
+            var target = BoardSystem.FindUnitOccupyingSlot(run, targetSlotId);
             var value = ManageEventResolver.ResolveTargetedEntryPower(run, source, target);
             if (value > 0)
             {
@@ -532,7 +532,7 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
         public bool SellBoardUnit(string boardSlotId)
         {
             var run = ProphecyGameSession.Instance.CurrentRun;
-            var target = run.boardUnits.LastOrDefault(unit => unit.boardSlotId == boardSlotId);
+            var target = BoardSystem.FindUnitOccupyingSlot(run, boardSlotId);
             ManageEventResolver.ResolveSell(run, target);
             CaptureAbilityTrigger();
             var success = BoardSystem.SellFromBoard(run, boardSlotId);
@@ -622,6 +622,12 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
                 unit.roundTempCount += Math.Max(0, unit.pendingNextRoundTempCount);
                 unit.roundTempAttack += Math.Max(0, unit.pendingNextRoundTempAttack);
                 unit.roundTempPower += Math.Max(0, unit.pendingNextRoundTempPower);
+                var permanentCountGain = Math.Max(0, unit.pendingNextRoundPermanentCount);
+                if (permanentCountGain > 0)
+                {
+                    unit.baseCount += permanentCountGain;
+                    unit.maxCount = 0;
+                }
                 unit.shopBuffHp += Math.Max(0, unit.pendingNextRoundPermanentHp);
                 unit.shopBuffPower += Math.Max(0, unit.pendingNextRoundPermanentPower);
                 unit.shopBuffLuck += Math.Max(0, unit.pendingNextRoundPermanentLuck);
@@ -987,6 +993,7 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
             unit.pendingNextRoundTempCount = 0;
             unit.pendingNextRoundTempAttack = 0;
             unit.pendingNextRoundTempPower = 0;
+            unit.pendingNextRoundPermanentCount = 0;
             unit.pendingNextRoundPermanentHp = 0;
             unit.pendingNextRoundPermanentPower = 0;
             unit.pendingNextRoundPermanentLuck = 0;
@@ -1021,9 +1028,15 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
                     && (string.IsNullOrWhiteSpace(reward.race) || unit.race == reward.race))
                 .ToList();
             var added = 0;
-            for (var i = 0; i < reward.count && pool.Count > 0; i += 1)
+            for (var i = 0; i < reward.count; i += 1)
             {
-                var unit = pool[_random.Next(pool.Count)];
+                var available = pool.Where(unit => ShopSystem.IsUnitAvailableInPool(run, unit.id)).ToList();
+                if (available.Count == 0)
+                {
+                    break;
+                }
+
+                var unit = available[_random.Next(available.Count)];
                 var card = new UnitCardState
                 {
                     unitId = unit.id,
@@ -1032,6 +1045,11 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
                     baseCount = ResolveStartCount(unit),
                     maxCount = 0
                 };
+                if (!ShopSystem.TryTakeDiscoveredCardFromPool(run, card))
+                {
+                    continue;
+                }
+
                 if (AddCardToHandOrCache(run, card, true))
                 {
                     added += 1;

@@ -11,23 +11,23 @@ namespace ProphecyCentury.Systems
     {
         public bool DeployFromHand(RunState runState, int handIndex, string boardSlotId = null)
         {
-            if (handIndex < 0 || handIndex >= runState.handCards.Count)
-            {
-                return false;
-            }
-
-            var targetSlot = string.IsNullOrWhiteSpace(boardSlotId) ? FirstOpenSlot(runState) : boardSlotId;
-            if (!IsValidBoardSlot(targetSlot))
-            {
-                return false;
-            }
-
-            if (runState.boardUnits.Any(unit => unit.boardSlotId == targetSlot))
+            if (runState == null || handIndex < 0 || handIndex >= runState.handCards.Count)
             {
                 return false;
             }
 
             var card = runState.handCards[handIndex];
+            var targetSlot = string.IsNullOrWhiteSpace(boardSlotId) ? FirstOpenSlot(runState, card) : boardSlotId;
+            if (!IsValidBoardSlot(targetSlot))
+            {
+                return false;
+            }
+
+            if (!CanPlaceCard(runState, card, targetSlot))
+            {
+                return false;
+            }
+
             runState.boardUnits.Add(CloneToBoardUnit(card, targetSlot));
             runState.handCards.RemoveAt(handIndex);
             return true;
@@ -35,7 +35,7 @@ namespace ProphecyCentury.Systems
 
         public bool MoveBoardUnit(RunState runState, string fromSlotId, string toSlotId)
         {
-            if (string.IsNullOrWhiteSpace(fromSlotId) || string.IsNullOrWhiteSpace(toSlotId) || fromSlotId == toSlotId)
+            if (runState == null || string.IsNullOrWhiteSpace(fromSlotId) || string.IsNullOrWhiteSpace(toSlotId) || fromSlotId == toSlotId)
             {
                 return false;
             }
@@ -45,27 +45,43 @@ namespace ProphecyCentury.Systems
                 return false;
             }
 
-            var moving = runState.boardUnits.FirstOrDefault(unit => unit.boardSlotId == fromSlotId);
+            var moving = FindUnitOccupyingSlot(runState, fromSlotId);
             if (moving == null)
             {
                 return false;
             }
 
-            var target = runState.boardUnits.FirstOrDefault(unit => unit.boardSlotId == toSlotId);
-            if (target != null)
+            var target = FindUnitOccupyingSlot(runState, toSlotId);
+            if (target == moving)
             {
-                target.boardSlotId = fromSlotId;
+                return false;
+            }
+
+            if (target != null && target != moving)
+            {
+                if (!TryResolveSwapAnchors(runState, moving, target, fromSlotId, toSlotId, out var movingAnchor, out var targetAnchor))
+                {
+                    return false;
+                }
+
+                moving.boardSlotId = movingAnchor;
+                target.boardSlotId = targetAnchor;
+                return true;
+            }
+            else if (!CanPlaceUnit(runState, moving, toSlotId, moving))
+            {
+                return false;
             }
 
             moving.boardSlotId = toSlotId;
             return true;
         }
 
-        public string FirstOpenSlot(RunState runState)
+        public string FirstOpenSlot(RunState runState, UnitCardState card = null)
         {
             var session = ProphecyGameSession.Instance;
-            var order = session.Data.Config?.GetBoardOrder() ?? new List<string>();
-            return order.FirstOrDefault(slot => runState.boardUnits.All(unit => unit.boardSlotId != slot));
+            var order = session?.Data?.Config?.GetBoardOrder() ?? new List<string>();
+            return order.FirstOrDefault(slot => CanPlaceCard(runState, card, slot));
         }
 
         public bool IsValidBoardSlot(string boardSlotId)
@@ -76,7 +92,7 @@ namespace ProphecyCentury.Systems
             }
 
             var session = ProphecyGameSession.Instance;
-            var order = session.Data.Config?.GetBoardOrder() ?? new List<string>();
+            var order = session?.Data?.Config?.GetBoardOrder() ?? new List<string>();
             return order.Contains(boardSlotId);
         }
 
@@ -96,7 +112,7 @@ namespace ProphecyCentury.Systems
 
         public bool SellFromBoard(RunState runState, string boardSlotId)
         {
-            var unit = runState.boardUnits.FirstOrDefault(item => item.boardSlotId == boardSlotId);
+            var unit = FindUnitOccupyingSlot(runState, boardSlotId);
             if (unit == null)
             {
                 return false;
@@ -106,6 +122,239 @@ namespace ProphecyCentury.Systems
             runState.gold += GetUnitSellReward(unit);
             RefundShopPoolFromUnit(runState, unit);
             return true;
+        }
+
+        public bool CanPlaceCard(RunState runState, UnitCardState card, string boardSlotId)
+        {
+            var definition = card == null ? null : ProphecyGameSession.Instance?.Data?.FindUnit(card.unitId);
+            return CanPlaceDefinition(runState, definition, boardSlotId, (BoardUnitState)null);
+        }
+
+        public bool CanMoveBoardUnit(RunState runState, string fromSlotId, string toSlotId)
+        {
+            if (runState == null || string.IsNullOrWhiteSpace(fromSlotId) || string.IsNullOrWhiteSpace(toSlotId) || fromSlotId == toSlotId)
+            {
+                return false;
+            }
+
+            if (!IsValidBoardSlot(fromSlotId) || !IsValidBoardSlot(toSlotId))
+            {
+                return false;
+            }
+
+            var moving = FindUnitOccupyingSlot(runState, fromSlotId);
+            if (moving == null)
+            {
+                return false;
+            }
+
+            var target = FindUnitOccupyingSlot(runState, toSlotId);
+            if (target == moving)
+            {
+                return false;
+            }
+
+            if (target != null && target != moving)
+            {
+                return TryResolveSwapAnchors(runState, moving, target, fromSlotId, toSlotId, out _, out _);
+            }
+
+            return CanPlaceUnit(runState, moving, toSlotId, moving);
+        }
+
+        public IReadOnlyList<string> GetMoveAffectedBoardSlots(RunState runState, string fromSlotId, string toSlotId)
+        {
+            if (runState == null || string.IsNullOrWhiteSpace(fromSlotId) || string.IsNullOrWhiteSpace(toSlotId))
+            {
+                return Array.Empty<string>();
+            }
+
+            var moving = FindUnitOccupyingSlot(runState, fromSlotId);
+            if (moving == null)
+            {
+                return Array.Empty<string>();
+            }
+
+            var movingDefinition = ProphecyGameSession.Instance?.Data?.FindUnit(moving.unitId);
+            var target = FindUnitOccupyingSlot(runState, toSlotId);
+            if (target != null && target != moving)
+            {
+                if (!TryResolveSwapAnchors(runState, moving, target, fromSlotId, toSlotId, out var movingAnchor, out var targetAnchor))
+                {
+                    return Array.Empty<string>();
+                }
+
+                var targetDefinition = ProphecyGameSession.Instance?.Data?.FindUnit(target.unitId);
+                return GetOccupiedBoardSlots(movingDefinition, movingAnchor)
+                    .Concat(GetOccupiedBoardSlots(targetDefinition, targetAnchor))
+                    .Distinct()
+                    .ToList();
+            }
+
+            return CanPlaceUnit(runState, moving, toSlotId, moving)
+                ? GetOccupiedBoardSlots(movingDefinition, toSlotId)
+                : Array.Empty<string>();
+        }
+
+        public static BoardUnitState FindUnitOccupyingSlot(RunState runState, string boardSlotId)
+        {
+            if (runState?.boardUnits == null || string.IsNullOrWhiteSpace(boardSlotId))
+            {
+                return null;
+            }
+
+            return runState.boardUnits.FirstOrDefault(unit => GetOccupiedBoardSlots(unit).Contains(boardSlotId));
+        }
+
+        public static IReadOnlyList<string> GetOccupiedBoardSlots(BoardUnitState unit)
+        {
+            if (unit == null)
+            {
+                return Array.Empty<string>();
+            }
+
+            var definition = ProphecyGameSession.Instance?.Data?.FindUnit(unit.unitId);
+            return GetOccupiedBoardSlots(definition, unit.boardSlotId);
+        }
+
+        public static IReadOnlyList<string> GetOccupiedBoardSlots(UnitDefinition definition, string anchorSlotId)
+        {
+            if (string.IsNullOrWhiteSpace(anchorSlotId))
+            {
+                return Array.Empty<string>();
+            }
+
+            if (ResolveBoardSize(definition) != 2 || !TryParseBoardSlot(anchorSlotId, out var row, out var column))
+            {
+                return new[] { anchorSlotId };
+            }
+
+            return new[]
+            {
+                anchorSlotId,
+                $"{row}-{column - 1}"
+            };
+        }
+
+        private bool CanPlaceUnit(RunState runState, BoardUnitState unit, string boardSlotId, BoardUnitState ignoreUnit)
+        {
+            var definition = unit == null ? null : ProphecyGameSession.Instance?.Data?.FindUnit(unit.unitId);
+            return CanPlaceDefinition(runState, definition, boardSlotId, ignoreUnit);
+        }
+
+        private bool TryResolveSwapAnchors(
+            RunState runState,
+            BoardUnitState moving,
+            BoardUnitState target,
+            string fromSlotId,
+            string toSlotId,
+            out string movingAnchor,
+            out string targetAnchor)
+        {
+            movingAnchor = null;
+            targetAnchor = null;
+            if (runState == null || moving == null || target == null || moving == target)
+            {
+                return false;
+            }
+
+            var movingDefinition = ProphecyGameSession.Instance?.Data?.FindUnit(moving.unitId);
+            var targetDefinition = ProphecyGameSession.Instance?.Data?.FindUnit(target.unitId);
+            foreach (var movingCandidate in GetAnchorCandidates(movingDefinition, toSlotId))
+            {
+                var movingSlots = GetOccupiedBoardSlots(movingDefinition, movingCandidate);
+                if (!CanOccupySlotsIgnoring(runState, movingSlots, moving, target))
+                {
+                    continue;
+                }
+
+                foreach (var targetCandidate in GetAnchorCandidates(targetDefinition, fromSlotId))
+                {
+                    var targetSlots = GetOccupiedBoardSlots(targetDefinition, targetCandidate);
+                    if (!CanOccupySlotsIgnoring(runState, targetSlots, moving, target)
+                        || movingSlots.Any(targetSlots.Contains))
+                    {
+                        continue;
+                    }
+
+                    movingAnchor = movingCandidate;
+                    targetAnchor = targetCandidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool CanPlaceDefinition(RunState runState, UnitDefinition definition, string boardSlotId, BoardUnitState ignoreUnit)
+        {
+            return CanPlaceDefinition(runState, definition, boardSlotId, ignoreUnit == null ? Array.Empty<BoardUnitState>() : new[] { ignoreUnit });
+        }
+
+        private bool CanPlaceDefinition(RunState runState, UnitDefinition definition, string boardSlotId, IReadOnlyCollection<BoardUnitState> ignoreUnits)
+        {
+            if (runState == null || !IsValidBoardSlot(boardSlotId))
+            {
+                return false;
+            }
+
+            var occupiedSlots = GetOccupiedBoardSlots(definition, boardSlotId);
+            if (occupiedSlots.Count == 0 || occupiedSlots.Any(slot => !IsValidBoardSlot(slot)))
+            {
+                return false;
+            }
+
+            return runState.boardUnits
+                .Where(unit => unit != null && (ignoreUnits == null || !ignoreUnits.Contains(unit)))
+                .All(unit => !GetOccupiedBoardSlots(unit).Any(occupiedSlots.Contains));
+        }
+
+        private bool CanOccupySlotsIgnoring(RunState runState, IReadOnlyCollection<string> occupiedSlots, params BoardUnitState[] ignoreUnits)
+        {
+            if (runState == null || occupiedSlots == null || occupiedSlots.Count == 0 || occupiedSlots.Any(slot => !IsValidBoardSlot(slot)))
+            {
+                return false;
+            }
+
+            return runState.boardUnits
+                .Where(unit => unit != null && (ignoreUnits == null || !ignoreUnits.Contains(unit)))
+                .All(unit => !GetOccupiedBoardSlots(unit).Any(occupiedSlots.Contains));
+        }
+
+        private static int ResolveBoardSize(UnitDefinition definition)
+        {
+            return definition != null && definition.size == 2 ? 2 : 1;
+        }
+
+        private static IReadOnlyList<string> GetAnchorCandidates(UnitDefinition definition, string requiredSlotId)
+        {
+            if (string.IsNullOrWhiteSpace(requiredSlotId))
+            {
+                return Array.Empty<string>();
+            }
+
+            var candidates = new List<string> { requiredSlotId };
+            if (ResolveBoardSize(definition) == 2 && TryParseBoardSlot(requiredSlotId, out var row, out var column))
+            {
+                candidates.Add($"{row}-{column + 1}");
+            }
+
+            return candidates.Distinct().ToList();
+        }
+
+        private static bool TryParseBoardSlot(string slotId, out int row, out int column)
+        {
+            row = 0;
+            column = 0;
+            if (string.IsNullOrWhiteSpace(slotId))
+            {
+                return false;
+            }
+
+            var parts = slotId.Split('-');
+            return parts.Length == 2
+                && int.TryParse(parts[0], out row)
+                && int.TryParse(parts[1], out column);
         }
 
         private static BoardUnitState CloneToBoardUnit(UnitCardState card, string boardSlotId)
@@ -145,11 +394,13 @@ namespace ProphecyCentury.Systems
                 manageRoundStatRetriggerTriggered = card.manageRoundStatRetriggerTriggered,
                 manageGiftActionBucket = card.manageGiftActionBucket,
                 manageAttackGainBucket = card.manageAttackGainBucket,
+                manageCountGainEventProgress = card.manageCountGainEventProgress,
                 manageSellCountBucket = card.manageSellCountBucket,
                 manageReceiveGiftPowerBucket = card.manageReceiveGiftPowerBucket,
                 manageReceiveGiftDiscoverTriggered = card.manageReceiveGiftDiscoverTriggered,
                 manageRoundAttackRewardTriggered = card.manageRoundAttackRewardTriggered,
                 pendingNextRoundTempCount = card.pendingNextRoundTempCount,
+                pendingNextRoundPermanentCount = card.pendingNextRoundPermanentCount,
                 battleProgressCounters = card.battleProgressCounters?.Select(counter => new BattleProgressCounterState { key = counter.key, value = counter.value }).ToList() ?? new System.Collections.Generic.List<BattleProgressCounterState>(),
                 boardSlotId = boardSlotId
             };

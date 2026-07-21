@@ -539,7 +539,7 @@ namespace ProphecyCentury.UI
                 "基础属性",
                 $"数量 {ResolveStartCount(unit)}    单体血量 {ResolveHpPerUnit(unit)}    攻击 {unit.attack}    防御 {unit.defense}",
                 $"伤害 {unit.damageMin}-{unit.damageMax}    先机 {unit.initiative}    速度 {unit.speed}",
-                $"幸运 {unit.luck}（暴击率 {unit.luck * 6}%）    士气 {unit.morale}（追加攻击率 {unit.morale * 4}%）    射程 {unit.range:0.##}    体型 {unit.size}",
+                $"幸运 {unit.luck}（暴击率 {unit.luck * 6}%）    士气 {unit.morale}（追加攻击率 {unit.morale * 4}%）    射程 {unit.EffectiveRange:0.##}    体型 {unit.size}",
                 string.Empty,
                 "普通经营技能",
                 ValueOrNone(unit.talentText),

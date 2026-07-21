@@ -94,13 +94,16 @@ namespace ProphecyCentury.Model
         public bool manageRoundStatRetriggerTriggered;
         public int manageGiftActionBucket;
         public int manageAttackGainBucket;
+        public int manageCountGainEventProgress;
         public int manageSellCountBucket;
+        public int manageLeaveTagBucket;
         public int manageReceiveGiftPowerBucket;
         public bool manageReceiveGiftDiscoverTriggered;
         public bool manageRoundAttackRewardTriggered;
         public int pendingNextRoundTempCount;
         public int pendingNextRoundTempAttack;
         public int pendingNextRoundTempPower;
+        public int pendingNextRoundPermanentCount;
         public int pendingNextRoundPermanentHp;
         public int pendingNextRoundPermanentPower;
         public int pendingNextRoundPermanentLuck;

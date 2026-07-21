@@ -523,6 +523,7 @@ namespace ProphecyCentury.UI
                 boardAuraAttack = card.boardAuraAttack,
                 baseCount = card.baseCount,
                 maxCount = card.maxCount,
+                manageCountGainEventProgress = card.manageCountGainEventProgress,
                 manageSellCountBucket = card.manageSellCountBucket,
                 boardSlotId = slotId
             };

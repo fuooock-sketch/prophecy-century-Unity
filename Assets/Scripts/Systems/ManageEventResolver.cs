@@ -314,6 +314,23 @@ namespace ProphecyCentury.Systems
                         GainCount(runState, owner, Value(talent, owner), owner, processed, depth);
                     }
                     break;
+                case "on_external_gift_action_self_gift_and_self_multiple_gain_forest_gem":
+                    if (eventType == "on_gain_count" && target == owner && eventValue > 0)
+                    {
+                        var threshold = Math.Max(1, talent.threshold);
+                        var currentCount = CurrentCount(owner);
+                        var previousCount = Math.Max(0, currentCount - eventValue);
+                        var crossedMultiples = currentCount / threshold - previousCount / threshold;
+                        if (crossedMultiples > 0)
+                        {
+                            GainForestGem(runState, owner, crossedMultiples * Math.Max(0, talent.gain), owner, processed, depth);
+                        }
+                    }
+                    else if (eventType == "on_gift_action" && reason != "burrow_mole_echo_gift")
+                    {
+                        GiftForestGem(runState, owner, owner, Gift(talent, owner), processed, depth, "burrow_mole_echo_gift");
+                    }
+                    break;
                 case "on_faith_gain_count_threshold_self_gain_count":
                     if (eventType == "on_gain_count" && target is BoardUnitState && UnitDef(target)?.faith == talent.faith && eventValue > 0)
                     {
@@ -365,10 +382,10 @@ namespace ProphecyCentury.Systems
                 case "while_on_board_count_gain_events_evolve":
                     if (eventType == "on_gain_count" && target is BoardUnitState && eventValue > 0)
                     {
-                        owner.manageAttackGainBucket += 1;
-                        if (owner.manageAttackGainBucket >= Math.Max(1, talent.threshold))
+                        owner.manageCountGainEventProgress += 1;
+                        if (owner.manageCountGainEventProgress >= Math.Max(1, talent.threshold))
                         {
-                            owner.manageAttackGainBucket = 0;
+                            owner.manageCountGainEventProgress = 0;
                             Evolve(runState, owner, talent.targetUnitId, target, processed, depth);
                         }
                     }
@@ -454,12 +471,17 @@ namespace ProphecyCentury.Systems
                     }
                     break;
                 case "on_leave_tag_count_tagged_units_gain_power":
-                    if (eventType == "on_leave" && target == owner)
+                    if (eventType == "on_leave" && target != null && HasTag(target, talent.tag))
                     {
-                        var tagCount = runState.boardUnits.Count(unit => HasTag(unit, talent.targetTag));
-                        foreach (var unit in runState.boardUnits.Where(unit => HasTag(unit, talent.targetTag)))
+                        owner.manageLeaveTagBucket += 1;
+                        var threshold = Math.Max(1, talent.threshold);
+                        while (owner.manageLeaveTagBucket >= threshold)
                         {
-                            GainCount(runState, unit, tagCount * Value(talent, owner, Power(talent, owner, 1)), owner, processed, depth);
+                            owner.manageLeaveTagBucket -= threshold;
+                            foreach (var unit in runState.boardUnits.Where(unit => HasTag(unit, talent.targetTag)))
+                            {
+                                GainCount(runState, unit, Value(talent, owner, Power(talent, owner, 1)), owner, processed, depth);
+                            }
                         }
                     }
                     break;
@@ -692,6 +714,18 @@ namespace ProphecyCentury.Systems
                         }
                     }
                     break;
+                case "on_sell_every_n_gain_gold":
+                    if (eventType == "on_sell" && target != null)
+                    {
+                        var threshold = Math.Max(1, talent.threshold);
+                        owner.manageSellCountBucket += 1;
+                        while (owner.manageSellCountBucket >= threshold)
+                        {
+                            owner.manageSellCountBucket -= threshold;
+                            runState.gold += Math.Max(0, Value(talent, owner));
+                        }
+                    }
+                    break;
                 case "on_receive_gift_total_team_gain_power_every_n":
                     if (eventType == "on_receive_gift" && target == owner && talent.threshold > 0)
                     {
@@ -719,10 +753,21 @@ namespace ProphecyCentury.Systems
                         DevourShopCard(runState, owner, talent, true, processed, depth);
                     }
                     break;
+                case "round_end_devour_shop_extreme_count":
+                    if (eventType == "on_round_end")
+                    {
+                        DevourShopCard(runState, owner, talent, string.Equals(talent.targetMode, "highest", StringComparison.Ordinal), processed, depth, true);
+                    }
+                    break;
                 case "while_on_board_on_entry_race_devour_shop_gain_attack":
                     if (eventType == "on_entry" && target != owner && CountsAsRace(runState, target, talent.race))
                     {
-                        DevourShopCard(runState, owner, talent, false, processed, depth);
+                        owner.manageEntryEffectTriggerCount += 1;
+                        if (owner.manageEntryEffectTriggerCount >= Math.Max(1, talent.threshold))
+                        {
+                            owner.manageEntryEffectTriggerCount = 0;
+                            DevourShopCard(runState, owner, talent, false, processed, depth);
+                        }
                     }
                     break;
                 case "on_entry_race_units_devour_shop_gain_attack":
@@ -763,7 +808,7 @@ namespace ProphecyCentury.Systems
                     {
                         for (var i = 0; i < Count(talent, owner); i += 1)
                         {
-                            AddUnitToHand(runState, talent.unitId, owner);
+                            AddUnitToHand(runState, talent.unitId, owner, false, true);
                         }
                     }
                     break;
@@ -894,14 +939,29 @@ namespace ProphecyCentury.Systems
                         GainCount(runState, owner, Value(talent, owner, Attack(talent, owner, 0)), owner, processed, depth);
                     }
                     break;
-                case "on_entry_devour_board_tag_copy_gain_attack":
+                case "on_entry_random_board_tag_gain_own_initial_count":
                     if (eventType == "on_entry" && target == owner)
                     {
                         foreach (var unit in PickRandom(runState.boardUnits.Where(unit => unit != owner && HasTag(unit, talent.targetTag)).ToList(), Count(talent, owner)))
                         {
-                            var gain = Math.Max(1, unit.baseCount > 0 ? unit.baseCount : ResolveStartCount(UnitDef(unit)));
-                            GainCount(runState, owner, gain, owner, processed, depth);
-                            Dispatch(runState, "on_devour", owner, "devour_board_tag_copy", owner, gain, processed, depth + 1);
+                            var gain = Math.Max(1, ResolveStartCount(UnitDef(unit)));
+                            GainCount(runState, unit, gain, owner, processed, depth);
+                        }
+                    }
+                    break;
+                case "on_leave_add_random_unit_from_pool":
+                    if (eventType == "on_leave" && target == owner && talent.unitIds != null && talent.unitIds.Length > 0)
+                    {
+                        var candidates = talent.unitIds.Where(unitId => !string.IsNullOrWhiteSpace(unitId)).ToList();
+                        for (var index = 0; index < Math.Max(1, Count(talent, owner)); index += 1)
+                        {
+                            var available = candidates.Where(unitId => _shopSystem.IsUnitAvailableInPool(runState, unitId)).ToList();
+                            if (available.Count == 0)
+                            {
+                                break;
+                            }
+
+                            AddUnitToHand(runState, available[_random.Next(available.Count)], owner, true);
                         }
                     }
                     break;
@@ -959,7 +1019,7 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private void DevourShopCard(RunState runState, BoardUnitState owner, SkillDefinition talent, bool highestCount, HashSet<string> processed, int depth)
+        private void DevourShopCard(RunState runState, BoardUnitState owner, SkillDefinition talent, bool highestCount, HashSet<string> processed, int depth, bool selectExtreme = false)
         {
             var candidates = runState.shopCards
                 .Select((card, index) => new { card, index })
@@ -970,9 +1030,13 @@ namespace ProphecyCentury.Systems
                 return;
             }
 
-            var picked = highestCount
-                ? candidates.OrderByDescending(entry => CurrentShopCount(entry.card)).First()
-                : candidates[_random.Next(candidates.Count)];
+            var picked = selectExtreme
+                ? highestCount
+                    ? candidates.OrderByDescending(entry => CurrentShopCount(entry.card)).First()
+                    : candidates.OrderBy(entry => CurrentShopCount(entry.card)).First()
+                : highestCount
+                    ? candidates.OrderByDescending(entry => CurrentShopCount(entry.card)).First()
+                    : candidates[_random.Next(candidates.Count)];
             var card = _shopSystem.RemoveShopCardForDevour(runState, picked.index);
             if (card == null)
             {
@@ -1057,11 +1121,13 @@ namespace ProphecyCentury.Systems
                 manageRoundStatRetriggerTriggered = card.manageRoundStatRetriggerTriggered,
                 manageGiftActionBucket = card.manageGiftActionBucket,
                 manageAttackGainBucket = card.manageAttackGainBucket,
+                manageCountGainEventProgress = card.manageCountGainEventProgress,
                 manageSellCountBucket = card.manageSellCountBucket,
                 manageReceiveGiftPowerBucket = card.manageReceiveGiftPowerBucket,
                 manageReceiveGiftDiscoverTriggered = card.manageReceiveGiftDiscoverTriggered,
                 manageRoundAttackRewardTriggered = card.manageRoundAttackRewardTriggered,
-                pendingNextRoundTempCount = card.pendingNextRoundTempCount
+                pendingNextRoundTempCount = card.pendingNextRoundTempCount,
+                pendingNextRoundPermanentCount = card.pendingNextRoundPermanentCount
             };
         }
 
@@ -1079,7 +1145,7 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private void GiftForestGem(RunState runState, UnitCardState source, UnitCardState target, int amount, HashSet<string> processed, int depth)
+        private void GiftForestGem(RunState runState, UnitCardState source, UnitCardState target, int amount, HashSet<string> processed, int depth, string giftActionReason = "gift_forest_gem")
         {
             if (target == null || amount <= 0)
             {
@@ -1090,7 +1156,7 @@ namespace ProphecyCentury.Systems
             target.forestGemsAttached += amount;
             target.forestGemsReceived += amount;
             target.forestGemCount += amount;
-            GainCount(runState, target, amount * (ForestGemReinforceCount + bonusCount), source, processed, depth, true);
+            GainCount(runState, target, amount * (ForestGemReinforceCount + bonusCount), source, processed, depth, true, "forest_gem_gift");
             runState.manageResources.forestGiftActions += 1;
             runState.manageResources.forestGiftTotal += amount;
             runState.manageResources.forestGiftRoundActions += 1;
@@ -1103,7 +1169,7 @@ namespace ProphecyCentury.Systems
                 targetName = target.name,
                 amount = amount
             });
-            Dispatch(runState, "on_gift_action", target, "gift_forest_gem", source, amount, processed, depth + 1);
+            Dispatch(runState, "on_gift_action", target, giftActionReason, source, amount, processed, depth + 1);
             Dispatch(runState, "on_receive_gift", target, "receive_gift", source, amount, processed, depth + 1);
         }
 
@@ -1199,7 +1265,7 @@ namespace ProphecyCentury.Systems
                 return false;
             }
 
-            var target = runState.boardUnits.FirstOrDefault(unit => unit.boardSlotId == boardSlotId);
+            var target = BoardSystem.FindUnitOccupyingSlot(runState, boardSlotId);
             if (target == null)
             {
                 return false;
@@ -1325,7 +1391,7 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private void GainCount(RunState runState, UnitCardState target, int amount, UnitCardState source, HashSet<string> processed, int depth, bool suppressFeedback = false)
+        private void GainCount(RunState runState, UnitCardState target, int amount, UnitCardState source, HashSet<string> processed, int depth, bool suppressFeedback = false, string eventReason = "gain_count")
         {
             if (target == null || amount <= 0)
             {
@@ -1340,7 +1406,7 @@ namespace ProphecyCentury.Systems
 
             var totalGain = ApplyHeroCountGainBonuses(runState, target, amount, source, suppressFeedback);
             TriggerForestGemGiftCountBonusAuras(runState, target);
-            Dispatch(runState, "on_gain_count", target, "gain_count", source, totalGain, processed, depth + 1);
+            Dispatch(runState, "on_gain_count", target, eventReason, source, totalGain, processed, depth + 1);
         }
 
         private int ApplyHeroCountGainBonuses(RunState runState, UnitCardState target, int amount, UnitCardState source, bool suppressFeedback)
@@ -1514,7 +1580,12 @@ namespace ProphecyCentury.Systems
             return Math.Max(1, definition.defaultCount > 0 ? definition.defaultCount : definition.startCount > 0 ? definition.startCount : definition.baseCount > 0 ? definition.baseCount : 1);
         }
 
-        private bool AddUnitToHand(RunState runState, string unitId, UnitCardState source = null)
+        private bool AddUnitToHand(
+            RunState runState,
+            string unitId,
+            UnitCardState source = null,
+            bool useShopPool = false,
+            bool useStartCount = false)
         {
             if (runState == null || string.IsNullOrWhiteSpace(unitId))
             {
@@ -1532,9 +1603,16 @@ namespace ProphecyCentury.Systems
                 unitId = unit.id,
                 name = unit.name,
                 star = unit.star,
-                baseCount = ResolveStartCount(unit),
+                baseCount = useStartCount
+                    ? Math.Max(1, unit.startCount > 0 ? unit.startCount : ResolveStartCount(unit))
+                    : ResolveStartCount(unit),
                 maxCount = 0
             };
+            if (useShopPool && !_shopSystem.TryTakeDiscoveredCardFromPool(runState, card))
+            {
+                return false;
+            }
+
             if (runState.handCards == null)
             {
                 runState.handCards = new List<UnitCardState>();
@@ -1569,10 +1647,16 @@ namespace ProphecyCentury.Systems
         {
             var pool = ProphecyGameSession.Instance.Data.Units.Where(predicate).ToList();
             var added = 0;
-            for (var i = 0; i < count && runState.handCards.Count < HandMaxCount && pool.Count > 0; i += 1)
+            for (var i = 0; i < count && runState.handCards.Count < HandMaxCount; i += 1)
             {
-                var picked = pool[_random.Next(pool.Count)];
-                if (AddUnitToHand(runState, picked.id, source))
+                var available = pool.Where(unit => _shopSystem.IsUnitAvailableInPool(runState, unit.id)).ToList();
+                if (available.Count == 0)
+                {
+                    break;
+                }
+
+                var picked = available[_random.Next(available.Count)];
+                if (AddUnitToHand(runState, picked.id, source, true))
                 {
                     added += 1;
                 }
@@ -1630,7 +1714,7 @@ namespace ProphecyCentury.Systems
                 case "on_any_entry_effect_triggered_self_gain_attack":
                 case "on_entry_board_tagged_units_gain_attack":
                 case "on_any_entry_effect_count_evolve":
-                case "on_entry_devour_board_tag_copy_gain_attack":
+                case "on_entry_random_board_tag_gain_own_initial_count":
                 case "enter_target_unit_permanent_power":
                 case "while_on_board_entry_effect_self_and_rear_gain_attack":
                     return eventType == "on_entry";
@@ -1650,6 +1734,7 @@ namespace ProphecyCentury.Systems
                 case "round_end_self_and_rear_rows_gain_count_retrigger_tag_round_end":
                 case "round_end_temp_gain_adjacent_attack":
                 case "round_end_devour_shop_highest_attack_gain_attack":
+                case "round_end_devour_shop_extreme_count":
                 case "round_end_tagged_units_devour_shop_gain_attack":
                 case "round_end_if_no_forest_gem_in_hand_self_gain_attack":
                     return eventType == "on_round_end";
@@ -1663,11 +1748,14 @@ namespace ProphecyCentury.Systems
                 case "on_leave_gift_forest_gem_team":
                 case "on_leave_gain_forest_gem_hand":
                 case "on_leave_retrigger_random_race_entry_effects":
+                case "on_leave_add_random_unit_from_pool":
                     return eventType == "on_leave";
                 case "on_gain_power_self_gain_attack":
                 case "on_gain_power_convert_to_attack_random_board_unit":
                 case "on_gain_count_transfer_to_random_other_allies":
                     return eventType == "on_gain_count";
+                case "on_external_gift_action_self_gift_and_self_multiple_gain_forest_gem":
+                    return eventType == "on_gain_count" || eventType == "on_gift_action";
                 case "on_gain_race_unit_self_gain_count":
                     return eventType == "on_gain_unit";
                 case "on_gain_defense_team_gain_attack":
@@ -1695,6 +1783,7 @@ namespace ProphecyCentury.Systems
                     return eventType == "on_gift_action";
                 case "on_other_sell_absorb_attached_gems_and_gain_attack":
                 case "on_sell_every_n_self_gain_count":
+                case "on_sell_every_n_gain_gold":
                     return eventType == "on_sell";
                 case "on_instant_evolve_self_gift_and_gain_attack":
                     return eventType == "on_instant_evolve";
@@ -1738,7 +1827,7 @@ namespace ProphecyCentury.Systems
                     case "on_entry_shop_cards_gain_attack":
                     case "on_entry_shop_default_count_permanent":
                     case "on_entry_board_tagged_units_gain_attack":
-                    case "on_entry_devour_board_tag_copy_gain_attack":
+                    case "on_entry_random_board_tag_gain_own_initial_count":
                         return true;
                     case "enter_target_unit_permanent_power":
                         return reason != null && reason.Contains("retrigger");
@@ -1763,38 +1852,50 @@ namespace ProphecyCentury.Systems
 
         private static IEnumerable<BoardUnitState> SideAdjacent(RunState runState, BoardUnitState owner)
         {
-            if (!TryParseSlot(owner?.boardSlotId, out var row, out var col))
+            var ownerSlots = OccupiedCoordinates(owner).ToList();
+            if (runState?.boardUnits == null || ownerSlots.Count == 0)
             {
                 return Enumerable.Empty<BoardUnitState>();
             }
 
             return runState.boardUnits.Where(unit =>
-                TryParseSlot(unit.boardSlotId, out var targetRow, out var targetCol)
-                && targetRow == row
-                && Math.Abs(targetCol - col) == 1);
+                unit != null
+                && unit != owner
+                && OccupiedCoordinates(unit).Any(target =>
+                    ownerSlots.Any(origin => target.Row == origin.Row && Math.Abs(target.Col - origin.Col) == 1)));
         }
 
         private static IEnumerable<BoardUnitState> SameRow(RunState runState, BoardUnitState owner)
         {
-            if (!TryParseSlot(owner?.boardSlotId, out var row, out _))
+            var ownerRows = OccupiedCoordinates(owner).Select(slot => slot.Row).Distinct().ToList();
+            if (runState?.boardUnits == null || ownerRows.Count == 0)
             {
                 return Enumerable.Empty<BoardUnitState>();
             }
 
-            return runState.boardUnits.Where(unit => TryParseSlot(unit.boardSlotId, out var unitRow, out _) && unitRow == row);
+            return runState.boardUnits.Where(unit =>
+                unit != null
+                && OccupiedCoordinates(unit).Any(slot => ownerRows.Contains(slot.Row)));
         }
 
         private static IEnumerable<BoardUnitState> ForwardAdjacent(RunState runState, BoardUnitState owner, string targetMode)
         {
-            if (!TryParseSlot(owner?.boardSlotId, out var row, out var col))
+            var ownerSlots = OccupiedCoordinates(owner).ToList();
+            if (runState?.boardUnits == null || ownerSlots.Count == 0)
             {
                 return Enumerable.Empty<BoardUnitState>();
             }
 
-            var forwardRow = row - 1;
             return targetMode == "forward_row_all"
-                ? runState.boardUnits.Where(unit => TryParseSlot(unit.boardSlotId, out var unitRow, out _) && unitRow == forwardRow)
-                : runState.boardUnits.Where(unit => TryParseSlot(unit.boardSlotId, out var unitRow, out var unitCol) && unitRow == forwardRow && Math.Abs(unitCol - col) <= 1);
+                ? runState.boardUnits.Where(unit =>
+                    unit != null
+                    && unit != owner
+                    && OccupiedCoordinates(unit).Any(target => ownerSlots.Any(origin => target.Row == origin.Row - 1)))
+                : runState.boardUnits.Where(unit =>
+                    unit != null
+                    && unit != owner
+                    && OccupiedCoordinates(unit).Any(target =>
+                        ownerSlots.Any(origin => target.Row == origin.Row - 1 && Math.Abs(target.Col - origin.Col) <= 1)));
         }
 
         private static int ResolveMushroomQuakuTempCount(RunState runState, BoardUnitState owner, SkillDefinition talent)
@@ -1814,14 +1915,19 @@ namespace ProphecyCentury.Systems
 
         private static IEnumerable<BoardUnitState> SameAndForwardRows(RunState runState, BoardUnitState owner)
         {
-            if (!TryParseSlot(owner?.boardSlotId, out var row, out _))
+            var targetRows = OccupiedCoordinates(owner)
+                .Select(slot => slot.Row)
+                .SelectMany(row => new[] { row, row - 1 })
+                .Distinct()
+                .ToList();
+            if (runState?.boardUnits == null || targetRows.Count == 0)
             {
                 return Enumerable.Empty<BoardUnitState>();
             }
 
             return runState.boardUnits.Where(unit =>
-                TryParseSlot(unit.boardSlotId, out var unitRow, out _)
-                && (unitRow == row || unitRow == row - 1));
+                unit != null
+                && OccupiedCoordinates(unit).Any(slot => targetRows.Contains(slot.Row)));
         }
 
         private static IEnumerable<BoardUnitState> SelfAndRearRow(RunState runState, BoardUnitState owner)
@@ -1832,7 +1938,7 @@ namespace ProphecyCentury.Systems
             }
 
             return runState.boardUnits.Where(unit =>
-                unit == owner || (TryParseSlot(unit.boardSlotId, out var unitRow, out _) && unitRow == row + 1));
+                unit == owner || OccupiedCoordinates(unit).Any(slot => slot.Row == row + 1));
         }
 
         private static IEnumerable<BoardUnitState> SelfAndRearRows(RunState runState, BoardUnitState owner)
@@ -1842,7 +1948,37 @@ namespace ProphecyCentury.Systems
                 return owner == null ? Enumerable.Empty<BoardUnitState>() : new[] { owner };
             }
 
-            return runState.boardUnits.Where(unit => TryParseSlot(unit.boardSlotId, out var unitRow, out _) && unitRow >= row);
+            return runState.boardUnits.Where(unit =>
+                unit != null
+                && (unit == owner || OccupiedCoordinates(unit).Any(slot => slot.Row >= row)));
+        }
+
+        private static IEnumerable<BoardSlotCoordinate> OccupiedCoordinates(BoardUnitState unit)
+        {
+            if (unit == null)
+            {
+                yield break;
+            }
+
+            foreach (var slot in BoardSystem.GetOccupiedBoardSlots(unit))
+            {
+                if (TryParseSlot(slot, out var row, out var col))
+                {
+                    yield return new BoardSlotCoordinate(row, col);
+                }
+            }
+        }
+
+        private struct BoardSlotCoordinate
+        {
+            public BoardSlotCoordinate(int row, int col)
+            {
+                Row = row;
+                Col = col;
+            }
+
+            public int Row;
+            public int Col;
         }
 
         private static bool TryParseSlot(string slotId, out int row, out int col)

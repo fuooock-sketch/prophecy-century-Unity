@@ -15,6 +15,8 @@ const units = JSON.parse(read(path.join('Assets', 'Resources', 'Data', 'unit_dat
 const manage = read(path.join('Assets', 'Scripts', 'Systems', 'ManageEventResolver.cs'));
 const stub = read(path.join('Assets', 'Scripts', 'Systems', 'BattleStubSystem.cs'));
 const realtime = read(path.join('Assets', 'Scripts', 'Systems', 'BattleRealtimeSystem.cs'));
+const flow = read(path.join('Assets', 'Scripts', 'Systems', 'RunFlowController.cs'));
+const ui = read(path.join('Assets', 'Scripts', 'UI', 'RunSceneController.cs'));
 
 function unit(id) {
   const found = units.find(item => item.id === id);
@@ -47,18 +49,24 @@ assert(cheetahGoldTalent.threshold === 5 && cheetahGoldTalent.value === 8, 'chee
 
 const mole = unit('burrow_mole');
 const moleTalent = onlySkill(mole.talents, mole.id, 'talent');
-assert(moleTalent.gift === 1 && moleTalent.gain === 1, 'burrow mole normal talent should gift 1 and gain 1 forest gem');
+assert(moleTalent.kind === 'on_external_gift_action_self_gift_and_self_multiple_gain_forest_gem', 'burrow mole talent should echo external forest-gem gift actions and reward each count multiple');
+assert(moleTalent.gift === 1 && moleTalent.threshold === 10 && moleTalent.gain === 1, 'burrow mole normal talent should gift 1 and gain 1 forest gem at each multiple of 10');
 const moleGoldTalent = onlySkill(mole.goldTalents, mole.id, 'gold talent');
-assert(moleGoldTalent.gift === 2 && moleGoldTalent.gain === 2, 'burrow mole gold talent should gift 2 and gain 2 forest gems');
+assert(moleGoldTalent.kind === 'on_external_gift_action_self_gift_and_self_multiple_gain_forest_gem', 'gold burrow mole talent should echo external forest-gem gift actions and reward each count multiple');
+assert(moleGoldTalent.gift === 2 && moleGoldTalent.threshold === 10 && moleGoldTalent.gain === 1, 'burrow mole gold talent should gift 2 and gain 1 forest gem at each multiple of 10');
+assert(manage.includes('reason != "burrow_mole_echo_gift"'), 'burrow mole echo gifts must not recursively trigger another echo');
+assert(manage.includes('"burrow_mole_echo_gift"'), 'burrow mole self-gifts should carry an explicit recursion guard reason');
+assert(stub.includes('unit.IsAlive && !unit.IsStealthed') && realtime.includes('!unit.IsAttached && !unit.IsStealthed'), 'stealthed units must not be selected as ordinary targets');
+assert(stub.includes('FirstAttackDamageMultiplier') && realtime.includes('FirstAttackDamageMultiplier'), 'burrow mole first attack should use a damage multiplier instead of a forced critical');
 
 const rangerRider = unit('ranger_rider');
 assert(rangerRider.talents.some(skill => skill.kind === 'on_receive_gift_self_evolve' && skill.threshold === 5 && skill.targetUnitId === 'elite_ranger_rider'), 'ranger rider should evolve after receiving 5 forest gems');
 assert(rangerRider.goldTalents.some(skill => skill.kind === 'on_receive_gift_self_evolve' && skill.threshold === 5 && skill.targetUnitId === 'elite_ranger_rider'), 'gold ranger rider should evolve after receiving 5 forest gems');
 
 const eliteRangerRider = unit('elite_ranger_rider');
-assert(onlySkill(eliteRangerRider.battleSkills, eliteRangerRider.id, 'battle skill').kind === 'battle_start_self_temp_initiative', 'elite ranger rider should gain temporary initiative at battle start');
-assert(onlySkill(eliteRangerRider.battleSkills, eliteRangerRider.id, 'battle skill').value === 2, 'elite ranger rider should gain +2 temporary initiative');
-assert(onlySkill(eliteRangerRider.goldBattleSkills, eliteRangerRider.id, 'gold battle skill').value === 4, 'gold elite ranger rider should gain +4 temporary initiative');
+assert(onlySkill(eliteRangerRider.battleSkills, eliteRangerRider.id, 'battle skill').kind === 'on_attack_teleport_and_crit_chance', 'elite ranger rider should teleport beside its target on every attack');
+assert(onlySkill(eliteRangerRider.battleSkills, eliteRangerRider.id, 'battle skill').chance === 0.5, 'elite ranger rider should have an absolute 50 percent crit chance');
+assert(onlySkill(eliteRangerRider.goldBattleSkills, eliteRangerRider.id, 'gold battle skill').chance === 1, 'gold elite ranger rider should have an absolute 100 percent crit chance');
 
 const ranger = unit('ranger');
 assert(ranger.talents.some(skill => skill.kind === 'while_on_board_count_gain_events_evolve' && skill.threshold === 10 && skill.targetUnitId === 'sword_ranger'), 'ranger should evolve after 10 on-board count-gain events');
@@ -88,16 +96,17 @@ assert(onlySkill(phantomArcher.talents, phantomArcher.id, 'talent').value === 0,
 assert(onlySkill(phantomArcher.goldTalents, phantomArcher.id, 'gold talent').value === 1, 'gold phantom archer should gain +1 count on other sales');
 assert(onlySkill(phantomArcher.battleSkills, phantomArcher.id, 'battle skill').distance === 8, 'phantom archer normal snipe crit distance should be 8');
 assert(onlySkill(phantomArcher.goldBattleSkills, phantomArcher.id, 'gold battle skill').distance === 6, 'phantom archer gold snipe crit distance should be 6');
+assert(stub.includes('aliveEnemies.Max(enemy => enemy.BoardRow)'), 'stub phantom archer should identify the back line by formation row');
 
 const twinTowerMage = unit('twin_tower_mage');
-assert(onlySkill(twinTowerMage.battleSkills, twinTowerMage.id, 'battle skill').kind === 'on_attack_self_count_loss_percent_aoe', 'twin tower mage should self-lose count and aoe on each attack');
-assert(onlySkill(twinTowerMage.battleSkills, twinTowerMage.id, 'battle skill').percent === 0.05 && onlySkill(twinTowerMage.battleSkills, twinTowerMage.id, 'battle skill').radius === 2, 'twin tower mage normal skill should lose 5 percent and use radius 2');
-assert(onlySkill(twinTowerMage.goldBattleSkills, twinTowerMage.id, 'gold battle skill').radius === 4, 'gold twin tower mage should use radius 4');
+assert(onlySkill(twinTowerMage.battleSkills, twinTowerMage.id, 'battle skill').kind === 'battle_start_attach_to_highest_count_allies', 'twin tower mage should attach to the highest-count ally');
+assert(onlySkill(twinTowerMage.battleSkills, twinTowerMage.id, 'battle skill').count === 1, 'normal twin tower mage should attach to one ally');
+assert(onlySkill(twinTowerMage.goldBattleSkills, twinTowerMage.id, 'gold battle skill').count === 2, 'gold twin tower mage should attach to two allies');
 
 const mireFiend = unit('mire_fiend');
 assert(mireFiend.goldTalents.some(skill => skill.kind === 'round_end_self_gift_forest_gem' && skill.value === 4), 'gold mire fiend should gift self 4 forest gems at round end');
-assert(mireFiend.talents.some(skill => skill.kind === 'on_receive_gift_self_evolve' && skill.threshold === 10 && skill.targetUnitId === 'blood_mire_fiend'), 'mire fiend should evolve after receiving 10 forest gems');
-assert(mireFiend.goldTalents.some(skill => skill.kind === 'on_receive_gift_self_evolve' && skill.threshold === 10 && skill.targetUnitId === 'blood_mire_fiend'), 'gold mire fiend should evolve after receiving 10 forest gems');
+assert(mireFiend.talents.some(skill => skill.kind === 'on_receive_gift_self_evolve' && skill.threshold === 30 && skill.targetUnitId === 'blood_mire_fiend'), 'mire fiend should evolve after receiving 30 forest gems');
+assert(mireFiend.goldTalents.some(skill => skill.kind === 'on_receive_gift_self_evolve' && skill.threshold === 30 && skill.targetUnitId === 'blood_mire_fiend'), 'gold mire fiend should evolve after receiving 30 forest gems');
 
 assert(manage.includes('case "on_gift_action_self_gain_count_every_n"'), 'ManageEventResolver should handle cheetah self gift-action counter');
 assert(manage.includes('case "while_on_board_count_gain_events_evolve"'), 'ManageEventResolver should handle ranger count-gain event evolution');
@@ -105,9 +114,11 @@ assert(manage.includes('case "round_end_forward_row_units_gift_forest_gem"'), 'M
 assert(/case "on_gift_action_self_gain_count_every_n":[\s\S]*return eventType == "on_gift_action";/.test(manage), 'cheetah self counter should listen for gift actions');
 assert(stub.includes('case "on_attack_multi_nearest_targets"'), 'BattleStubSystem should resolve mercenary captain multi-target attacks');
 assert(realtime.includes('case "battle_start_stealth_assassinate_lowest_hp"'), 'BattleRealtimeSystem should support burrow mole gold stealth assassinate');
-assert(stub.includes('case "battle_start_self_temp_initiative"'), 'BattleStubSystem should support elite ranger rider temporary initiative');
-assert(realtime.includes('case "battle_start_self_temp_initiative"'), 'BattleRealtimeSystem should support elite ranger rider temporary initiative preview');
-assert(stub.includes('case "on_attack_self_count_loss_percent_aoe"'), 'BattleStubSystem should support twin tower mage self-loss aoe attacks');
-assert(realtime.includes('case "on_attack_self_count_loss_percent_aoe"'), 'BattleRealtimeSystem should support twin tower mage self-loss aoe preview');
+assert(stub.includes('on_attack_teleport_and_crit_chance'), 'BattleStubSystem should support elite ranger rider teleport attacks');
+assert(stub.includes('PendingRoundPermanentCount += Math.Max(0, skill.value)'), 'cheetah death reward should be permanent count');
+assert(flow.includes('unit.baseCount += permanentCountGain'), 'next-round permanent count should be applied to base count');
+assert(stub.includes('battle_start_attach_to_highest_count_allies') && realtime.includes('battle_start_attach_to_highest_count_allies'), 'both battle systems should support twin tower attachment');
+assert(ui.includes('ApplyBattleAttachmentFeedback') && ui.includes('PlayBattleAttachedAttackEffect') && ui.includes('ApplyBattleAttachmentDeathFeedback'), 'UI should render twin tower attach, follow-up attack, and detach feedback');
+assert(ui.includes('battleEvent.Message.IndexOf("pounces"'), 'UI should recognize elite ranger rider teleport events');
 
 console.log('Gansei skill alignment OK');

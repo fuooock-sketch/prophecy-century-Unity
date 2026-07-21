@@ -118,6 +118,7 @@ public sealed class SynthesisSystem
                 manageRoundStatRetriggerTriggered = sourceUnits.Any(unit => unit.manageRoundStatRetriggerTriggered),
                 manageGiftActionBucket = sourceUnits.Max(unit => unit.manageGiftActionBucket),
                 manageAttackGainBucket = sourceUnits.Max(unit => unit.manageAttackGainBucket),
+                manageCountGainEventProgress = sourceUnits.Max(unit => unit.manageCountGainEventProgress),
                 manageSellCountBucket = sourceUnits.Max(unit => unit.manageSellCountBucket),
                 manageReceiveGiftPowerBucket = sourceUnits.Max(unit => unit.manageReceiveGiftPowerBucket),
                 manageReceiveGiftDiscoverTriggered = sourceUnits.Any(unit => unit.manageReceiveGiftDiscoverTriggered),

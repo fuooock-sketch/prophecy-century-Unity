@@ -4949,14 +4949,27 @@
     ]
   },
   {
+    "id": "testmap_paladin",
+    "name": "testmap paladin",
+    "type": "normal",
+    "units": [
+      {
+        "slotId": "2-2",
+        "unitId": "bright_warrior",
+        "count": 1,
+        "star": 1
+      }
+    ]
+  },
+  {
     "id": "snow_peak_defense_r01",
     "name": "Snow Peak Defense R01",
     "type": "normal",
     "units": [
       {
-        "slotId": "1-1",
-        "unitId": "fire_elemental",
-        "count": 22,
+        "slotId": "4-4",
+        "unitId": "frost_spirit",
+        "count": 21,
         "star": 1
       }
     ]
@@ -4967,16 +4980,16 @@
     "type": "normal",
     "units": [
       {
-        "slotId": "1-1",
-        "unitId": "fire_elemental",
-        "count": 22,
-        "star": 1
+        "slotId": "4-3",
+        "unitId": "caller",
+        "count": 15,
+        "star": 2
       },
       {
-        "slotId": "2-2",
-        "unitId": "novice_elementalist",
-        "count": 13,
-        "star": 2
+        "slotId": "4-4",
+        "unitId": "frost_spirit",
+        "count": 21,
+        "star": 1
       }
     ]
   },
@@ -4986,22 +4999,22 @@
     "type": "normal",
     "units": [
       {
-        "slotId": "1-1",
-        "unitId": "fire_elemental",
-        "count": 22,
-        "star": 1
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "puppet_spirit",
-        "count": 10,
+        "slotId": "4-1",
+        "unitId": "archer",
+        "count": 7,
         "star": 3
       },
       {
-        "slotId": "2-2",
-        "unitId": "novice_elementalist",
-        "count": 13,
+        "slotId": "4-3",
+        "unitId": "caller",
+        "count": 15,
         "star": 2
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "frost_spirit",
+        "count": 21,
+        "star": 1
       }
     ]
   },
@@ -5011,34 +5024,28 @@
     "type": "normal",
     "units": [
       {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 34,
-        "star": 1
+        "slotId": "4-1",
+        "unitId": "archer",
+        "count": 7,
+        "star": 3
       },
       {
-        "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 40,
-        "star": 1
+        "slotId": "4-2",
+        "unitId": "pain_flame",
+        "count": 6,
+        "star": 4
       },
       {
-        "slotId": "3-2",
-        "unitId": "novice_elementalist",
-        "count": 19,
+        "slotId": "4-3",
+        "unitId": "caller",
+        "count": 15,
         "star": 2
       },
       {
-        "slotId": "3-3",
+        "slotId": "4-4",
         "unitId": "frost_spirit",
         "count": 21,
         "star": 1
-      },
-      {
-        "slotId": "4-4",
-        "unitId": "wind_elemental",
-        "count": 14,
-        "star": 4
       }
     ]
   },
@@ -5048,34 +5055,40 @@
     "type": "normal",
     "units": [
       {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 34,
-        "star": 1
-      },
-      {
-        "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 40,
-        "star": 1
+        "slotId": "3-1",
+        "unitId": "mercenary_captain",
+        "count": 6,
+        "star": 4
       },
       {
         "slotId": "3-2",
-        "unitId": "novice_elementalist",
-        "count": 19,
-        "star": 2
+        "unitId": "pain_flame",
+        "count": 6,
+        "star": 4
       },
       {
         "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 18,
-        "star": 4
+        "unitId": "archer",
+        "count": 7,
+        "star": 3
       },
       {
-        "slotId": "4-3",
-        "unitId": "wind_elemental",
-        "count": 8,
-        "star": 4
+        "slotId": "4-1",
+        "unitId": "priest",
+        "count": 10,
+        "star": 3
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "caller",
+        "count": 15,
+        "star": 2
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "frost_spirit",
+        "count": 21,
+        "star": 1
       }
     ]
   },
@@ -5086,51 +5099,51 @@
     "units": [
       {
         "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 34,
-        "star": 1
+        "unitId": "pain_flame",
+        "count": 6,
+        "star": 4
       },
       {
         "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 40,
-        "star": 1
-      },
-      {
-        "slotId": "3-1",
-        "unitId": "water_elemental",
-        "count": 17,
-        "star": 2
+        "unitId": "mercenary_captain",
+        "count": 6,
+        "star": 4
       },
       {
         "slotId": "3-2",
-        "unitId": "novice_elementalist",
-        "count": 19,
-        "star": 2
-      },
-      {
-        "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 18,
-        "star": 4
-      },
-      {
-        "slotId": "4-2",
-        "unitId": "stubborn_apprentice",
-        "count": 20,
-        "star": 1
-      },
-      {
-        "slotId": "4-3",
-        "unitId": "wind_elemental",
-        "count": 10,
-        "star": 4
-      },
-      {
-        "slotId": "4-4",
         "unitId": "archmage",
         "count": 1,
         "star": 5
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "frost_spirit",
+        "count": 21,
+        "star": 1
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "priest",
+        "count": 10,
+        "star": 3
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "caller",
+        "count": 15,
+        "star": 2
+      },
+      {
+        "slotId": "4-3",
+        "unitId": "archer",
+        "count": 8,
+        "star": 3
+      },
+      {
+        "slotId": "4-4",
+        "unitId": "archer",
+        "count": 7,
+        "star": 3
       }
     ]
   },
@@ -5140,64 +5153,52 @@
     "type": "normal",
     "units": [
       {
-        "slotId": "1-1",
-        "unitId": "fire_elemental",
-        "count": 104,
-        "star": 1
-      },
-      {
         "slotId": "2-1",
-        "unitId": "novice_elementalist",
-        "count": 13,
-        "star": 2
+        "unitId": "pain_flame",
+        "count": 6,
+        "star": 4
       },
       {
         "slotId": "2-2",
-        "unitId": "novice_elementalist",
-        "count": 19,
-        "star": 2
-      },
-      {
-        "slotId": "3-1",
-        "unitId": "water_elemental",
-        "count": 21,
-        "star": 2
+        "unitId": "mercenary_captain",
+        "count": 6,
+        "star": 4
       },
       {
         "slotId": "3-2",
-        "unitId": "element_master",
-        "count": 2,
+        "unitId": "archmage",
+        "count": 1,
         "star": 5
       },
       {
         "slotId": "3-3",
-        "unitId": "stubborn_apprentice",
-        "count": 20,
+        "unitId": "frost_spirit",
+        "count": 21,
         "star": 1
       },
       {
         "slotId": "4-1",
-        "unitId": "water_elemental",
-        "count": 19,
-        "star": 2
+        "unitId": "priest",
+        "count": 10,
+        "star": 3
       },
       {
         "slotId": "4-2",
-        "unitId": "wind_elemental",
-        "count": 18,
-        "star": 4
+        "unitId": "caller",
+        "count": 15,
+        "star": 2
       },
       {
         "slotId": "4-3",
-        "unitId": "wind_elemental",
-        "count": 10,
-        "star": 4
+        "unitId": "archer",
+        "count": 8,
+        "star": 3
       },
       {
         "slotId": "4-4",
-        "unitId": "archmage",
-        "count": 2,
-        "star": 5
+        "unitId": "archer",
+        "count": 7,
+        "star": 3
       }
     ]
   },
@@ -5208,63 +5209,51 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 14,
-        "star": 5
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 123,
-        "star": 1
+        "unitId": "pain_flame",
+        "count": 9,
+        "star": 4
       },
       {
         "slotId": "2-2",
-        "unitId": "novice_elementalist",
-        "count": 29,
-        "star": 2
-      },
-      {
-        "slotId": "3-1",
-        "unitId": "water_elemental",
-        "count": 67,
-        "star": 2
+        "unitId": "twin_tower_mage",
+        "count": 4,
+        "star": 6
       },
       {
         "slotId": "3-2",
-        "unitId": "element_master",
-        "count": 12,
+        "unitId": "archmage",
+        "count": 3,
         "star": 5
       },
       {
         "slotId": "3-3",
-        "unitId": "stubborn_apprentice",
-        "count": 30,
-        "star": 1
-      },
-      {
-        "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 8,
+        "unitId": "forest_general",
+        "count": 5,
         "star": 5
       },
       {
+        "slotId": "4-1",
+        "unitId": "priest",
+        "count": 13,
+        "star": 3
+      },
+      {
         "slotId": "4-2",
-        "unitId": "novice_elementalist",
-        "count": 23,
+        "unitId": "caller",
+        "count": 18,
         "star": 2
       },
       {
         "slotId": "4-3",
-        "unitId": "wind_elemental",
-        "count": 47,
-        "star": 4
+        "unitId": "archer",
+        "count": 24,
+        "star": 3
       },
       {
         "slotId": "4-4",
-        "unitId": "archmage",
-        "count": 7,
-        "star": 5
+        "unitId": "mercenary_captain",
+        "count": 9,
+        "star": 4
       }
     ]
   },
@@ -5275,63 +5264,45 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 24,
-        "star": 5
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 153,
-        "star": 1
-      },
-      {
-        "slotId": "2-2",
-        "unitId": "novice_elementalist",
-        "count": 39,
-        "star": 2
-      },
-      {
-        "slotId": "3-1",
-        "unitId": "novice_elementalist",
-        "count": 33,
-        "star": 2
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "element_master",
-        "count": 22,
-        "star": 5
-      },
-      {
-        "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 57,
+        "unitId": "mercenary_captain",
+        "count": 11,
         "star": 4
       },
       {
-        "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 15,
+        "slotId": "2-2",
+        "unitId": "cheetah",
+        "count": 5,
         "star": 5
       },
       {
-        "slotId": "4-2",
-        "unitId": "water_elemental",
-        "count": 77,
-        "star": 2
+        "slotId": "3-1",
+        "unitId": "sky_watcher",
+        "count": 12,
+        "star": 3
       },
       {
-        "slotId": "4-3",
-        "unitId": "academy_gardener",
-        "count": 17,
+        "slotId": "3-3",
+        "unitId": "forest_general",
+        "count": 7,
+        "star": 5
+      },
+      {
+        "slotId": "4-1",
+        "unitId": "priest",
+        "count": 15,
+        "star": 3
+      },
+      {
+        "slotId": "4-2",
+        "unitId": "phantom_archer",
+        "count": 64,
         "star": 4
       },
       {
         "slotId": "4-4",
-        "unitId": "archmage",
-        "count": 12,
-        "star": 5
+        "unitId": "mire_fiend",
+        "count": 32,
+        "star": 6
       }
     ]
   },
@@ -5342,63 +5313,45 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 34,
-        "star": 5
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 172,
-        "star": 1
+        "unitId": "mercenary_captain",
+        "count": 13,
+        "star": 4
       },
       {
         "slotId": "2-2",
-        "unitId": "novice_elementalist",
-        "count": 49,
-        "star": 2
+        "unitId": "forest_general",
+        "count": 9,
+        "star": 5
       },
       {
         "slotId": "3-1",
-        "unitId": "novice_elementalist",
-        "count": 43,
-        "star": 2
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "element_master",
-        "count": 32,
-        "star": 5
+        "unitId": "sky_watcher",
+        "count": 14,
+        "star": 3
       },
       {
         "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 67,
-        "star": 4
+        "unitId": "blood_mire_fiend",
+        "count": 57,
+        "star": 6
       },
       {
         "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 22,
-        "star": 5
-      },
-      {
-        "slotId": "4-2",
-        "unitId": "water_elemental",
-        "count": 87,
-        "star": 2
-      },
-      {
-        "slotId": "4-3",
-        "unitId": "academy_gardener",
-        "count": 40,
+        "unitId": "phantom_archer",
+        "count": 79,
         "star": 4
       },
       {
+        "slotId": "4-2",
+        "unitId": "priest",
+        "count": 20,
+        "star": 3
+      },
+      {
         "slotId": "4-4",
-        "unitId": "archmage",
-        "count": 17,
-        "star": 5
+        "unitId": "feather_guard",
+        "count": 6,
+        "star": 4
       }
     ]
   },
@@ -5409,63 +5362,51 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 60,
-        "star": 5
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 244,
-        "star": 1
-      },
-      {
-        "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 51,
-        "star": 1
-      },
-      {
-        "slotId": "3-1",
-        "unitId": "novice_elementalist",
-        "count": 77,
-        "star": 2
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "novice_elementalist",
-        "count": 81,
-        "star": 2
-      },
-      {
-        "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 99,
+        "unitId": "mercenary_captain",
+        "count": 19,
         "star": 4
       },
       {
-        "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 45,
+        "slotId": "2-1",
+        "unitId": "priest",
+        "count": 29,
+        "star": 3
+      },
+      {
+        "slotId": "2-2",
+        "unitId": "forest_general",
+        "count": 15,
         "star": 5
       },
       {
+        "slotId": "3-1",
+        "unitId": "sky_watcher",
+        "count": 20,
+        "star": 3
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "blood_mire_fiend",
+        "count": 68,
+        "star": 6
+      },
+      {
         "slotId": "4-2",
-        "unitId": "water_elemental",
-        "count": 119,
-        "star": 2
+        "unitId": "feather_guard",
+        "count": 12,
+        "star": 4
       },
       {
         "slotId": "4-3",
-        "unitId": "academy_gardener",
-        "count": 72,
+        "unitId": "phantom_archer",
+        "count": 70,
         "star": 4
       },
       {
         "slotId": "4-4",
-        "unitId": "archmage",
-        "count": 36,
-        "star": 5
+        "unitId": "phantom_archer",
+        "count": 149,
+        "star": 4
       }
     ]
   },
@@ -5475,64 +5416,46 @@
     "type": "normal",
     "units": [
       {
-        "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 70,
-        "star": 5
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 263,
-        "star": 1
-      },
-      {
         "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 66,
-        "star": 1
+        "unitId": "blood_mire_fiend",
+        "count": 79,
+        "star": 6
       },
       {
         "slotId": "3-1",
-        "unitId": "novice_elementalist",
-        "count": 87,
-        "star": 2
+        "unitId": "priest",
+        "count": 40,
+        "star": 3
       },
       {
         "slotId": "3-2",
-        "unitId": "novice_elementalist",
-        "count": 91,
-        "star": 2
+        "unitId": "sky_watcher",
+        "count": 25,
+        "star": 3
       },
       {
         "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 109,
-        "star": 4
-      },
-      {
-        "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 52,
+        "unitId": "forest_general",
+        "count": 29,
         "star": 5
       },
       {
         "slotId": "4-2",
-        "unitId": "water_elemental",
-        "count": 129,
-        "star": 2
+        "unitId": "feather_guard",
+        "count": 24,
+        "star": 4
       },
       {
         "slotId": "4-3",
-        "unitId": "academy_gardener",
-        "count": 82,
+        "unitId": "phantom_archer",
+        "count": 75,
         "star": 4
       },
       {
         "slotId": "4-4",
-        "unitId": "archmage",
-        "count": 41,
-        "star": 5
+        "unitId": "phantom_archer",
+        "count": 226,
+        "star": 4
       }
     ]
   },
@@ -5542,64 +5465,46 @@
     "type": "normal",
     "units": [
       {
-        "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 80,
-        "star": 5
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 282,
-        "star": 1
-      },
-      {
         "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 81,
-        "star": 1
+        "unitId": "blood_mire_fiend",
+        "count": 85,
+        "star": 6
       },
       {
         "slotId": "3-1",
-        "unitId": "novice_elementalist",
-        "count": 97,
-        "star": 2
+        "unitId": "priest",
+        "count": 46,
+        "star": 3
       },
       {
         "slotId": "3-2",
-        "unitId": "novice_elementalist",
-        "count": 101,
-        "star": 2
+        "unitId": "sky_watcher",
+        "count": 31,
+        "star": 3
       },
       {
         "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 119,
-        "star": 4
-      },
-      {
-        "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 59,
+        "unitId": "forest_general",
+        "count": 35,
         "star": 5
       },
       {
         "slotId": "4-2",
-        "unitId": "water_elemental",
-        "count": 139,
-        "star": 2
+        "unitId": "feather_guard",
+        "count": 37,
+        "star": 4
       },
       {
         "slotId": "4-3",
-        "unitId": "academy_gardener",
-        "count": 92,
+        "unitId": "phantom_archer",
+        "count": 81,
         "star": 4
       },
       {
         "slotId": "4-4",
-        "unitId": "archmage",
-        "count": 46,
-        "star": 5
+        "unitId": "phantom_archer",
+        "count": 291,
+        "star": 4
       }
     ]
   },
@@ -5610,63 +5515,51 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "garrison_guard",
-        "count": 106,
+        "unitId": "forest_general",
+        "count": 38,
         "star": 5
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 372,
-        "star": 1
       },
       {
         "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 210,
-        "star": 1
-      },
-      {
-        "slotId": "3-1",
-        "unitId": "novice_elementalist",
-        "count": 249,
-        "star": 2
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "demon_lord",
-        "count": 36,
+        "unitId": "blood_mire_fiend",
+        "count": 88,
         "star": 6
       },
       {
+        "slotId": "3-1",
+        "unitId": "priest",
+        "count": 49,
+        "star": 3
+      },
+      {
+        "slotId": "3-2",
+        "unitId": "sky_watcher",
+        "count": 34,
+        "star": 3
+      },
+      {
         "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 220,
+        "unitId": "phantom_archer",
+        "count": 51,
         "star": 4
       },
       {
-        "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 90,
-        "star": 5
-      },
-      {
         "slotId": "4-2",
-        "unitId": "water_elemental",
-        "count": 179,
-        "star": 2
+        "unitId": "feather_guard",
+        "count": 40,
+        "star": 4
       },
       {
         "slotId": "4-3",
-        "unitId": "academy_gardener",
-        "count": 129,
+        "unitId": "phantom_archer",
+        "count": 84,
         "star": 4
       },
       {
         "slotId": "4-4",
-        "unitId": "archmage",
-        "count": 71,
-        "star": 5
+        "unitId": "phantom_archer",
+        "count": 296,
+        "star": 4
       }
     ]
   },
@@ -5677,63 +5570,45 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "magic_dragon",
-        "count": 177,
-        "star": 6
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 573,
-        "star": 1
+        "unitId": "forest_general",
+        "count": 41,
+        "star": 5
       },
       {
         "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 310,
-        "star": 1
+        "unitId": "blood_mire_fiend",
+        "count": 94,
+        "star": 6
       },
       {
         "slotId": "3-1",
-        "unitId": "novice_elementalist",
-        "count": 301,
-        "star": 2
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "demon_lord",
-        "count": 183,
-        "star": 6
+        "unitId": "priest",
+        "count": 55,
+        "star": 3
       },
       {
         "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 272,
+        "unitId": "phantom_archer",
+        "count": 54,
         "star": 4
       },
       {
-        "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 140,
-        "star": 5
-      },
-      {
         "slotId": "4-2",
-        "unitId": "water_elemental",
-        "count": 334,
-        "star": 2
+        "unitId": "feather_guard",
+        "count": 46,
+        "star": 4
       },
       {
         "slotId": "4-3",
-        "unitId": "magic_dragon",
-        "count": 5,
-        "star": 6
+        "unitId": "phantom_archer",
+        "count": 87,
+        "star": 4
       },
       {
         "slotId": "4-4",
-        "unitId": "archmage",
-        "count": 105,
-        "star": 5
+        "unitId": "phantom_archer",
+        "count": 329,
+        "star": 4
       }
     ]
   },
@@ -5744,63 +5619,45 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "magic_dragon",
-        "count": 180,
-        "star": 6
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 609,
-        "star": 1
+        "unitId": "forest_general",
+        "count": 47,
+        "star": 5
       },
       {
         "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 346,
-        "star": 1
+        "unitId": "blood_mire_fiend",
+        "count": 106,
+        "star": 6
       },
       {
         "slotId": "3-1",
-        "unitId": "novice_elementalist",
-        "count": 301,
-        "star": 2
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "demon_lord",
-        "count": 183,
-        "star": 6
+        "unitId": "priest",
+        "count": 67,
+        "star": 3
       },
       {
         "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 272,
+        "unitId": "feather_guard",
+        "count": 10,
         "star": 4
       },
       {
-        "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 140,
-        "star": 5
-      },
-      {
         "slotId": "4-2",
-        "unitId": "water_elemental",
-        "count": 336,
-        "star": 2
+        "unitId": "feather_guard",
+        "count": 65,
+        "star": 4
       },
       {
         "slotId": "4-3",
-        "unitId": "archmage",
-        "count": 105,
-        "star": 5
+        "unitId": "phantom_archer",
+        "count": 214,
+        "star": 4
       },
       {
         "slotId": "4-4",
-        "unitId": "magic_dragon",
-        "count": 5,
-        "star": 6
+        "unitId": "phantom_archer",
+        "count": 374,
+        "star": 4
       }
     ]
   },
@@ -5811,62 +5668,38 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "magic_dragon",
-        "count": 203,
-        "star": 6
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 659,
-        "star": 1
-      },
-      {
-        "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 396,
-        "star": 1
-      },
-      {
-        "slotId": "3-1",
-        "unitId": "novice_elementalist",
-        "count": 321,
-        "star": 2
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "demon_lord",
-        "count": 203,
-        "star": 6
-      },
-      {
-        "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 295,
+        "unitId": "phantom_archer",
+        "count": 222,
         "star": 4
       },
       {
-        "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 150,
-        "star": 5
+        "slotId": "2-2",
+        "unitId": "blood_mire_fiend",
+        "count": 106,
+        "star": 6
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "phantom_archer",
+        "count": 382,
+        "star": 4
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "mire_fiend",
+        "count": 36,
+        "star": 6
       },
       {
         "slotId": "4-2",
-        "unitId": "water_elemental",
-        "count": 356,
-        "star": 2
-      },
-      {
-        "slotId": "4-3",
-        "unitId": "archmage",
-        "count": 220,
-        "star": 5
+        "unitId": "feather_guard",
+        "count": 70,
+        "star": 4
       },
       {
         "slotId": "4-4",
-        "unitId": "magic_dragon",
-        "count": 5,
+        "unitId": "mire_fiend",
+        "count": 23,
         "star": 6
       }
     ]
@@ -5878,62 +5711,38 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "magic_dragon",
-        "count": 203,
-        "star": 6
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 659,
-        "star": 1
-      },
-      {
-        "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 396,
-        "star": 1
-      },
-      {
-        "slotId": "3-1",
-        "unitId": "novice_elementalist",
-        "count": 321,
-        "star": 2
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "demon_lord",
-        "count": 203,
-        "star": 6
-      },
-      {
-        "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 295,
+        "unitId": "phantom_archer",
+        "count": 222,
         "star": 4
       },
       {
-        "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 150,
-        "star": 5
+        "slotId": "2-2",
+        "unitId": "blood_mire_fiend",
+        "count": 106,
+        "star": 6
+      },
+      {
+        "slotId": "3-1",
+        "unitId": "phantom_archer",
+        "count": 382,
+        "star": 4
+      },
+      {
+        "slotId": "3-3",
+        "unitId": "blood_mire_fiend",
+        "count": 51,
+        "star": 6
       },
       {
         "slotId": "4-2",
-        "unitId": "water_elemental",
-        "count": 356,
-        "star": 2
-      },
-      {
-        "slotId": "4-3",
-        "unitId": "archmage",
-        "count": 220,
-        "star": 5
+        "unitId": "feather_guard",
+        "count": 75,
+        "star": 4
       },
       {
         "slotId": "4-4",
-        "unitId": "elder_spirit",
-        "count": 1,
+        "unitId": "mire_fiend",
+        "count": 42,
         "star": 6
       }
     ]
@@ -5945,63 +5754,21 @@
     "units": [
       {
         "slotId": "1-1",
-        "unitId": "magic_dragon",
-        "count": 366,
-        "star": 6
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 766,
-        "star": 1
-      },
-      {
-        "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 604,
-        "star": 1
-      },
-      {
-        "slotId": "3-1",
-        "unitId": "novice_elementalist",
-        "count": 383,
-        "star": 2
-      },
-      {
-        "slotId": "3-2",
-        "unitId": "demon_lord",
-        "count": 360,
-        "star": 6
-      },
-      {
-        "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 357,
+        "unitId": "phantom_archer",
+        "count": 222,
         "star": 4
       },
       {
-        "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 288,
-        "star": 5
+        "slotId": "3-1",
+        "unitId": "phantom_archer",
+        "count": 382,
+        "star": 4
       },
       {
         "slotId": "4-2",
-        "unitId": "water_elemental",
-        "count": 421,
-        "star": 2
-      },
-      {
-        "slotId": "4-3",
-        "unitId": "archmage",
-        "count": 362,
-        "star": 5
-      },
-      {
-        "slotId": "4-4",
-        "unitId": "demon_lord",
-        "count": 7,
-        "star": 6
+        "unitId": "feather_guard",
+        "count": 80,
+        "star": 4
       }
     ]
   },
@@ -6011,77 +5778,46 @@
     "type": "boss",
     "units": [
       {
-        "slotId": "1-1",
-        "unitId": "magic_dragon",
-        "count": 431,
-        "star": 6
-      },
-      {
-        "slotId": "2-1",
-        "unitId": "fire_elemental",
-        "count": 873,
-        "star": 1
-      },
-      {
         "slotId": "2-2",
-        "unitId": "fire_elemental",
-        "count": 711,
-        "star": 1
+        "unitId": "blood_mire_fiend",
+        "count": 238,
+        "star": 6
       },
       {
         "slotId": "3-1",
-        "unitId": "novice_elementalist",
-        "count": 647,
-        "star": 2
+        "unitId": "sky_watcher",
+        "count": 23,
+        "star": 3
       },
       {
         "slotId": "3-2",
-        "unitId": "demon_lord",
-        "count": 416,
-        "star": 6
-      },
-      {
-        "slotId": "3-3",
-        "unitId": "wind_elemental",
-        "count": 422,
+        "unitId": "phantom_archer",
+        "count": 630,
         "star": 4
       },
       {
-        "slotId": "4-1",
-        "unitId": "archmage",
-        "count": 428,
-        "star": 5
+        "slotId": "3-3",
+        "unitId": "phantom_archer",
+        "count": 302,
+        "star": 4
       },
       {
         "slotId": "4-2",
-        "unitId": "water_elemental",
-        "count": 584,
-        "star": 2
+        "unitId": "feather_guard",
+        "count": 85,
+        "star": 4
       },
       {
         "slotId": "4-3",
-        "unitId": "archmage",
-        "count": 502,
-        "star": 5
+        "unitId": "watchful_support",
+        "count": 12,
+        "star": 3
       },
       {
         "slotId": "4-4",
-        "unitId": "magic_dragon",
-        "count": 14,
-        "star": 6
-      }
-    ]
-  },
-  {
-    "id": "testmap_paladin",
-    "name": "testmap paladin",
-    "type": "normal",
-    "units": [
-      {
-        "slotId": "2-2",
-        "unitId": "bright_warrior",
-        "count": 1,
-        "star": 1
+        "unitId": "priest",
+        "count": 41,
+        "star": 3
       }
     ]
   }

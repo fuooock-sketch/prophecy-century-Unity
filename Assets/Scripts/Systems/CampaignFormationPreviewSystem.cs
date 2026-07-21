@@ -231,7 +231,7 @@ namespace ProphecyCentury.Systems
                 + Math.Max(0, definition.power) * 1.35f
                 + Math.Max(0, definition.initiative) * 0.7f
                 + Math.Max(0, definition.speed) * 0.55f
-                + Math.Max(0, definition.range) * 1.8f
+                + Math.Max(0, definition.EffectiveRange) * 1.8f
                 + hpPerUnit * 0.33f;
             var starMultiplier = 1f + Math.Max(0, star - 1) * 0.18f;
             var goldenMultiplier = golden ? 1.25f : 1f;
