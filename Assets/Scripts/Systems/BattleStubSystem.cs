@@ -1476,16 +1476,37 @@ namespace ProphecyCentury.Systems
 
         private static void ResolveBattleStart(List<BattleRuntimeUnit> allies, List<BattleRuntimeUnit> enemies, Random random, List<BattleEvent> events = null, float elapsed = 0f)
         {
+            // Freeze the opening queue before any skill can summon or move a unit.
+            // Each side resolves from its front-left slot, left-to-right and then
+            // front-to-back, instead of depending on purchase/deployment history.
             var initialAllies = allies.ToList();
-            for (var i = 0; i < allies.Count; i += 1)
+            var openingQueue = initialAllies
+                .Where(unit => unit != null)
+                .OrderBy(unit => unit.BoardRow)
+                .ThenBy(unit => unit.BoardCol)
+                .ThenBy(unit => unit.SlotId)
+                .ToList();
+            for (var i = 0; i < openingQueue.Count; i += 1)
             {
-                var unit = allies[i];
+                var unit = openingQueue[i];
                 if (unit == null || !unit.IsAlive)
                 {
                     continue;
                 }
 
-                foreach (var skill in GetBattleSkills(unit))
+                var openingSkills = GetBattleSkills(unit)
+                    .Where(skill => skill != null
+                        && (!string.IsNullOrWhiteSpace(skill.kind)
+                            && (skill.kind.StartsWith("battle_start_", StringComparison.Ordinal)
+                                || skill.kind == FirstAttackBacklineSnipeKind)))
+                    .ToList();
+                if (openingSkills.Count == 0)
+                {
+                    continue;
+                }
+
+                AddEvent(events, elapsed, "battle_start_skill_begin", unit, unit, 0, $"{unit.Name} begins resolving opening skills");
+                foreach (var skill in openingSkills)
                 {
                     switch (skill.kind)
                     {
@@ -1764,6 +1785,7 @@ namespace ProphecyCentury.Systems
                             break;
                     }
                 }
+                AddEvent(events, elapsed, "battle_start_skill_end", unit, unit, 0, $"{unit.Name} finishes resolving opening skills");
             }
         }
 

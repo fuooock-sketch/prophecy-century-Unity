@@ -103,15 +103,35 @@ namespace ProphecyCentury.Systems
 
         private static void ResolveBattleStart(List<RealtimeBattleUnit> allies, List<RealtimeBattleUnit> enemies, Random random, List<BattleEvent> events, float elapsed)
         {
-            for (var i = 0; i < allies.Count; i += 1)
+            // Snapshot a deterministic positional queue. Summons created while
+            // resolving may affect later skills, but never join this opening queue.
+            var openingQueue = allies
+                .Where(unit => unit != null)
+                .OrderBy(unit => unit.Row)
+                .ThenBy(unit => unit.Col)
+                .ThenBy(unit => unit.SlotId)
+                .ToList();
+            for (var i = 0; i < openingQueue.Count; i += 1)
             {
-                var unit = allies[i];
+                var unit = openingQueue[i];
                 if (unit == null || !unit.IsAlive)
                 {
                     continue;
                 }
 
-                foreach (var skill in GetBattleSkills(unit))
+                var openingSkills = GetBattleSkills(unit)
+                    .Where(skill => skill != null
+                        && (!string.IsNullOrWhiteSpace(skill.kind)
+                            && (skill.kind.StartsWith("battle_start_", StringComparison.Ordinal)
+                                || skill.kind == FirstAttackBacklineSnipeKind)))
+                    .ToList();
+                if (openingSkills.Count == 0)
+                {
+                    continue;
+                }
+
+                AddEvent(events, elapsed, "battle_start_skill_begin", unit, unit, 0, $"{unit.Name} begins resolving opening skills");
+                foreach (var skill in openingSkills)
                 {
                     switch (skill.kind)
                     {
@@ -346,6 +366,7 @@ namespace ProphecyCentury.Systems
                             break;
                     }
                 }
+                AddEvent(events, elapsed, "battle_start_skill_end", unit, unit, 0, $"{unit.Name} finishes resolving opening skills");
             }
         }
 

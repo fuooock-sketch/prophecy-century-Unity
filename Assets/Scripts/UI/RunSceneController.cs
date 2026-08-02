@@ -4407,6 +4407,13 @@ namespace ProphecyCentury.UI
 
                 switch (battleEvent.Kind)
                 {
+                    case "battle_start_skill_begin":
+                        ApplyBattleSourceCue(views, battleEvent, "开战技能", new Color32(255, 220, 96, 255), floatingTexts);
+                        yield return WaitAndUpdateBattleEffects(0.42f, floatingTexts, bursts);
+                        break;
+                    case "battle_start_skill_end":
+                        yield return WaitAndUpdateBattleEffects(0.12f, floatingTexts, bursts);
+                        break;
                     case "round":
                         yield return WaitAndUpdateBattleEffects(0.65f, floatingTexts, bursts);
                         break;
