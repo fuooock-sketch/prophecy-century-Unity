@@ -1617,20 +1617,20 @@
         "attackInterval": 0.95,
         "size": 1,
         "tags": [],
-        "talentText": "每次获得数量时，其他所有部队各获得+2数量。",
-        "goldTalentText": "每次获得数量时，其他所有部队各获得+4数量。",
+        "talentText": "任意友方部队获得数量时，获得的数值额外+1。",
+        "goldTalentText": "任意友方部队获得数量时，获得的数值额外+2。",
         "battleText": "—",
         "goldBattleText": "—",
         "talents": [
             {
-                "kind": "while_on_board_self_gain_stat_team_gain_power",
-                "value": 2
+                "kind": "while_on_board_count_gain_bonus",
+                "value": 1
             }
         ],
         "goldTalents": [
             {
-                "kind": "while_on_board_self_gain_stat_team_gain_power",
-                "value": 4
+                "kind": "while_on_board_count_gain_bonus",
+                "value": 2
             }
         ],
         "battleSkills": [],
@@ -1648,7 +1648,7 @@
         "attackRange": 8.0,
         "firstPurchaseHp": 13,
         "firstPurchaseAverageDamage": 12,
-        "skillText": "每次获得数量时，其他所有部队各获得+2数量。\n每次获得数量时，其他所有部队各获得+4数量。\n—\n—",
+        "skillText": "任意友方部队获得数量时，获得的数值额外+1。\n任意友方部队获得数量时，获得的数值额外+2。\n—\n—",
         "designOnlyInitialBaseDamage": 12
     },
     {
@@ -2213,8 +2213,8 @@
         "hidden": true,
         "talentText": "每赐予本部队1次【密林宝钻】时，额外获得+4数量。",
         "goldTalentText": "每赐予本部队1次【密林宝钻】时，额外获得+8数量。",
-        "battleText": "每次受到攻击后如果存活，下回合开始时，获得1颗【密林宝钻】。",
-        "goldBattleText": "每次受到攻击后如果存活，下回合开始时，获得2颗【密林宝钻】。",
+        "battleText": "本场战斗受到过伤害且战斗结束时仍存活，下回合开始时，获得1颗【密林宝钻】（每场战斗最多触发1次）。",
+        "goldBattleText": "本场战斗受到过伤害且战斗结束时仍存活，下回合开始时，获得2颗【密林宝钻】（每场战斗最多触发1次）。",
         "talents": [
             {
                 "kind": "on_receive_gift_self_gain_attack",
@@ -2252,7 +2252,7 @@
         "attackRange": 1.0,
         "firstPurchaseHp": 72,
         "firstPurchaseAverageDamage": 54,
-        "skillText": "每赐予本部队1次【密林宝钻】时，额外获得+4数量。\n每赐予本部队1次【密林宝钻】时，额外获得+8数量。\n每次受到攻击后如果存活，下回合开始时，获得1颗【密林宝钻】。\n每次受到攻击后如果存活，下回合开始时，获得2颗【密林宝钻】。",
+        "skillText": "每赐予本部队1次【密林宝钻】时，额外获得+4数量。\n每赐予本部队1次【密林宝钻】时，额外获得+8数量。\n本场战斗受到过伤害且战斗结束时仍存活，下回合开始时，获得1颗【密林宝钻】（每场战斗最多触发1次）。\n本场战斗受到过伤害且战斗结束时仍存活，下回合开始时，获得2颗【密林宝钻】（每场战斗最多触发1次）。",
         "designOnlyInitialBaseDamage": 54
     },
     {

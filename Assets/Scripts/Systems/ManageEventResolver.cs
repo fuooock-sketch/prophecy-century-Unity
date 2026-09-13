@@ -821,11 +821,11 @@ namespace ProphecyCentury.Systems
                         {
                             sourceSlotId = owner.boardSlotId,
                             sourceName = owner.name,
-                            count = bonus
+                            count = AddCountGainAuraBonus(runState, bonus)
                         };
                         foreach (var card in runState.shopCards.Where(card => card != null))
                         {
-                            ReinforceUnit(card, bonus);
+                            ReinforceUnit(card, AddCountGainAuraBonus(runState, bonus));
                         }
 
                         for (var i = 0; i < runState.shopCards.Count; i += 1)
@@ -850,11 +850,11 @@ namespace ProphecyCentury.Systems
                         {
                             sourceSlotId = owner.boardSlotId,
                             sourceName = owner.name,
-                            count = gain
+                            count = AddCountGainAuraBonus(runState, gain)
                         };
                         foreach (var card in runState.shopCards.Where(card => card != null))
                         {
-                            ReinforceUnit(card, gain);
+                            ReinforceUnit(card, AddCountGainAuraBonus(runState, gain));
                         }
 
                         for (var i = 0; i < runState.shopCards.Count; i += 1)
@@ -1010,12 +1010,12 @@ namespace ProphecyCentury.Systems
 
             foreach (var card in runState.handCards.Where(card => tags.Any(tag => HasTag(card, tag))))
             {
-                ReinforceUnit(card, Value(talent, owner, NonZero(talent.power, talent.attack, 1)));
+                ReinforceUnit(card, AddCountGainAuraBonus(runState, Value(talent, owner, NonZero(talent.power, talent.attack, 1))));
             }
 
             foreach (var card in runState.shopCards.Where(card => card != null && tags.Any(tag => HasTag(card, tag))))
             {
-                ReinforceUnit(card, Value(talent, owner, NonZero(talent.power, talent.attack, 1)));
+                ReinforceUnit(card, AddCountGainAuraBonus(runState, Value(talent, owner, NonZero(talent.power, talent.attack, 1))));
             }
         }
 
@@ -1391,6 +1391,24 @@ namespace ProphecyCentury.Systems
             }
         }
 
+        private int AddCountGainAuraBonus(RunState runState, int amount)
+        {
+            if (amount <= 0 || runState == null)
+            {
+                return amount;
+            }
+
+            // Modify the original gain, never dispatch a second gain for the bonus.
+            foreach (var owner in runState.boardUnits.Where(unit => unit != null))
+            {
+                foreach (var talent in GetTalents(owner).Where(skill => skill.kind == "while_on_board_count_gain_bonus"))
+                {
+                    amount += Math.Max(0, Value(talent, owner));
+                }
+            }
+            return amount;
+        }
+
         private void GainCount(RunState runState, UnitCardState target, int amount, UnitCardState source, HashSet<string> processed, int depth, bool suppressFeedback = false, string eventReason = "gain_count")
         {
             if (target == null || amount <= 0)
@@ -1398,10 +1416,16 @@ namespace ProphecyCentury.Systems
                 return;
             }
 
+            var originalAmount = amount;
+            amount = AddCountGainAuraBonus(runState, amount);
             ReinforceUnit(target, amount);
             if (!suppressFeedback && target is BoardUnitState boardTarget)
             {
                 AddCountGainFeedback(source, boardTarget, amount);
+            }
+            else if (suppressFeedback && amount > originalAmount && target is BoardUnitState auraTarget)
+            {
+                AddCountGainFeedback(source, auraTarget, amount - originalAmount, "魔导师加成");
             }
 
             var totalGain = ApplyHeroCountGainBonuses(runState, target, amount, source, suppressFeedback);

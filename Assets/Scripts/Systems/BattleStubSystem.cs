@@ -34,6 +34,8 @@ namespace ProphecyCentury.Systems
             ApplyContinuousAuras(enemies);
             ResolveBattleStart(players, enemies, random, events, 0f);
             ResolveBattleStart(enemies, players, random, events, 0f);
+            ResolveFinalOpeningCounts(players, events);
+            ResolveFinalOpeningCounts(enemies, events);
             ApplyContinuousAuras(players);
             ApplyContinuousAuras(enemies);
             var playerScore = EstimateScore(players);
@@ -128,6 +130,8 @@ namespace ProphecyCentury.Systems
             ApplyContinuousAuras(enemies);
             ResolveBattleStart(players, enemies, random);
             ResolveBattleStart(enemies, players, random);
+            ResolveFinalOpeningCounts(players);
+            ResolveFinalOpeningCounts(enemies);
             ApplyContinuousAuras(players);
             ApplyContinuousAuras(enemies);
 
@@ -147,6 +151,7 @@ namespace ProphecyCentury.Systems
             var units = BuildPlayerUnits(runState);
             ApplyContinuousAuras(units);
             ResolveBattleStart(units, new List<BattleRuntimeUnit>(), new Random(17));
+            ResolveFinalOpeningCounts(units);
             ApplyContinuousAuras(units);
             return EstimateScore(units);
         }
@@ -157,6 +162,7 @@ namespace ProphecyCentury.Systems
             var units = BuildEnemyUnits(runState, random);
             ApplyContinuousAuras(units);
             ResolveBattleStart(units, new List<BattleRuntimeUnit>(), random);
+            ResolveFinalOpeningCounts(units);
             ApplyContinuousAuras(units);
             return EstimateScore(units);
         }
@@ -166,6 +172,7 @@ namespace ProphecyCentury.Systems
             var units = BuildCasualPvpEnemyRuntimeUnits(snapshot);
             ApplyContinuousAuras(units);
             ResolveBattleStart(units, new List<BattleRuntimeUnit>(), new Random(17));
+            ResolveFinalOpeningCounts(units);
             ApplyContinuousAuras(units);
             return EstimateScore(units);
         }
@@ -769,6 +776,7 @@ namespace ProphecyCentury.Systems
             {
                 AddEvent(events, elapsed, critical ? "critical_damage" : "damage", source, target, actualDamage, $"{source.Name} deals {actualDamage} damage to {target.Name}");
                 target.DamagedCount += 1;
+                target.HasTakenDamage = true;
                 ResolveDamaged(target);
                 if (allowForcedCounterattack)
                 {
@@ -1595,6 +1603,8 @@ namespace ProphecyCentury.Systems
 
                 var openingSkills = GetBattleSkills(unit)
                     .Where(skill => skill != null
+                        && skill.kind != "battle_start_team_count_per_faith_count"
+                        && skill.kind != "battle_start_self_count_percent_per_faith_count"
                         && (!string.IsNullOrWhiteSpace(skill.kind)
                             && (skill.kind.StartsWith("battle_start_", StringComparison.Ordinal)
                                 || skill.kind == FirstAttackBacklineSnipeKind)))
@@ -1657,21 +1667,9 @@ namespace ProphecyCentury.Systems
                             }
                             unit.SkillTriggers += teamAttack > 0 ? 1 : 0;
                             break;
-                        case "battle_start_team_count_per_faith_count":
-                            var teamCountGain = CountFaith(allies, skill.faith, unit.Faith) * Math.Max(1, skill.value);
-                            foreach (var ally in allies.Where(ally => ally.IsAlive))
-                            {
-                                AddTemporaryCount(ally, teamCountGain);
-                            }
-                            unit.SkillTriggers += teamCountGain > 0 ? 1 : 0;
-                            break;
                         case "battle_start_self_stats_per_faith_count":
                             var faithCount = CountFaith(allies, skill.faith, unit.Faith);
                             AddBattleStats(unit, skill, faithCount);
-                            break;
-                        case "battle_start_self_count_percent_per_faith_count":
-                            var selfFaithCount = CountFaith(initialAllies, skill.faith, unit.Faith);
-                            ApplySelfCountPercentPerFaithCount(unit, selfFaithCount, skill);
                             break;
                         case "battle_start_speedup_first_attack_crit_stun_restore":
                             unit.OriginalSpeed = unit.Speed;
@@ -2129,7 +2127,7 @@ namespace ProphecyCentury.Systems
                     AddEvent(events, elapsed, "attached_death", unit, attached, 0, $"{attached.Name} dies after its last host {unit.Name}");
                 }
             }
-            ResolveAllyDeathTaggedPower(unit, allies);
+            ResolveAllyDeathTaggedPower(unit, allies, events, elapsed);
             if (unit.ForestGemDeathMarkSource != null && unit.ForestGemDeathMarkSource.PlayerSide)
             {
                 unit.ForestGemDeathMarkSource.PendingRoundForestGems += Math.Max(1, unit.ForestGemDeathMarkAmount);
@@ -2212,11 +2210,6 @@ namespace ProphecyCentury.Systems
                     unit.SkillTriggers += 1;
                 }
 
-                if (skill.kind == "on_damaged_survive_next_round_forest_gem" && unit.IsAlive)
-                {
-                    unit.PendingRoundForestGems += Math.Max(1, skill.value);
-                    unit.SkillTriggers += 1;
-                }
             }
         }
 
@@ -2342,6 +2335,7 @@ namespace ProphecyCentury.Systems
             var beforeHp = unit.CurrentHp;
             unit.CurrentCount = Math.Max(0, unit.CurrentCount - Math.Max(1, lossCount));
             unit.CurrentHp = Math.Max(0, Math.Min(unit.CurrentHp, unit.CurrentCount * Math.Max(1, unit.HpPerUnit)));
+            unit.CurrentTotalHp = unit.CurrentHp;
             return Math.Max(1, beforeHp - unit.CurrentHp);
         }
 
@@ -2530,6 +2524,13 @@ namespace ProphecyCentury.Systems
                         source.pendingNextRoundForestGems += Math.Max(1, skill.value);
                     }
 
+                    if (skill.kind == "on_damaged_survive_next_round_forest_gem" && unit.HasTakenDamage && unit.IsAlive)
+                    {
+                        source.pendingNextRoundForestGems += Math.Max(1, skill.value);
+                        unit.SkillTriggers += 1;
+                        AddEvent(events, events?.LastOrDefault()?.Time ?? 0f, "skill", unit, unit, Math.Max(1, skill.value), $"{unit.Name} 受伤后存活，下回合获得密林宝钻");
+                    }
+
                     if (skill.kind == "battle_end_survivors_next_round_team_temp_attack" && survivingPlayers > 0)
                     {
                         source.pendingNextRoundTempAttack += survivingPlayers * Math.Max(1, skill.value);
@@ -2710,7 +2711,7 @@ namespace ProphecyCentury.Systems
             }
         }
 
-        private static void ResolveAllyDeathTaggedPower(BattleRuntimeUnit deadUnit, List<BattleRuntimeUnit> allies)
+        private static void ResolveAllyDeathTaggedPower(BattleRuntimeUnit deadUnit, List<BattleRuntimeUnit> allies, List<BattleEvent> events = null, float elapsed = 0f)
         {
             if (deadUnit == null || allies == null)
             {
@@ -2729,7 +2730,13 @@ namespace ProphecyCentury.Systems
                     var changed = false;
                     foreach (var target in allies.Where(unit => unit.IsAlive && HasTag(unit, skill.targetTag)))
                     {
-                        AddTemporaryCount(target, Math.Max(0, skill.value > 0 ? skill.value : skill.power));
+                        var gain = Math.Max(0, skill.value > 0 ? skill.value : skill.power);
+                        if (gain <= 0)
+                        {
+                            continue;
+                        }
+                        AddTemporaryCount(target, gain);
+                        AddEvent(events, elapsed, "count_gain", owner, target, gain, $"{target.Name} 因 {deadUnit.Name} 阵亡，临时数量 +{gain}");
                         changed = true;
                     }
 
@@ -2760,10 +2767,35 @@ namespace ProphecyCentury.Systems
             if (countGain > 0)
             {
                 unit.SkillTriggers += 1;
-                AddEvent(events, elapsed, "skill", unit, unit, countGain, $"{unit.Name} gains faith count");
+                AddEvent(events, elapsed, "count_gain", unit, unit, countGain, $"{unit.Name} gains faith count");
             }
 
             return countGain;
+        }
+
+        private static void ResolveFinalOpeningCounts(List<BattleRuntimeUnit> allies, List<BattleEvent> events = null, float elapsed = 0f)
+        {
+            var queue = allies.Where(unit => unit != null && unit.IsAlive)
+                .OrderBy(unit => unit.BoardRow).ThenBy(unit => unit.BoardCol).ThenBy(unit => unit.SlotId).ToList();
+            // Flat team bonuses settle before percentage bonuses, independently of deployment order.
+            foreach (var kind in new[] { "battle_start_team_count_per_faith_count", "battle_start_self_count_percent_per_faith_count" })
+            foreach (var unit in queue)
+            foreach (var skill in GetBattleSkills(unit).Where(skill => skill.kind == kind))
+            {
+                var faithCount = CountFaith(allies, skill.faith, unit.Faith);
+                var targets = kind == "battle_start_team_count_per_faith_count" ? queue : new List<BattleRuntimeUnit> { unit };
+                foreach (var target in targets)
+                {
+                    var gain = kind == "battle_start_team_count_per_faith_count"
+                        ? faithCount * Math.Max(1, skill.value)
+                        : (int)Math.Ceiling(target.CurrentCount * Math.Max(0, skill.value) * faithCount / 100f);
+                    if (gain <= 0) continue;
+                    AddTemporaryCount(target, gain);
+                    AddEvent(events, elapsed, "count_gain", unit, target, gain, $"{unit.Name} 开战前结算数量加成");
+                }
+                unit.SkillTriggers += faithCount > 0 ? 1 : 0;
+            }
+            foreach (var unit in queue) unit.OpeningCountsResolved = true;
         }
 
         private static void ResolveFaithSummonCountBonuses(List<BattleRuntimeUnit> allies, BattleRuntimeUnit summoned, List<BattleEvent> events = null, float elapsed = 0f)
@@ -2778,7 +2810,7 @@ namespace ProphecyCentury.Systems
                 foreach (var skill in GetBattleSkills(ally).Where(skill => skill.kind == "battle_start_self_count_percent_per_faith_count"))
                 {
                     var faith = string.IsNullOrWhiteSpace(skill.faith) ? ally.Faith : skill.faith;
-                    if (summoned.Faith != faith)
+                    if (!ally.OpeningCountsResolved || summoned.Faith != faith)
                     {
                         continue;
                     }
@@ -3647,6 +3679,8 @@ namespace ProphecyCentury.Systems
         public int CounterCount;
         public int MoraleExtraCount;
         public int DamagedCount;
+        public bool HasTakenDamage;
+        public bool OpeningCountsResolved;
         public int ForcedCounterattackTriggers;
         public int ShieldLayers;
         public float StunRemaining;

@@ -9,6 +9,24 @@ namespace ProphecyCentury.UI
 {
     public sealed class RuntimeEncyclopediaPanel : MonoBehaviour
     {
+        private UnitDefinition _selectedDetailUnit;
+        private bool _goldDetail;
+        private ScrollRect _skillScroll;
+        private Text _battleBody;
+        private Text _battleHeading;
+        private Text _relatedHeading;
+        private Text[] _attributeValues;
+        private Button _normalDetailButton;
+        private Button _goldDetailButton;
+        private RectTransform _detailLayout;
+
+        private void LateUpdate()
+        {
+            if (_detailLayout == null || _detailRoot == null || !_detailRoot.activeInHierarchy) return;
+            var bounds = ((RectTransform)_detailLayout.parent).rect.size;
+            if (bounds.x > 0 && bounds.y > 0)
+                _detailLayout.localScale = Vector3.one * Mathf.Min(bounds.x / 1500f, bounds.y / 1040f);
+        }
         [SerializeField] private GameObject _root;
         [SerializeField] private Transform _gridRoot;
         [SerializeField] private Text _countLabel;
@@ -76,6 +94,7 @@ namespace ProphecyCentury.UI
             EnsureLayoutFits();
             EnsureDetailModal();
             _root.SetActive(true);
+            _root.transform.SetAsLastSibling();
             if (_detailRoot != null)
             {
                 _detailRoot.SetActive(false);
@@ -343,6 +362,8 @@ namespace ProphecyCentury.UI
 
             _detailRoot.SetActive(true);
             _detailRoot.transform.SetAsLastSibling();
+            _selectedDetailUnit = unit;
+            _goldDetail = false;
             if (_detailTitle != null)
             {
                 _detailTitle.text = unit.name;
@@ -350,7 +371,7 @@ namespace ProphecyCentury.UI
 
             if (_detailMeta != null)
             {
-                _detailMeta.text = BuildMetaLine("图鉴卡牌", unit);
+                _detailMeta.text = $"{new string('★', Mathf.Clamp(unit.star, 0, 6))}    {ValueOrNone(unit.race)}  /  {ValueOrNone(unit.faith)}  /  {ValueOrNone(unit.typeLabel)}";
             }
 
             if (_detailPortrait != null)
@@ -358,12 +379,8 @@ namespace ProphecyCentury.UI
                 RuntimeUnitIconCache.ApplyTo(_detailPortrait, unit.name);
             }
 
-            if (_detailBody != null)
-            {
-                _detailBody.text = BuildFullDetailText(unit);
-            }
-
             RebuildRelatedCards(unit);
+            RefreshDetailEdition();
         }
 
         private void CloseDetail()
@@ -396,6 +413,8 @@ namespace ProphecyCentury.UI
                 return;
             }
 
+            if (_skillScroll != null) return;
+
             if (_detailRoot == null)
             {
                 var existing = _root.transform.Find("EncyclopediaDetailModal");
@@ -404,67 +423,118 @@ namespace ProphecyCentury.UI
 
             if (_detailRoot != null)
             {
-                BindExistingDetailReferences();
-                Stretch(_detailRoot.GetComponent<RectTransform>());
-                WireDetailButtons();
-                return;
+                _detailRoot.SetActive(false);
+                Destroy(_detailRoot);
+                _detailRoot = null;
             }
 
-            _detailRoot = CreatePanel("EncyclopediaDetailModal", _root.transform, new Color32(4, 6, 14, 172));
+            BuildReadableDetailModal();
+        }
+
+        private void BuildReadableDetailModal()
+        {
+            _detailRoot = CreatePanel("EncyclopediaDetailModal", _root.transform, new Color32(4, 6, 14, 220));
             Stretch(_detailRoot.GetComponent<RectTransform>());
-
-            var panel = CreatePanel("DetailPanelModal", _detailRoot.transform, new Color32(22, 27, 48, 252));
-            var panelRect = panel.GetComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-            panelRect.pivot = new Vector2(0.5f, 0.5f);
-            panelRect.sizeDelta = new Vector2(980f, 1060f);
-            panelRect.anchoredPosition = Vector2.zero;
-
-            _detailTitle = CreateText("DetailTitle", panel.transform, "卡牌详情", 42, TextAnchor.MiddleLeft, 34f, 24f, 600f, 62f);
-            _detailMeta = CreateText("DetailMeta", panel.transform, string.Empty, 21, TextAnchor.UpperLeft, 34f, 88f, 740f, 70f);
-            _detailCloseButton = CreateButton("DetailCloseButton", panel.transform, "关闭", 820f, 28f, 120f, 54f, CloseDetail);
-
-            _detailPortrait = CreatePanel("DetailPortrait", panel.transform, new Color32(42, 50, 78, 220)).GetComponent<Image>();
-            SetTopLeft(_detailPortrait.rectTransform, 36f, 160f, 172f, 172f);
+            var panel = CreatePanel("DetailPanelModal", _detailRoot.transform, new Color32(22, 27, 42, 255));
+            SetAnchoredPanel(panel.GetComponent<RectTransform>(), 0.18f, 0.065f, 0.82f, 0.935f);
+            // Fixed design coordinates scale as a group to fit the current canvas.
+            var layout = new GameObject("ReadableDetailLayout", typeof(RectTransform));
+            layout.transform.SetParent(panel.transform, false);
+            var rect = layout.GetComponent<RectTransform>();
+            _detailLayout = rect;
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(1500f, 1040f);
+            Canvas.ForceUpdateCanvases();
+            var bounds = panel.GetComponent<RectTransform>().rect.size;
+            rect.localScale = Vector3.one * Mathf.Min(bounds.x / 1500f, bounds.y / 1040f);
+            _detailTitle = CreateText("DetailTitle", rect, "卡牌详情", 40, TextAnchor.MiddleLeft, 38, 20, 1120, 58);
+            _detailMeta = CreateText("DetailMeta", rect, "", 23, TextAnchor.MiddleLeft, 38, 80, 1200, 38);
+            _detailMeta.color = new Color32(186, 199, 216, 255);
+            _detailCloseButton = CreateButton("DetailCloseButton", rect, "关闭", 1330, 28, 130, 54, CloseDetail);
+            _detailPortrait = CreatePanel("DetailPortrait", rect, Color.white).GetComponent<Image>();
+            SetTopLeft(_detailPortrait.rectTransform, 38, 140, 270, 270);
             _detailPortrait.preserveAspect = true;
-
-            var heroPanel = CreatePanel("HeroSummary", panel.transform, new Color32(32, 38, 62, 238));
-            SetTopLeft(heroPanel.GetComponent<RectTransform>(), 230f, 160f, 710f, 172f);
-            CreateText("HeroHint", heroPanel.transform, "点击关联卡牌可继续查看详情", 22, TextAnchor.MiddleLeft, 22f, 18f, 660f, 38f);
-            CreateText("HeroTags", heroPanel.transform, "基础信息 / 属性 / 技能 / 关联卡牌", 20, TextAnchor.MiddleLeft, 22f, 74f, 660f, 42f);
-
-            var scroll = CreateScrollArea("DetailScroll", panel.transform, 34f, 354f, 906f, 522f);
-            _detailBody = CreateText("DetailBody", scroll.content, string.Empty, 20, TextAnchor.UpperLeft, 0f, 0f, 882f, 900f);
-            _detailBody.verticalOverflow = VerticalWrapMode.Overflow;
-            scroll.content.sizeDelta = new Vector2(906f, 900f);
-
-            var relatedLabel = CreateText("RelatedTitle", panel.transform, "关联卡牌", 24, TextAnchor.MiddleLeft, 34f, 894f, 160f, 34f);
-            relatedLabel.color = new Color32(255, 216, 107, 255);
-            _detailRelatedRoot = CreateRelatedRoot(panel.transform);
-            _detailRoot.SetActive(false);
+            var labels = new[] { "初始数量", "单体生命", "攻击", "防御", "伤害", "攻击距离", "先机", "速度", "幸运", "士气", "体型", "类型" };
+            _attributeValues = new Text[labels.Length];
+            for (var i = 0; i < labels.Length; i++)
+            {
+                var tile = CreatePanel("Attribute" + i, rect, new Color32(32, 40, 57, 255));
+                SetTopLeft(tile.GetComponent<RectTransform>(), 338 + i % 6 * 188, 140 + i / 6 * 115, 174, 101);
+                var label = CreateText("Label", tile.transform, labels[i], 21, TextAnchor.MiddleLeft, 16, 10, 145, 30);
+                label.color = new Color32(170, 188, 208, 255);
+                _attributeValues[i] = CreateText("Value", tile.transform, "", 28, TextAnchor.MiddleLeft, 16, 44, 145, 42);
+            }
+            CreateText("BaseStatsHint", rect, "基础属性 · 切换品质查看对应技能", 21, TextAnchor.MiddleLeft, 338, 377, 1100, 34);
+            _normalDetailButton = CreateButton("NormalSkills", rect, "普通", 38, 436, 150, 52, () => SetDetailEdition(false));
+            _goldDetailButton = CreateButton("GoldenSkills", rect, "金色", 200, 436, 150, 52, () => SetDetailEdition(true));
+            CreateText("ScrollHint", rect, "向下滚动查看完整技能与关联卡牌", 21, TextAnchor.MiddleRight, 810, 436, 645, 52);
+            _skillScroll = CreateScrollArea("DetailScroll", rect, 38, 506, 1424, 492);
+            _skillScroll.scrollSensitivity = 38;
+            var content = _skillScroll.content;
+            var heading = CreateText("TalentHeading", content, "经营天赋", 28, TextAnchor.MiddleLeft, 0, 0, 1380, 44);
+            heading.color = new Color32(227, 193, 119, 255);
+            _detailBody = CreateText("DetailBody", content, "", 26, TextAnchor.UpperLeft, 0, 58, 1380, 100);
+            _battleHeading = CreateText("BattleHeading", content, "战斗技能", 28, TextAnchor.MiddleLeft, 0, 200, 1380, 44);
+            _battleHeading.color = heading.color;
+            _battleBody = CreateText("BattleBody", content, "", 26, TextAnchor.UpperLeft, 0, 258, 1380, 100);
+            _relatedHeading = CreateText("RelatedHeading", content, "关联卡牌 · 点击查看", 26, TextAnchor.MiddleLeft, 0, 400, 1380, 44);
+            _relatedHeading.color = heading.color;
+            _detailRelatedRoot = CreateRelatedRoot(content);
+            var grid = _detailRelatedRoot.GetComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(450, 96);
+            grid.spacing = new Vector2(14, 14);
+            foreach (var text in new[] { _detailBody, _battleBody })
+            {
+                text.resizeTextForBestFit = false;
+                text.lineSpacing = 1.3f;
+                text.color = new Color32(225, 230, 239, 255);
+            }
             _detailButtonsWired = false;
             WireDetailButtons();
+            _detailRoot.SetActive(false);
         }
 
-        private void BindExistingDetailReferences()
+        private void SetDetailEdition(bool golden)
         {
-            if (_detailRoot == null)
-            {
-                return;
-            }
-
-            _detailTitle = _detailTitle != null ? _detailTitle : FindDeepChild(_detailRoot.transform, "DetailTitle")?.GetComponent<Text>();
-            _detailMeta = _detailMeta != null ? _detailMeta : FindDeepChild(_detailRoot.transform, "DetailMeta")?.GetComponent<Text>();
-            _detailBody = _detailBody != null ? _detailBody : FindDeepChild(_detailRoot.transform, "DetailBody")?.GetComponent<Text>();
-            _detailPortrait = _detailPortrait != null ? _detailPortrait : FindDeepChild(_detailRoot.transform, "DetailPortrait")?.GetComponent<Image>();
-            _detailCloseButton = _detailCloseButton != null ? _detailCloseButton : FindDeepChild(_detailRoot.transform, "DetailCloseButton")?.GetComponent<Button>();
-            _detailRelatedRoot = _detailRelatedRoot != null ? _detailRelatedRoot : FindDeepChild(_detailRoot.transform, "RelatedRoot");
-            if (_detailCloseButton != null)
-            {
-                _detailButtonsWired = false;
-            }
+            RuntimeSfxPlayer.PlayClick();
+            _goldDetail = golden;
+            RefreshDetailEdition();
         }
+
+        private void RefreshDetailEdition()
+        {
+            var unit = _selectedDetailUnit;
+            if (unit == null || _skillScroll == null) return;
+            var values = new[] { ResolveStartCount(unit).ToString(), ResolveHpPerUnit(unit).ToString(), unit.attack.ToString(), unit.defense.ToString(), $"{unit.damageMin}–{unit.damageMax}", $"{unit.EffectiveRange:0.##}", unit.initiative.ToString(), unit.speed.ToString(), unit.luck.ToString(), unit.morale.ToString(), unit.size.ToString(), FormatRawType(unit.type) };
+            for (var i = 0; i < values.Length; i++) _attributeValues[i].text = values[i];
+            _detailBody.text = SkillDescription(_goldDetail ? unit.goldTalentText : unit.talentText, "暂无经营天赋");
+            _battleBody.text = SkillDescription(_goldDetail ? unit.goldBattleText : unit.battleText, "暂无战斗技能");
+            _normalDetailButton.image.color = _goldDetail ? new Color32(46, 56, 74, 255) : new Color32(68, 105, 145, 255);
+            _goldDetailButton.image.color = _goldDetail ? new Color32(135, 103, 47, 255) : new Color32(46, 56, 74, 255);
+            _detailBody.color = _battleBody.color = _goldDetail ? new Color32(247, 222, 168, 255) : new Color32(225, 230, 239, 255);
+            var talentHeight = Mathf.Max(56, _detailBody.preferredHeight + 12);
+            SetTopLeft(_detailBody.rectTransform, 0, 58, 1380, talentHeight);
+            var battleTop = 58 + talentHeight + 30;
+            SetTopLeft(_battleHeading.rectTransform, 0, battleTop, 1380, 44);
+            var battleHeight = Mathf.Max(56, _battleBody.preferredHeight + 12);
+            SetTopLeft(_battleBody.rectTransform, 0, battleTop + 58, 1380, battleHeight);
+            var relatedTop = battleTop + 58 + battleHeight + 30;
+            SetTopLeft(_relatedHeading.rectTransform, 0, relatedTop, 1380, 44);
+            var relatedHeight = CollectRelatedUnits(unit).Count > 3 ? 206 : 96;
+            SetTopLeft((RectTransform)_detailRelatedRoot, 0, relatedTop + 58, 1380, relatedHeight);
+            _skillScroll.content.sizeDelta = new Vector2(1424, relatedTop + 58 + relatedHeight + 24);
+            _skillScroll.StopMovement();
+            _skillScroll.content.anchoredPosition = Vector2.zero;
+            _skillScroll.verticalNormalizedPosition = 1;
+        }
+
+        private static string SkillDescription(string value, string empty)
+        {
+            return string.IsNullOrWhiteSpace(value) || value.Trim() == "—" ? empty : value;
+        }
+
+
 
         private void RebuildRelatedCards(UnitDefinition unit)
         {
@@ -496,22 +566,22 @@ namespace ProphecyCentury.UI
         {
             var obj = CreatePanel("RelatedCard", _detailRelatedRoot, new Color32(42, 50, 78, 210));
             var layout = obj.AddComponent<LayoutElement>();
-            layout.preferredWidth = 284f;
-            layout.preferredHeight = 76f;
+            layout.preferredWidth = 450f;
+            layout.preferredHeight = 96f;
             var button = obj.AddComponent<Button>();
             button.targetGraphic = obj.GetComponent<Image>();
             button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
             button.onClick.AddListener(() => OpenDetail(entry.Unit));
 
             var icon = CreatePanel("Icon", obj.transform, new Color32(255, 255, 255, 255)).GetComponent<Image>();
-            SetTopLeft(icon.rectTransform, 8f, 8f, 58f, 58f);
+            SetTopLeft(icon.rectTransform, 10f, 10f, 76f, 76f);
             icon.preserveAspect = true;
             RuntimeUnitIconCache.ApplyTo(icon, entry.Unit.name);
 
-            CreateText("Name", obj.transform, entry.Unit.name, 17, TextAnchor.UpperLeft, 74f, 8f, 196f, 24f);
-            var meta = CreateText("Meta", obj.transform, $"{entry.Relation} / {entry.SourceLabel}", 13, TextAnchor.UpperLeft, 74f, 34f, 196f, 18f);
+            CreateText("Name", obj.transform, entry.Unit.name, 24, TextAnchor.UpperLeft, 100f, 10f, 336f, 32f);
+            var meta = CreateText("Meta", obj.transform, $"{entry.Relation} / {entry.SourceLabel}", 20, TextAnchor.UpperLeft, 100f, 44f, 336f, 28f);
             meta.color = new Color32(255, 216, 107, 255);
-            var tags = CreateText("Tags", obj.transform, $"{entry.Unit.race} / {entry.Unit.faith} / {entry.Unit.typeLabel}", 12, TextAnchor.UpperLeft, 74f, 52f, 196f, 18f);
+            var tags = CreateText("Tags", obj.transform, $"{entry.Unit.race} / {entry.Unit.faith}", 18, TextAnchor.UpperLeft, 100f, 72f, 336f, 24f);
             tags.color = new Color32(159, 183, 216, 255);
         }
 
@@ -526,44 +596,6 @@ namespace ProphecyCentury.UI
             });
         }
 
-        private string BuildFullDetailText(UnitDefinition unit)
-        {
-            var tags = unit.tags != null && unit.tags.Length > 0 ? string.Join(" / ", unit.tags) : "无";
-            var lines = new List<string>
-            {
-                "基础信息",
-                $"ID：{unit.id}",
-                $"种族：{ValueOrNone(unit.race)}    信仰：{ValueOrNone(unit.faith)}    职业：{ValueOrNone(unit.typeLabel)}",
-                $"类型：{FormatRawType(unit.type)}    隐藏/衍生：{(unit.hidden ? "是" : "否")}    标签：{tags}",
-                string.Empty,
-                "基础属性",
-                $"数量 {ResolveStartCount(unit)}    单体血量 {ResolveHpPerUnit(unit)}    攻击 {unit.attack}    防御 {unit.defense}",
-                $"伤害 {unit.damageMin}-{unit.damageMax}    先机 {unit.initiative}    速度 {unit.speed}",
-                $"幸运 {unit.luck}（暴击率 {unit.luck * 6}%）    士气 {unit.morale}（追加攻击率 {unit.morale * 4}%）    射程 {unit.EffectiveRange:0.##}    体型 {unit.size}",
-                string.Empty,
-                "普通经营技能",
-                ValueOrNone(unit.talentText),
-                string.Empty,
-                "普通战斗技能",
-                ValueOrNone(unit.battleText),
-                string.Empty,
-                "金色经营技能",
-                ValueOrNone(unit.goldTalentText),
-                string.Empty,
-                "金色战斗技能",
-                ValueOrNone(unit.goldBattleText)
-            };
-
-            var related = CollectRelatedUnits(unit);
-            if (related.Count > 0)
-            {
-                lines.Add(string.Empty);
-                lines.Add("关联卡牌");
-                lines.AddRange(related.Take(6).Select(entry => $"{entry.Relation}：{entry.Unit.name}（{entry.SourceLabel}）"));
-            }
-
-            return string.Join("\n", lines);
-        }
 
         private static string BuildMetaLine(string sourceLabel, UnitDefinition unit)
         {

@@ -262,6 +262,13 @@ namespace ProphecyCentury.UI
                 leaderboardButton.onClick.AddListener(() => ShowLeaderboardModal(root));
             }
             var quitButtonTransform = FindDeepChild(title, "QuitGameButton");
+            if (FindDeepChild(title, "TitleEncyclopediaButton") == null)
+            {
+                CreateButton("TitleEncyclopediaButton", title, "图鉴", Vector2.zero, new Vector2(180f, 44f), () => OpenTitleEncyclopedia(root));
+                StyleSecondaryButton(title.Find("TitleEncyclopediaButton"));
+            }
+            WireButton(title, "TitleEncyclopediaButton", () => OpenTitleEncyclopedia(root));
+            PlaceTitleUtilityButton(FindDeepChild(title, "TitleEncyclopediaButton"), 1960f);
             PlaceTitleUtilityButton(leaderboardButton?.transform, 2160f);
             PlaceTitleUtilityButton(quitButtonTransform, 2360f);
             var settingsButton = FindDeepChild(title, "SettingsButton")?.GetComponent<Button>();
@@ -538,6 +545,9 @@ namespace ProphecyCentury.UI
             StyleSecondaryButton(titlePanel.transform.Find("SettingsButton"));
             CreateButton("CreditsButton", titlePanel.transform, "制作组", new Vector2(2050f, -636f), new Vector2(320f, 56f), () => { });
             StyleSecondaryButton(titlePanel.transform.Find("CreditsButton"));
+            CreateButton("TitleEncyclopediaButton", titlePanel.transform, "图鉴", Vector2.zero, new Vector2(180f, 44f), () => { });
+            StyleSecondaryButton(titlePanel.transform.Find("TitleEncyclopediaButton"));
+            PlaceTitleUtilityButton(titlePanel.transform.Find("TitleEncyclopediaButton"), 1960f);
             CreateButton("LeaderboardButton", titlePanel.transform, "排行榜", new Vector2(2160f, -1212f), new Vector2(180f, 44f), () => { });
             StyleSecondaryButton(titlePanel.transform.Find("LeaderboardButton"));
             CreateButton("QuitGameButton", titlePanel.transform, "退出游戏", new Vector2(2360f, -1212f), new Vector2(180f, 44f), () => { });
@@ -560,6 +570,14 @@ namespace ProphecyCentury.UI
             return titlePanel;
         }
 
+        private static void OpenTitleEncyclopedia(Transform root)
+        {
+            if (root == null) return;
+            var encyclopedia = root.GetComponentInChildren<RuntimeEncyclopediaPanel>(true)
+                ?? root.gameObject.AddComponent<RuntimeEncyclopediaPanel>();
+            encyclopedia.Open();
+        }
+
         public static void BindTitlePanel(Transform root, RunSceneController controller)
         {
             WireButton(root, "ContinueGameButton", controller.ContinueGame);
@@ -567,6 +585,7 @@ namespace ProphecyCentury.UI
             WireButton(root, "SettingsButton", () => ShowModal(root, "SettingsModal"));
             WireButton(root, "CreditsButton", () => ShowModal(root, "CreditsModal"));
             WireButton(root, "LeaderboardButton", () => ShowLeaderboardModal(root));
+            WireButton(root, "TitleEncyclopediaButton", () => OpenTitleEncyclopedia(root));
             WireButton(root, "QuitGameButton", controller.ShowExitConfirmDialog);
         }
 
