@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System;
 using System.Linq;
 using ProphecyCentury.Core;
 using ProphecyCentury.Data;
@@ -111,6 +112,7 @@ namespace ProphecyCentury.UI
             }
 
             var run = session.CurrentRun;
+            MarkRunAsCheat(run);
             run.state = "manage";
             run.round = Mathf.Max(3, run.round);
             run.gold = Mathf.Max(30, run.gold);
@@ -209,6 +211,7 @@ namespace ProphecyCentury.UI
                 session.StartNewRun();
             }
 
+            MarkRunAsCheat(session.CurrentRun);
             session.CurrentRun.gold += 10;
             Debug.Log($"[ProphecyCentury] GM added 10 gold. Gold={session.CurrentRun.gold}");
             RefreshView();
@@ -235,6 +238,7 @@ namespace ProphecyCentury.UI
             }
 
             var run = session.CurrentRun;
+            MarkRunAsCheat(run);
             var changed = 0;
             var definitionChanged = 0;
 
@@ -262,6 +266,7 @@ namespace ProphecyCentury.UI
             }
 
             var run = session.CurrentRun;
+            MarkRunAsCheat(run);
             var changed = 0;
             var definitionChanged = 0;
 
@@ -294,6 +299,12 @@ namespace ProphecyCentury.UI
 
             Debug.Log($"[ProphecyCentury] GM reset playtest luck and morale. Cleared {changed} cards and reloaded unit definitions/config.");
             RefreshView();
+        }
+
+        private static void MarkRunAsCheat(RunState run)
+        {
+            if (run == null || run.gameMode != GameModeIds.CasualPvp) return;
+            run.casualPvpCheatUsed = true;
         }
 
         [ContextMenu("Test Small Merchant Sell Count")]

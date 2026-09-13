@@ -3557,13 +3557,13 @@
         ],
         "battleSkills": [
             {
-                "kind": "battle_start_pounce_nearest_damage",
+                "kind": "first_attack_pounce_nearest_damage",
                 "attackMultiplier": 3
             }
         ],
         "goldBattleSkills": [
             {
-                "kind": "battle_start_pounce_nearest_damage",
+                "kind": "first_attack_pounce_nearest_damage",
                 "attackMultiplier": 6
             }
         ],
@@ -3796,8 +3796,8 @@
         "tags": [],
         "talentText": "回合结束时，吞噬商店中数量最少的部队，获得其数量。",
         "goldTalentText": "回合结束时，吞噬商店中数量最多的部队，获得其数量。",
-        "battleText": "每次攻击，选取攻击距离内最近敌人的位置召唤一阵范围半径为2的火雨，对其中的每个敌人造成1次伤害。",
-        "goldBattleText": "每次攻击，选取攻击距离内最近敌人的位置召唤一阵范围半径为3的火雨，对其中的每个敌人造成1次伤害。",
+        "battleText": "攻击改为在攻击距离内最近敌人的位置召唤一阵范围半径为2的火雨，对其中的每个敌人造成1次伤害。",
+        "goldBattleText": "攻击改为在攻击距离内最近敌人的位置召唤一阵范围半径为3的火雨，对其中的每个敌人造成1次伤害。",
         "talents": [
             {
                 "kind": "round_end_devour_shop_extreme_count",
@@ -3814,7 +3814,7 @@
         ],
         "battleSkills": [
             {
-                "kind": "on_attack_count_fire_rain_area_dot",
+                "kind": "attack_fire_rain_area",
                 "count": 1,
                 "radius": 2,
                 "duration": 0,
@@ -3823,7 +3823,7 @@
         ],
         "goldBattleSkills": [
             {
-                "kind": "on_attack_count_fire_rain_area_dot",
+                "kind": "attack_fire_rain_area",
                 "count": 1,
                 "radius": 3,
                 "duration": 0,
@@ -3842,7 +3842,7 @@
         "attackRange": 1.0,
         "firstPurchaseHp": 120,
         "firstPurchaseAverageDamage": 76,
-        "skillText": "回合结束时，吞噬商店中数量最少的部队，获得其数量。\n回合结束时，吞噬商店中数量最多的部队，获得其数量。\n每次攻击，选取攻击距离内最近敌人的位置召唤一阵范围半径为2的火雨，对其中的每个敌人造成1次伤害。\n每次攻击，选取攻击距离内最近敌人的位置召唤一阵范围半径为3的火雨，对其中的每个敌人造成1次伤害。",
+        "skillText": "回合结束时，吞噬商店中数量最少的部队，获得其数量。\n回合结束时，吞噬商店中数量最多的部队，获得其数量。\n攻击改为在攻击距离内最近敌人的位置召唤一阵范围半径为2的火雨，对其中的每个敌人造成1次伤害。\n攻击改为在攻击距离内最近敌人的位置召唤一阵范围半径为3的火雨，对其中的每个敌人造成1次伤害。",
         "designOnlyInitialBaseDamage": 76
     },
     {

@@ -1230,9 +1230,9 @@ namespace ProphecyCentury.Systems
             return target is BoardUnitState boardTarget && runState.boardUnits.Contains(boardTarget);
         }
 
-        public void ResolveHeroBoardLeave(RunState runState, BoardUnitState leavingUnit)
+        public void ResolveHeroBoardSold(RunState runState, BoardUnitState soldUnit)
         {
-            if (runState == null || leavingUnit == null || runState.heroId != "magic")
+            if (runState == null || soldUnit == null || runState.heroId != "magic")
             {
                 return;
             }
@@ -1246,7 +1246,7 @@ namespace ProphecyCentury.Systems
             var processed = new HashSet<string>();
             foreach (var target in targets)
             {
-                GainCount(runState, target, 1, leavingUnit, processed, 0);
+                GainCount(runState, target, 1, soldUnit, processed, 0);
             }
 
             _abilityTriggered = true;

@@ -54,6 +54,7 @@ namespace ProphecyCentury.Core
             CurrentRun = new RunState
             {
                 saveVersion = 1,
+                gameMode = GameModeIds.Campaign,
                 campaignId = campaign,
                 heroId = hero,
                 state = "manage",

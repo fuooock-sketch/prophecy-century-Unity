@@ -1,0 +1,20 @@
+services:
+  casual-pvp:
+    build:
+      context: ../..
+      dockerfile: tools/casual_pvp_server/Dockerfile
+    command: ["--host", "0.0.0.0", "--port", "8765", "--database", "/var/lib/prophecy-century-casual-pvp/casual_pvp.db"]
+    ports:
+      - "127.0.0.1:${PVP_PORT:-8765}:8765"
+    volumes:
+      - casual_pvp_data:/var/lib/prophecy-century-casual-pvp
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; assert urlopen('http://127.0.0.1:8765/health', timeout=2).status == 200"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  casual_pvp_data:

@@ -12,65 +12,62 @@ namespace ProphecyCentury.Systems
     {
         private const string SaveFileName = "prophecy_century_run.json";
 
-        public string SavePath => Path.Combine(Application.persistentDataPath, SaveFileName);
+        public string LegacySavePath => Path.Combine(Application.persistentDataPath, SaveFileName);
+        public string SavePath
+        {
+            get
+            {
+                if (CasualPvpSystem.IsCasual(ProphecyGameSession.Instance?.CurrentRun))
+                {
+                    var casualSlots = new CasualPvpSaveSlotService();
+                    return casualSlots.CurrentSaveSlotIndex > 0 ? casualSlots.GetSlotPath(casualSlots.CurrentSaveSlotIndex) : casualSlots.SaveDirectory;
+                }
+                var slots = new SaveSlotService();
+                return slots.CurrentSaveSlotIndex > 0 ? slots.GetSlotPath(slots.CurrentSaveSlotIndex) : LegacySavePath;
+            }
+        }
 
         public bool SaveCurrentRun()
         {
-            var run = ProphecyGameSession.Instance?.CurrentRun;
-            if (run == null)
+            if (CasualPvpSystem.IsCasual(ProphecyGameSession.Instance?.CurrentRun))
             {
-                return false;
+                return new CasualPvpSaveSlotService().SaveCurrentRun().Success;
             }
-
-            try
-            {
-                var json = JsonUtility.ToJson(run, true);
-                File.WriteAllText(SavePath, json);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Save failed: {ex.Message}");
-                return false;
-            }
+            return new SaveSlotService().SaveCurrentRun().Success;
         }
 
         public bool LoadCurrentRun()
         {
-            if (!File.Exists(SavePath))
+            if (CasualPvpSystem.IsCasual(ProphecyGameSession.Instance?.CurrentRun))
             {
-                return false;
+                var casualSlots = new CasualPvpSaveSlotService();
+                var casualResult = casualSlots.CurrentSaveSlotIndex > 0
+                    ? casualSlots.LoadGame(casualSlots.CurrentSaveSlotIndex)
+                    : casualSlots.LoadMostRecentValid();
+                if (casualResult.Success) Normalize(casualResult.Save.gameData);
+                return casualResult.Success;
             }
 
-            try
-            {
-                var json = File.ReadAllText(SavePath);
-                var run = JsonUtility.FromJson<RunState>(json);
-                if (run == null)
-                {
-                    return false;
-                }
-
-                Normalize(run);
-                ProphecyGameSession.Instance.RestoreRun(run);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Load failed: {ex.Message}");
-                return false;
-            }
+            var slots = new SaveSlotService();
+            slots.ImportLegacySave(LegacySavePath);
+            var result = slots.CurrentSaveSlotIndex > 0
+                ? slots.LoadGame(slots.CurrentSaveSlotIndex)
+                : slots.LoadMostRecentValid();
+            if (result.Success) Normalize(result.Save.gameData);
+            return result.Success;
         }
 
-        private static void Normalize(RunState run)
+        internal static void Normalize(RunState run)
         {
             var isLegacySave = run.saveVersion <= 0;
+            if (string.IsNullOrWhiteSpace(run.gameMode)) run.gameMode = GameModeIds.Campaign;
             if (isLegacySave) run.saveVersion = 1;
             if (run.dayCount <= 0) run.dayCount = isLegacySave ? Math.Max(1, run.round) : 0;
             if (run.maxMovePoints <= 0) run.maxMovePoints = 4;
             if (run.remainingMovePoints < 0) run.remainingMovePoints = 0;
             if (string.IsNullOrWhiteSpace(run.currentNodeId)) run.currentNodeId = "start";
             if (isLegacySave) run.phase = ResolvePhase(run.state);
+            CasualPvpSystem.Normalize(run);
             if (run.boardUnits == null) run.boardUnits = new System.Collections.Generic.List<BoardUnitState>();
             if (run.handCards == null) run.handCards = new System.Collections.Generic.List<UnitCardState>();
             if (run.pendingHandCards == null) run.pendingHandCards = new System.Collections.Generic.List<UnitCardState>();
@@ -86,7 +83,7 @@ namespace ProphecyCentury.Systems
             CustomChallengeSystem.Normalize(run);
             NormalizeWorldMapState(run);
             NormalizeExplorationBattleState(run);
-            if (run.campaignRoundLimit <= 0)
+            if (!CasualPvpSystem.IsCasual(run) && run.campaignRoundLimit <= 0)
             {
                 run.campaignRoundLimit = ProphecyGameSession.Instance?.Data?.Config?.victoryRound > 0
                     ? ProphecyGameSession.Instance.Data.Config.victoryRound

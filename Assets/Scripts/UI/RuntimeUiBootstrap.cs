@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using ProphecyCentury.Core;
 using ProphecyCentury.Model;
@@ -14,7 +15,9 @@ namespace ProphecyCentury.UI
         public const string RuntimeUiPrefabAssetPath = "Assets/Resources/Prefabs/RuntimeCanvas.prefab";
         private const string RuntimeUiPrefabResourcePath = "Prefabs/RuntimeCanvas";
         private const string BattleStagePanelPrefabResourcePath = "Prefabs/UI/BattleStagePanel";
+        private const string TitleLogoResourcePath = "Art/Login/prophecy_century_logo";
         private const string ElementalBattleChallengeButtonName = "ElementalBattleChallengeButton";
+        private static readonly Dictionary<string, Sprite> HeroPortraitSprites = new Dictionary<string, Sprite>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureRunSceneUi()
@@ -111,12 +114,16 @@ namespace ProphecyCentury.UI
                 return;
             }
 
+            EnsureTitleVideoLayout(root.transform);
+            BindTitlePanel(root.transform, controller);
             TryInstallBattleStagePanelPrefab(root.transform, controller);
             HideTitleSelectionControls(root.transform);
             EnsureTitleShortcutChallengeButton(root.transform, controller);
             EnsureSelectionScreens(root.transform, controller);
             EnsurePlayerHpBar(root.transform, controller);
             EnsureArmyPowerLabel(root.transform, controller);
+            EnsureAuxiliaryMenu(root.transform, controller);
+            EnsureSaveSlotMenu(root.transform, controller);
 
             WireButton(root.transform, "StartSelectedRunButton", controller.OpenCampaignSelection);
             WireButton(root.transform, "StartGameButton", controller.OpenCampaignSelection);
@@ -140,6 +147,109 @@ namespace ProphecyCentury.UI
             if (encyclopedia != null)
             {
                 WireButton(root.transform, "EncyclopediaButtonV2", encyclopedia.Open);
+            }
+            EnsureCasualPvpUi(root.transform, controller);
+        }
+
+        private static void EnsureTitleVideoLayout(Transform root)
+        {
+            if (root == null) return;
+            var title = FindDeepChild(root, "TitlePanel");
+            if (title == null) return;
+
+            TitleVideoBackground.Create(root);
+        }
+
+        private static void EnsureTitleLogo(Transform title)
+        {
+            var logoTexture = Resources.Load<Texture2D>(TitleLogoResourcePath);
+            if (logoTexture == null)
+            {
+                Debug.LogWarning("Title logo texture was not found at Resources/" + TitleLogoResourcePath + ".");
+                return;
+            }
+
+            var logo = title.Find("TitleLogo")?.GetComponent<RawImage>();
+            if (logo == null)
+            {
+                var logoObject = new GameObject("TitleLogo", typeof(RectTransform), typeof(RawImage));
+                logoObject.transform.SetParent(title, false);
+                logo = logoObject.GetComponent<RawImage>();
+            }
+
+            logo.texture = logoTexture;
+            logo.raycastTarget = false;
+            SetTitleCenteredRect(logo.rectTransform, new Vector2(650f, -415f), new Vector2(920f, 652f));
+
+            SetTitleTextVisibility(title, "TitleTextGlow", false);
+            SetTitleTextVisibility(title, "TitleText", false);
+
+            var subtitle = title.Find("TitleSubtitle")?.GetComponent<Text>();
+            if (subtitle != null)
+            {
+                subtitle.text = "Prophecy Century";
+                subtitle.fontSize = 28;
+                subtitle.color = new Color32(235, 212, 157, 220);
+                SetTitleCenteredRect(subtitle.rectTransform, new Vector2(650f, -756f), new Vector2(560f, 44f));
+            }
+        }
+
+        private static void SetTitleTextVisibility(Transform title, string name, bool visible)
+        {
+            var element = title.Find(name);
+            if (element != null) element.gameObject.SetActive(visible);
+        }
+
+        private static void EnsureSaveSlotMenu(Transform root, RunSceneController controller)
+        {
+            if (root == null || controller == null || root.GetComponent<SaveSlotMenuController>() != null) return;
+            var titlePanel = FindDeepChild(root, "TitlePanel")?.gameObject;
+            var continueButton = FindDeepChild(root, "ContinueGameButton")?.GetComponent<Button>();
+            if (titlePanel == null || continueButton == null) return;
+            root.gameObject.AddComponent<SaveSlotMenuController>().Initialize(controller, titlePanel, continueButton);
+        }
+
+        private static void EnsureCasualPvpUi(Transform root, RunSceneController controller)
+        {
+            if (root == null || controller == null) return;
+            var existing = root.GetComponent<CasualPvpUiController>();
+            if (existing != null)
+            {
+                existing.RewireTitleButtons();
+                return;
+            }
+            var titlePanel = FindDeepChild(root, "TitlePanel")?.gameObject;
+            var continueButton = FindDeepChild(root, "ContinueGameButton")?.GetComponent<Button>();
+            var saveMenu = root.GetComponent<SaveSlotMenuController>();
+            if (titlePanel == null || continueButton == null || saveMenu == null) return;
+            root.gameObject.AddComponent<CasualPvpUiController>().Initialize(controller, titlePanel, saveMenu, continueButton);
+        }
+
+        private static void EnsureAuxiliaryMenu(Transform root, RunSceneController controller)
+        {
+            var title = FindDeepChild(root, "TitlePanel");
+            if (title == null) return;
+            if (FindDeepChild(root, "SettingsModal") == null)
+            {
+                var settings = CreateSettingsModal(root);
+                settings.SetActive(false);
+            }
+            if (FindDeepChild(root, "CreditsModal") == null)
+            {
+                var credits = CreateCreditsModal(root);
+                credits.SetActive(false);
+            }
+            if (FindDeepChild(title, "CreditsButton") == null)
+            {
+                CreateButton("CreditsButton", title, "制作组", new Vector2(2050f, -636f), new Vector2(320f, 56f), () => ShowModal(root, "CreditsModal"));
+                StyleSecondaryButton(title.Find("CreditsButton"));
+            }
+            var settingsButton = FindDeepChild(title, "SettingsButton")?.GetComponent<Button>();
+            if (settingsButton != null)
+            {
+                settingsButton.onClick.RemoveAllListeners();
+                settingsButton.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
+                settingsButton.onClick.AddListener(() => ShowModal(root, "SettingsModal"));
             }
         }
 
@@ -378,6 +488,63 @@ namespace ProphecyCentury.UI
             return null;
         }
 
+        public const string TitlePanelPrefabAssetPath = "Assets/Resources/Prefabs/UI/TitlePanel.prefab";
+        private const string TitlePanelPrefabResourcePath = "Prefabs/UI/TitlePanel";
+
+        public static GameObject CreateTitlePanel(Transform parent)
+        {
+            var prefab = Resources.Load<GameObject>(TitlePanelPrefabResourcePath);
+            if (prefab == null) return CreateDefaultTitlePanel(parent);
+            var panel = Object.Instantiate(prefab, parent, false);
+            panel.name = "TitlePanel";
+            return panel;
+        }
+
+        // Used by the editor generator and as a fallback if the asset is missing.
+        public static GameObject CreateDefaultTitlePanel(Transform parent)
+        {
+            var titlePanel = CreatePanel("TitlePanel", parent, new Color32(5, 9, 18, 42), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            titlePanel.GetComponent<Image>().raycastTarget = false;
+            CreateTitleText(titlePanel.transform);
+            EnsureTitleLogo(titlePanel.transform);
+
+            // 按钮：继续游戏 / 开始游戏 / 设置 / 退出游戏
+            CreateButton("ContinueGameButton", titlePanel.transform, "继续游戏", new Vector2(2050f, -380f), new Vector2(320f, 72f), () => { });
+            StylePrimaryButton(titlePanel.transform.Find("ContinueGameButton"));
+
+            CreateButton("StartGameButton", titlePanel.transform, "开始游戏", new Vector2(2050f, -472f), new Vector2(320f, 72f), () => { });
+            StylePrimaryButton(titlePanel.transform.Find("StartGameButton"));
+            CreateButton("SettingsButton", titlePanel.transform, "设置", new Vector2(2050f, -564f), new Vector2(320f, 56f), () => { });
+            StyleSecondaryButton(titlePanel.transform.Find("SettingsButton"));
+            CreateButton("CreditsButton", titlePanel.transform, "制作组", new Vector2(2050f, -636f), new Vector2(320f, 56f), () => { });
+            StyleSecondaryButton(titlePanel.transform.Find("CreditsButton"));
+            CreateButton("QuitGameButton", titlePanel.transform, "退出游戏", new Vector2(2050f, -708f), new Vector2(320f, 56f), () => { });
+            StyleSecondaryButton(titlePanel.transform.Find("QuitGameButton"));
+
+            // 版本号
+            var versionText = CreateText("VersionText", titlePanel.transform, "v" + Application.version, 16, TextAnchor.LowerRight, Vector2.zero, Vector2.one, new Vector2(0f, 14f), new Vector2(-20f, 0f));
+            versionText.color = new Color32(120, 140, 160, 100);
+            versionText.raycastTarget = false;
+
+            var names = new[] { "ContinueGameButton", "StartGameButton", "SettingsButton", "CreditsButton", "QuitGameButton" };
+            var yPositions = new[] { -380f, -472f, -564f, -636f, -708f };
+            for (var index = 0; index < names.Length; index++)
+            {
+                SetTitleCenteredRect(titlePanel.transform.Find(names[index]).GetComponent<RectTransform>(),
+                    new Vector2(2050f, yPositions[index]), new Vector2(320f, index < 2 ? 72f : 56f));
+            }
+            return titlePanel;
+        }
+
+        public static void BindTitlePanel(Transform root, RunSceneController controller)
+        {
+            WireButton(root, "ContinueGameButton", controller.ContinueGame);
+            WireButton(root, "StartGameButton", controller.OpenCampaignSelection);
+            WireButton(root, "SettingsButton", () => ShowModal(root, "SettingsModal"));
+            WireButton(root, "CreditsButton", () => ShowModal(root, "CreditsModal"));
+            WireButton(root, "QuitGameButton", controller.ShowExitConfirmDialog);
+        }
+
         public static GameObject CreateGeneratedUi(bool includeEditorPlaytestTools = true)
         {
             var canvasObject = new GameObject("RuntimeCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -406,40 +573,9 @@ namespace ProphecyCentury.UI
             var encyclopedia = canvasObject.AddComponent<RuntimeEncyclopediaPanel>();
 
             // ---- Title Panel ----
-            var titlePanel = CreatePanel("TitlePanel", canvasObject.transform, new Color32(5, 9, 18, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            titlePanel.GetComponent<Image>().raycastTarget = false;
-            CreateTitleAstrolabe(titlePanel.transform);
-            CreateTitleText(titlePanel.transform);
-
-            // 星盘动画
-            titlePanel.AddComponent<TitleAstrolabeAnimator>();
-
-            // 按钮：继续游戏 / 开始游戏 / 设置 / 退出游戏
-            var hasSaveFile = File.Exists(new SaveGameSystem().SavePath);
-            CreateButton("ContinueGameButton", titlePanel.transform, "继续游戏", new Vector2(1280f, -380f), new Vector2(320f, 72f), controller.ContinueGame);
-            StylePrimaryButton(titlePanel.transform.Find("ContinueGameButton"));
-            if (!hasSaveFile)
-            {
-                var continueBtn = titlePanel.transform.Find("ContinueGameButton")?.GetComponent<Button>();
-                if (continueBtn != null)
-                {
-                    continueBtn.interactable = false;
-                    var continueLabel = continueBtn.GetComponentInChildren<Text>();
-                    if (continueLabel != null) continueLabel.color = new Color32(120, 120, 120, 180);
-                }
-            }
-
-            CreateButton("StartGameButton", titlePanel.transform, "开始游戏", new Vector2(1280f, -472f), new Vector2(320f, 72f), controller.OpenCampaignSelection);
-            StylePrimaryButton(titlePanel.transform.Find("StartGameButton"));
-            CreateButton("SettingsButton", titlePanel.transform, "设置", new Vector2(1280f, -564f), new Vector2(320f, 56f), () => ShowSettingsModal(canvasObject.transform));
-            StyleSecondaryButton(titlePanel.transform.Find("SettingsButton"));
-            CreateButton("QuitGameButton", titlePanel.transform, "退出游戏", new Vector2(1280f, -640f), new Vector2(320f, 56f), controller.ShowExitConfirmDialog);
-            StyleSecondaryButton(titlePanel.transform.Find("QuitGameButton"));
-
-            // 版本号
-            var versionText = CreateText("VersionText", titlePanel.transform, "v" + Application.version, 16, TextAnchor.LowerRight, Vector2.zero, Vector2.one, new Vector2(0f, 14f), new Vector2(-20f, 0f));
-            versionText.color = new Color32(120, 140, 160, 100);
-            versionText.raycastTarget = false;
+            TitleVideoBackground.Create(canvasObject.transform);
+            var titlePanel = CreateTitlePanel(canvasObject.transform);
+            BindTitlePanel(canvasObject.transform, controller);
 
             var campaignSelectionScreen = CreateCampaignSelectionScreen(canvasObject.transform, controller);
             var heroSelectionScreen = CreateHeroSelectionScreen(canvasObject.transform, controller);
@@ -453,9 +589,13 @@ namespace ProphecyCentury.UI
 
             var settingsModal = CreateSettingsModal(canvasObject.transform);
             settingsModal.SetActive(false);
+            var creditsModal = CreateCreditsModal(canvasObject.transform);
+            creditsModal.SetActive(false);
 
             // ConfirmDialog
             ConfirmDialog.FindOrCreate(canvasObject.transform);
+            EnsureSaveSlotMenu(canvasObject.transform, controller);
+            EnsureCasualPvpUi(canvasObject.transform, controller);
 
             var runPanel = CreatePanel("RunPanel", canvasObject.transform, new Color32(18, 24, 31, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var topBar = CreatePanel("TopBar", runPanel.transform, new Color32(25, 34, 44, 255), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -72f), Vector2.zero);
@@ -509,8 +649,7 @@ namespace ProphecyCentury.UI
             SetPixelRectTopLeft(handPanelV2.GetComponent<RectTransform>(), 22f, 898f, 2131f, 357f);
             SetPixelRectTopLeft(battlePanelV2.GetComponent<RectTransform>(), 2198f, 947f, 335f, 261f);
 
-            var heroPortrait = CreatePanel("HeroPortrait", playerPanelV2.transform, Color.white, new Vector2(0.11f, 0.51f), new Vector2(0.89f, 0.95f), Vector2.zero, Vector2.zero);
-            ApplySpriteFromProjectPath(heroPortrait.GetComponent<Image>(), "Art/bg/loading_image.png");
+            var heroPortrait = CreatePanel("HeroPortrait", playerPanelV2.transform, Color.clear, new Vector2(0.11f, 0.51f), new Vector2(0.89f, 0.95f), Vector2.zero, Vector2.zero);
             SetPixelRectTopLeft(heroPortrait.GetComponent<RectTransform>(), 46f, 51f, 306f, 397f);
             var hpBar = CreatePanel("HpBar", playerPanelV2.transform, new Color32(221, 221, 221, 255), new Vector2(0.12f, 0.42f), new Vector2(0.88f, 0.465f), Vector2.zero, Vector2.zero);
             SetPixelRectTopLeft(hpBar.GetComponent<RectTransform>(), 46f, 478f, 311f, 36f);
@@ -909,18 +1048,18 @@ namespace ProphecyCentury.UI
         private static void CreateTitleText(Transform parent)
         {
             var shadow = CreateText("TitleTextGlow", parent, "预言世纪", 86, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
-            SetTitleCenteredRect(shadow.GetComponent<RectTransform>(), new Vector2(1280f, -210f), new Vector2(760f, 126f));
+            SetTitleCenteredRect(shadow.GetComponent<RectTransform>(), new Vector2(650f, -210f), new Vector2(760f, 126f));
             shadow.color = new Color32(72, 176, 188, 92);
 
             var title = CreateText("TitleText", parent, "预言世纪", 78, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
-            SetTitleCenteredRect(title.GetComponent<RectTransform>(), new Vector2(1280f, -204f), new Vector2(720f, 118f));
+            SetTitleCenteredRect(title.GetComponent<RectTransform>(), new Vector2(650f, -204f), new Vector2(720f, 118f));
             title.color = new Color32(239, 204, 126, 255);
             title.resizeTextForBestFit = true;
             title.resizeTextMinSize = 54;
             title.resizeTextMaxSize = 78;
 
             var subtitle = CreateText("TitleSubtitle", parent, "在星盘中选择命运的入口", 24, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
-            SetTitleCenteredRect(subtitle.GetComponent<RectTransform>(), new Vector2(1280f, -302f), new Vector2(560f, 44f));
+            SetTitleCenteredRect(subtitle.GetComponent<RectTransform>(), new Vector2(650f, -302f), new Vector2(560f, 44f));
             subtitle.color = new Color32(195, 223, 220, 188);
         }
 
@@ -1547,14 +1686,20 @@ namespace ProphecyCentury.UI
         {
             var screen = CreatePanel("HeroSelectionScreen", parent, new Color32(5, 9, 18, 255), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
-            CreateTitleLine(screen.transform, "TopLine", new Vector2(1280f, -80f), new Vector2(2200f, 2f), 0f, new Color32(92, 188, 200, 86));
+            CreateTitleLine(screen.transform, "TopLine", new Vector2(1280f, -112f), new Vector2(2200f, 2f), 0f, new Color32(92, 188, 200, 86));
 
             CreateButton("BackButton", screen.transform, "返回", new Vector2(120f, -40f), new Vector2(140f, 48f), () => controller.ReturnToCampaignFromHero());
-            StyleSecondaryButton(screen.transform.Find("BackButton"));
+            var backButton = screen.transform.Find("BackButton");
+            StyleSecondaryButton(backButton);
+            SetHeroSelectionFontFloor(backButton?.Find("Label")?.GetComponent<Text>(), 26);
 
-            var titleText = CreateText("ScreenTitle", screen.transform, "选择解读预言的人", 42, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
-            SetTitleCenteredRect(titleText.GetComponent<RectTransform>(), new Vector2(1280f, -40f), new Vector2(600f, 60f));
+            var titleText = CreateText("ScreenTitle", screen.transform, "选择你的英雄", 46, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetTitleCenteredRect(titleText.GetComponent<RectTransform>(), new Vector2(1280f, -34f), new Vector2(720f, 58f));
             titleText.color = new Color32(239, 204, 126, 255);
+
+            var subtitle = CreateText("ScreenSubtitle", screen.transform, "英雄能力会贯穿整局经营与战斗准备，选择后本局不可更换", 26, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetTitleCenteredRect(subtitle.GetComponent<RectTransform>(), new Vector2(1280f, -84f), new Vector2(1200f, 34f));
+            subtitle.color = new Color32(166, 207, 211, 220);
 
             var cardContainer = new GameObject("HeroCards", typeof(GridLayoutGroup));
             cardContainer.transform.SetParent(screen.transform, false);
@@ -1562,12 +1707,12 @@ namespace ProphecyCentury.UI
             cardRect.anchorMin = new Vector2(0.5f, 0.5f);
             cardRect.anchorMax = new Vector2(0.5f, 0.5f);
             cardRect.pivot = new Vector2(0.5f, 0.5f);
-            cardRect.anchoredPosition = Vector2.zero;
-            cardRect.sizeDelta = new Vector2(2200f, 600f);
+            cardRect.anchoredPosition = new Vector2(0f, -22f);
+            cardRect.sizeDelta = new Vector2(2200f, 800f);
 
             var layout = cardContainer.GetComponent<GridLayoutGroup>();
-            layout.cellSize = new Vector2(640f, 480f);
-            layout.spacing = new Vector2(60f, 40f);
+            layout.cellSize = new Vector2(700f, 780f);
+            layout.spacing = new Vector2(50f, 20f);
             layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             layout.constraintCount = 3;
             layout.childAlignment = TextAnchor.MiddleCenter;
@@ -1579,9 +1724,7 @@ namespace ProphecyCentury.UI
                 foreach (var hero in heroes)
                 {
                     if (hero == null) continue;
-                    var portraitPath = !string.IsNullOrWhiteSpace(hero.portrait_glyph)
-                        ? hero.portrait_glyph
-                        : "Art/hero/" + hero.id + ".jpg";
+                    var portraitPath = ResolveHeroPortraitPath(hero.id, hero.portrait_glyph);
                     CreateHeroCard(cardContainer.transform, hero.id, hero.name, hero.title,
                         portraitPath, hero.epithet, hero.passive_text, controller);
                 }
@@ -1593,7 +1736,7 @@ namespace ProphecyCentury.UI
                 {
                     ("james", "詹姆士", "增援统帅", "Art/hero/James.jpg", "让每一次获得数量更有效率", "经营阶段，我方任意已上阵部队获得数量时，额外获得+1数量。"),
                     ("magic", "马吉克", "离阵术士", "Art/hero/Magic.jpg", "把退场转化为新的战力", "经营阶段，我方已上阵部队出售并离场时，场上随机3个我方部队获得+1数量。"),
-                    ("shalame", "夏拉美", "征募财务官", "Art/hero/Shalame.jpg", "从扩军中整理出预算", "经营阶段，我方已上阵部队每累计获得20数量，额外获得+1金币。"),
+                    ("shalame", "夏拉美", "征募财务官", "Art/hero/Shirmmy.jpg", "从扩军中整理出预算", "经营阶段，我方已上阵部队每累计获得20数量，额外获得+1金币。"),
                 };
                 foreach (var (id, name, title, portraitPath, epithet, passiveText) in fallback)
                 {
@@ -1601,31 +1744,174 @@ namespace ProphecyCentury.UI
                 }
             }
 
+            var footer = CreateText("SelectionHint", screen.transform, "稳定成长 · 出售运营 · 经济循环——选择最适合本局构筑方向的英雄", 26, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetTitleCenteredRect(footer.GetComponent<RectTransform>(), new Vector2(1280f, -1182f), new Vector2(1700f, 46f));
+            footer.color = new Color32(143, 176, 188, 190);
+
             return screen;
         }
 
         private static void CreateHeroCard(Transform parent, string heroId, string heroName, string heroTitle, string portraitPath, string epithet, string passiveText, RunSceneController controller)
         {
-            var card = CreatePanel("HeroCard_" + heroId, parent, new Color32(16, 28, 45, 245), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            GetHeroSelectionMeta(heroId, out var style, out var trigger, out var payoff, out var recommendation, out var accent);
 
-            var rim = CreatePanel("CardRim", card.transform, new Color32(204, 169, 94, 72), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            rim.GetComponent<Image>().raycastTarget = false;
+            var card = CreatePanel("HeroCard_" + heroId, parent, accent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var body = CreatePanel("CardBody", card.transform, new Color32(14, 27, 43, 255), Vector2.zero, Vector2.one, new Vector2(3f, 3f), new Vector2(-3f, -3f));
 
-            var portrait = CreatePanel("Portrait", card.transform, Color.white, new Vector2(0.5f, 0.7f), new Vector2(0.5f, 0.7f), new Vector2(-100f, -100f), new Vector2(-100f, -100f));
-            ApplySpriteFromProjectPath(portrait.GetComponent<Image>(), portraitPath);
+            var accentLine = CreatePanel("AccentLine", body.transform, accent, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(accentLine.GetComponent<RectTransform>(), 0f, 0f, 694f, 8f);
+            accentLine.GetComponent<Image>().raycastTarget = false;
 
-            var nameText = CreateText("HeroName", card.transform, heroName, 28, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(12f, -120f), new Vector2(-12f, -155f));
-            nameText.color = new Color32(239, 204, 126, 255);
+            var styleBadge = CreatePanel("StyleBadge", body.transform, new Color(accent.r, accent.g, accent.b, 0.25f), Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(styleBadge.GetComponent<RectTransform>(), 24f, 24f, 168f, 38f);
+            var styleText = CreateText("Style", styleBadge.transform, style, 26, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f));
+            styleText.color = new Color32(243, 232, 194, 255);
 
-            var titleText = CreateText("HeroTitle", card.transform, heroTitle, 18, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(12f, -155f), new Vector2(-12f, -185f));
-            titleText.color = new Color32(183, 220, 217, 205);
+            var portraitFrame = CreatePanel("PortraitFrame", body.transform, new Color(accent.r, accent.g, accent.b, 0.58f), Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(portraitFrame.GetComponent<RectTransform>(), 24f, 76f, 218f, 232f);
+            var portrait = CreatePanel("Portrait", portraitFrame.transform, new Color32(24, 38, 54, 255), Vector2.zero, Vector2.one, new Vector2(3f, 3f), new Vector2(-3f, -3f));
+            var portraitImage = portrait.GetComponent<Image>();
+            ApplyHeroPortrait(portraitImage, heroId, portraitPath);
+            portraitImage.preserveAspect = true;
 
-            var epithetText = CreateText("Epithet", card.transform, epithet, 16, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, new Vector2(12f, -185f), new Vector2(-12f, -230f));
-            epithetText.color = new Color32(166, 207, 205, 150);
+            var nameText = CreateText("HeroName", body.transform, heroName, 36, TextAnchor.MiddleLeft, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(nameText.GetComponent<RectTransform>(), 270f, 82f, 390f, 52f);
+            nameText.color = new Color32(244, 211, 136, 255);
+
+            var titleText = CreateText("HeroTitle", body.transform, heroTitle, 28, TextAnchor.MiddleLeft, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(titleText.GetComponent<RectTransform>(), 270f, 137f, 390f, 40f);
+            titleText.color = new Color32(183, 220, 217, 230);
+
+            var epithetText = CreateText("Epithet", body.transform, epithet, 26, TextAnchor.UpperLeft, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(epithetText.GetComponent<RectTransform>(), 270f, 184f, 390f, 88f);
+            epithetText.color = new Color32(166, 193, 202, 210);
             epithetText.fontStyle = FontStyle.Italic;
+            epithetText.resizeTextForBestFit = true;
+            epithetText.resizeTextMinSize = 26;
+            epithetText.resizeTextMaxSize = 26;
 
-            CreateButton("SelectButton", card.transform, "选择此英雄", new Vector2(0f, -300f), new Vector2(200f, 50f), () => controller.StartRunWithHero(heroId));
-            StylePrimaryButton(card.transform.Find("SelectButton"));
+            var abilityPanel = CreatePanel("AbilityPanel", body.transform, new Color32(7, 17, 29, 220), Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(abilityPanel.GetComponent<RectTransform>(), 24f, 328f, 646f, 310f);
+
+            var abilityTitle = CreateText("AbilityTitle", abilityPanel.transform, "英雄被动", 26, TextAnchor.MiddleLeft, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(abilityTitle.GetComponent<RectTransform>(), 20f, 14f, 180f, 34f);
+            abilityTitle.color = accent;
+
+            var passive = CreateText("PassiveText", abilityPanel.transform, passiveText, 28, TextAnchor.UpperLeft, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(passive.GetComponent<RectTransform>(), 20f, 52f, 606f, 100f);
+            passive.color = new Color32(225, 232, 235, 255);
+            passive.resizeTextForBestFit = true;
+            passive.resizeTextMinSize = 26;
+            passive.resizeTextMaxSize = 28;
+
+            var divider = CreatePanel("Divider", abilityPanel.transform, new Color32(103, 154, 166, 70), Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(divider.GetComponent<RectTransform>(), 20f, 164f, 606f, 1f);
+            divider.GetComponent<Image>().raycastTarget = false;
+
+            var triggerText = CreateText("Trigger", abilityPanel.transform, $"触发   {trigger}", 26, TextAnchor.MiddleLeft, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(triggerText.GetComponent<RectTransform>(), 20f, 178f, 606f, 40f);
+            triggerText.color = new Color32(184, 207, 214, 255);
+
+            var payoffText = CreateText("Payoff", abilityPanel.transform, $"收益   {payoff}", 26, TextAnchor.MiddleLeft, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(payoffText.GetComponent<RectTransform>(), 20f, 224f, 606f, 40f);
+            payoffText.color = new Color32(239, 204, 126, 255);
+
+            var recommendationText = CreateText("Recommendation", body.transform, recommendation, 26, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            SetPixelRectTopLeft(recommendationText.GetComponent<RectTransform>(), 28f, 644f, 638f, 56f);
+            recommendationText.color = new Color32(151, 185, 194, 220);
+            recommendationText.resizeTextForBestFit = true;
+            recommendationText.resizeTextMinSize = 26;
+            recommendationText.resizeTextMaxSize = 26;
+
+            CreateButton("SelectButton", body.transform, $"选择 {heroName}", Vector2.zero, new Vector2(370f, 58f), () => controller.StartRunWithHero(heroId));
+            var selectButton = body.transform.Find("SelectButton");
+            SetPixelRectTopLeft(selectButton.GetComponent<RectTransform>(), 162f, 706f, 370f, 58f);
+            StylePrimaryButton(selectButton);
+            SetHeroSelectionFontFloor(selectButton.Find("Label")?.GetComponent<Text>(), 28);
+        }
+
+        private static void SetHeroSelectionFontFloor(Text text, int preferredSize)
+        {
+            if (text == null) return;
+            text.fontSize = Mathf.Max(26, preferredSize);
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = 26;
+            text.resizeTextMaxSize = Mathf.Max(26, preferredSize);
+        }
+
+        internal static void ApplyHeroPortrait(Image image, string heroId, string configuredValue)
+        {
+            if (image == null) return;
+
+            if (string.IsNullOrWhiteSpace(heroId))
+            {
+                image.sprite = null;
+                image.color = Color.clear;
+                return;
+            }
+
+            var path = ResolveHeroPortraitPath(heroId, configuredValue);
+            if (!HeroPortraitSprites.TryGetValue(path, out var sprite))
+            {
+                image.sprite = null;
+                ApplySpriteFromProjectPath(image, path);
+                sprite = image.sprite;
+                HeroPortraitSprites[path] = sprite;
+            }
+
+            image.sprite = sprite;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = true;
+            image.color = sprite != null ? Color.white : Color.clear;
+        }
+
+        private static string ResolveHeroPortraitPath(string heroId, string configuredValue)
+        {
+            switch (heroId)
+            {
+                case "james": return "Art/hero/James.jpg";
+                case "magic": return "Art/hero/Magic.jpg";
+                case "shalame": return "Art/hero/Shirmmy.jpg";
+            }
+
+            return !string.IsNullOrWhiteSpace(configuredValue) && (configuredValue.Contains("/") || configuredValue.Contains("\\"))
+                ? configuredValue
+                : $"Art/hero/{heroId}.jpg";
+        }
+
+        private static void GetHeroSelectionMeta(string heroId, out string style, out string trigger, out string payoff, out string recommendation, out Color accent)
+        {
+            switch (heroId)
+            {
+                case "james":
+                    style = "稳定成长";
+                    trigger = "已上阵部队每次获得数量";
+                    payoff = "该部队额外获得 +1 数量";
+                    recommendation = "适合持续强化核心部队，能力稳定且容易发挥";
+                    accent = new Color32(205, 159, 72, 255);
+                    return;
+                case "magic":
+                    style = "出售运营";
+                    trigger = "出售一支已上阵部队";
+                    payoff = "随机最多 3 支友军各获得 +1 数量";
+                    recommendation = "适合频繁调整阵容，把出售节奏转化为场上战力";
+                    accent = new Color32(132, 105, 190, 255);
+                    return;
+                case "shalame":
+                    style = "经济循环";
+                    trigger = "已上阵部队累计获得 20 数量";
+                    payoff = "获得 +1 金币，超出进度继续保留";
+                    recommendation = "适合规划数量成长，用额外金币滚动长期经济优势";
+                    accent = new Color32(75, 166, 145, 255);
+                    return;
+                default:
+                    style = "独特能力";
+                    trigger = "满足英雄能力条件";
+                    payoff = "获得对应的整局增益";
+                    recommendation = "围绕英雄能力规划你的阵容与经营路线";
+                    accent = new Color32(92, 174, 190, 255);
+                    return;
+            }
         }
 
         private static GameObject CreateSettingsModal(Transform parent)
@@ -1675,7 +1961,14 @@ namespace ProphecyCentury.UI
             slider.handleRect = handle.GetComponent<RectTransform>();
             slider.minValue = 0f;
             slider.maxValue = 1f;
-            slider.value = 0.8f;
+            slider.value = PlayerPrefs.GetFloat("ProphecyCentury.MasterVolume", 0.8f);
+            AudioListener.volume = slider.value;
+            slider.onValueChanged.AddListener(value =>
+            {
+                AudioListener.volume = value;
+                PlayerPrefs.SetFloat("ProphecyCentury.MasterVolume", value);
+                PlayerPrefs.Save();
+            });
 
             return sliderObject;
         }
@@ -1688,6 +1981,29 @@ namespace ProphecyCentury.UI
                 modal.gameObject.SetActive(true);
                 modal.SetAsLastSibling();
             }
+        }
+
+        private static GameObject CreateCreditsModal(Transform parent)
+        {
+            var modal = CreatePanel("CreditsModal", parent, new Color32(5, 9, 18, 245), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-420f, -310f), new Vector2(420f, 310f));
+            CreatePanel("Inner", modal.transform, new Color32(12, 28, 45, 250), Vector2.zero, Vector2.one, new Vector2(8f, 8f), new Vector2(-8f, -8f));
+            var title = CreateText("Title", modal.transform, "预言世纪", 42, TextAnchor.MiddleCenter, new Vector2(0.1f, 0.75f), new Vector2(0.9f, 0.92f), Vector2.zero, Vector2.zero);
+            title.color = new Color32(239, 204, 126, 255);
+            var creditsAsset = Resources.Load<TextAsset>("Config/credits");
+            var creditsText = creditsAsset != null ? creditsAsset.text : "制作组\n\n游戏设计 / 程序 / 美术 / 音频";
+            var content = CreateText("CreditsText", modal.transform, creditsText, 24, TextAnchor.MiddleCenter, new Vector2(0.12f, 0.27f), new Vector2(0.88f, 0.72f), Vector2.zero, Vector2.zero);
+            content.color = new Color32(210, 224, 230, 255);
+            CreateButton("BackButton", modal.transform, "返回主菜单", new Vector2(0f, -235f), new Vector2(220f, 58f), () => modal.SetActive(false));
+            StylePrimaryButton(modal.transform.Find("BackButton"));
+            return modal;
+        }
+
+        private static void ShowModal(Transform parent, string name)
+        {
+            var modal = FindDeepChild(parent, name);
+            if (modal == null) return;
+            modal.gameObject.SetActive(true);
+            modal.SetAsLastSibling();
         }
     }
 }

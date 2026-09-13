@@ -58,3 +58,4 @@ tmp_*
 **/*auth_qr.png
 tools/gif_*.txt
 tools/extract_result.txt
+tools/casual_pvp_server/data/

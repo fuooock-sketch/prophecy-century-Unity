@@ -21,6 +21,7 @@ namespace ProphecyCentury.UI
         [SerializeField] private Text roundLabel;
         [SerializeField] private Text hpLabel;
         [SerializeField] private Text stateLabel;
+        private Image _heroPortrait;
         [SerializeField] private Text armyPowerLabel;
         [SerializeField] private Image hpFillImage;
 
@@ -54,6 +55,7 @@ namespace ProphecyCentury.UI
         private readonly BattleStubSystem _battleStub = new BattleStubSystem();
         private readonly BattleRealtimeSystem _battleRealtime = new BattleRealtimeSystem();
         private readonly SaveGameSystem _saveGame = new SaveGameSystem();
+        private readonly CasualPvpNetworkClient _casualPvpClient = new CasualPvpNetworkClient();
         private const string BattleUnitPrefabResourcePath = "Prefabs/UI/BattleUnitView";
         private const int BattleHexColumnCount = 13;
         private const int BattleHexMaxRows = 6;
@@ -81,6 +83,8 @@ namespace ProphecyCentury.UI
         private bool _dragSellMode;
         private bool _battlePlaybackRunning;
         private bool _dayExploreTransitionRunning;
+        private bool _startingCasualPvp;
+        private float _nextCasualReportFlushAt;
         private readonly Dictionary<string, int> _delayedCountDisplayOverrides = new Dictionary<string, int>();
         private Transform _battleFieldRoot;
         private GameObject _battleStartActionButton;
@@ -333,10 +337,39 @@ namespace ProphecyCentury.UI
                 return;
             }
 
-            _saveGame.LoadCurrentRun();
+            if (!_saveGame.LoadCurrentRun()) return;
+            if (CasualPvpSystem.IsCasual(Run))
+            {
+                EnterLoadedRun();
+                return;
+            }
             ShowRun();
             WriteLog("已读取存档。");
             RefreshView();
+        }
+
+        public void EnterLoadedRun()
+        {
+            StopAllCoroutines();
+            _casualPvpClient.CancelReportFlush();
+            _nextCasualReportFlushAt = 0f;
+            _battlePlaybackRunning = false;
+            _battlePlaybackPaused = false;
+            _battleSetupDraggingEnabled = false;
+            _battlePlayerPositionOverrides.Clear();
+            _dayExploreTransitionRunning = false;
+            _startingCasualPvp = false;
+            _selectedHandIndex = -1;
+            _selectedBoardSlotId = null;
+            GetComponentInParent<CasualPvpUiController>()?.HideForRun();
+            ShowRun();
+            WriteLog("已读取最近存档。");
+            RefreshView();
+            if (CasualPvpSystem.IsLocked(Run)) StartCoroutine(PlayBattleStage());
+            else if (CasualPvpSystem.IsCasual(Run) && Run.state == "casual_milestone")
+                GetComponentInParent<CasualPvpUiController>()?.ShowMilestone(FinishCasualPvpAtMilestone, ContinueCasualPvpEndless);
+            else if (Run != null && (Run.state == "gameover" || Run.state == "victory"))
+                ShowGameResultModal(Run.state);
         }
 
         /// <summary>
@@ -405,7 +438,15 @@ namespace ProphecyCentury.UI
 
         public void ShowTitle()
         {
+            if (CasualPvpSystem.IsCasual(Run))
+            {
+                StopAllCoroutines();
+                _casualPvpClient.CancelReportFlush();
+                _battlePlaybackRunning = false;
+                _dayExploreTransitionRunning = false;
+            }
             RestoreOperationalUiAfterBattle();
+            GetComponentInParent<CasualPvpUiController>()?.HideForRun();
             if (titlePanel != null)
             {
                 titlePanel.SetActive(true);
@@ -431,11 +472,17 @@ namespace ProphecyCentury.UI
             {
                 formationPreviewScreen.SetActive(false);
             }
+
+            GetComponentInParent<SaveSlotMenuController>()?.RefreshMainMenu();
+            GetComponentInParent<CasualPvpUiController>()?.RefreshMainMenu();
+            GetComponentInParent<RuntimeBgmPlayer>()?.SetTitleMusicPlaying(true);
         }
 
         public void ShowRun()
         {
+            GetComponentInParent<RuntimeBgmPlayer>()?.SetTitleMusicPlaying(false);
             RestoreOperationalUiAfterBattle();
+            GetComponentInParent<CasualPvpUiController>()?.HideForRun();
             if (titlePanel != null)
             {
                 titlePanel.SetActive(false);
@@ -567,10 +614,41 @@ namespace ProphecyCentury.UI
             }
 
             _flow.PrepareNewRun(selectedCampaignId, heroId);
+            if (_startingCasualPvp)
+            {
+                CasualPvpSystem.InitializeRun(Run);
+            }
             EnsureShopInitialized();
+            _saveGame.SaveCurrentRun();
             ShowRun();
-            WriteLog("已开始所选战役。");
+            WriteLog(_startingCasualPvp ? "已开始休闲对战。" : "已开始所选战役。");
+            _startingCasualPvp = false;
             RefreshView();
+        }
+
+        public void BeginCasualPvpSetup()
+        {
+            _startingCasualPvp = true;
+            selectedCampaignId = GameModeIds.CasualPvp;
+        }
+
+        public void OpenCasualHeroSelection()
+        {
+            BeginCasualPvpSetup();
+            GetComponentInParent<CasualPvpUiController>()?.HideForRun();
+            if (titlePanel != null) titlePanel.SetActive(false);
+            if (campaignSelectionScreen != null) campaignSelectionScreen.SetActive(false);
+            if (formationPreviewScreen != null) formationPreviewScreen.SetActive(false);
+            if (heroSelectionScreen != null)
+            {
+                heroSelectionScreen.SetActive(true);
+                heroSelectionScreen.transform.SetAsLastSibling();
+            }
+        }
+
+        public void HideHeroSelectionScreen()
+        {
+            if (heroSelectionScreen != null) heroSelectionScreen.SetActive(false);
         }
 
         public void ReturnToTitleFromCampaign()
@@ -594,6 +672,11 @@ namespace ProphecyCentury.UI
 
         public void ReturnToCampaignFromHero()
         {
+            if (_startingCasualPvp)
+            {
+                GetComponentInParent<CasualPvpUiController>()?.ReturnFromHeroSelection();
+                return;
+            }
             if (heroSelectionScreen != null)
             {
                 heroSelectionScreen.SetActive(false);
@@ -622,6 +705,11 @@ namespace ProphecyCentury.UI
 
         private void Update()
         {
+            if (!_battlePlaybackRunning && CasualPvpSystem.IsCasual(Run) && Time.unscaledTime >= _nextCasualReportFlushAt)
+            {
+                _nextCasualReportFlushAt = Time.unscaledTime + 30f;
+                StartCoroutine(_casualPvpClient.FlushReports(Run));
+            }
             if (string.IsNullOrWhiteSpace(_dragSource))
             {
                 return;
@@ -3757,6 +3845,7 @@ namespace ProphecyCentury.UI
 
         public void StartBattle()
         {
+            if (CasualPvpSystem.IsCasual(Run) && Run.state != "manage" && !CasualPvpSystem.IsLocked(Run)) return;
             if (Run != null && (Run.state == "gameover" || Run.state == "victory"))
             {
                 ShowGameResultModal(Run.state);
@@ -3817,6 +3906,24 @@ namespace ProphecyCentury.UI
 
             if (_battlePlaybackRunning || _dayExploreTransitionRunning)
             {
+                return;
+            }
+
+            if (CasualPvpSystem.IsCasual(Run))
+            {
+                if (Run == null || Run.phase != GamePhase.NightManage || Run.state != "manage")
+                {
+                    RuntimeSfxPlayer.PlayError();
+                    ShowFloatingText("当前无法开始匹配");
+                    return;
+                }
+                if (Run.boardUnits == null || Run.boardUnits.Count == 0)
+                {
+                    RuntimeSfxPlayer.PlayError();
+                    ShowFloatingText("至少上阵 1 个单位");
+                    return;
+                }
+                _confirmDialog.Show("锁定阵容并匹配", $"确认结束第 {Run.round} 回合经营？\n锁定后不能购买、出售或调整阵容。", StartBattle);
                 return;
             }
 
@@ -4100,7 +4207,56 @@ namespace ProphecyCentury.UI
             }
 
             WriteLog(roundEndLine);
+            if (CasualPvpSystem.IsCasual(Run) && !_saveGame.SaveCurrentRun())
+            {
+                ShowCasualCheckpointFailure();
+                yield break;
+            }
             yield return PlayRoundEndFeedbackThenRefresh(roundEndFeedback, roundEndBefore, roundEndGoldBefore);
+            if (CasualPvpSystem.IsCasual(Run))
+            {
+                var casualUi = GetComponentInParent<CasualPvpUiController>();
+                CasualPvpMatchResponse match;
+                if (Run.casualPvpOpponent == null)
+                {
+                    casualUi?.ShowMatchProgress($"✓ 已锁定本方阵容\n✓ 正在保存第 {Run.round} 回合镜像\n● 正在寻找同回合对手……");
+                    var playerSnapshot = Run.casualPvpPlayerSnapshot ?? (Run.casualPvpPlayerSnapshot = CasualPvpSystem.CapturePlayerSnapshot(Run));
+                    CasualPvpMatchResponse receivedMatch = null;
+                    yield return _casualPvpClient.PrepareMatch(Run, playerSnapshot, response => receivedMatch = response);
+                    match = receivedMatch ?? CasualPvpSystem.MatchLocally(Run, playerSnapshot);
+                    if (!_saveGame.SaveCurrentRun())
+                    {
+                        ShowCasualCheckpointFailure();
+                        yield break;
+                    }
+                }
+                else
+                {
+                    match = new CasualPvpMatchResponse
+                    {
+                        success = true,
+                        matchId = Run.casualPvpMatchId,
+                        fallback = Run.casualPvpOpponent.sourceType == "system_fallback",
+                        snapshot = Run.casualPvpOpponent
+                    };
+                }
+
+                if (!match.success || match.snapshot == null)
+                {
+                    _battlePlaybackRunning = false;
+                    RuntimeSfxPlayer.PlayError();
+                    casualUi?.ShowRecoveryRetry(match.error ?? "无法取得同回合对手，请重试。", StartBattle);
+                    RefreshView();
+                    yield break;
+                }
+                if (casualUi != null)
+                {
+                    var ready = false;
+                    casualUi.ShowOpponentReveal(match.snapshot, match.fallback, () => ready = true);
+                    yield return new WaitUntil(() => ready);
+                    casualUi.HideOverlay();
+                }
+            }
             if (!isExplorationBattle)
             {
                 yield return PlayBattleStartCountdown();
@@ -4110,7 +4266,7 @@ namespace ProphecyCentury.UI
             _flow.SetBattlePhase();
             ShowBattleStage();
             SetBattleStageProgress(0f);
-            var preview = _battleStub.CreatePreview(Run);
+            var preview = _battleStub.CreatePreview(CasualPvpSystem.IsCasual(Run) ? CasualPvpSystem.CreateBattleCopy(Run) : Run);
             var previewPlayerScore = preview.PlayerScore;
             var previewEnemyScore = preview.EnemyScore;
             var setupResult = CreateBattlePreviewStageResult(preview);
@@ -4118,7 +4274,8 @@ namespace ProphecyCentury.UI
             _battleSetupDraggingEnabled = false;
             SetBattleStageText("战斗开始", $"我方战力 {previewPlayerScore}，敌方战力 {previewEnemyScore}\n{FormatEnemyLineup(preview)}");
 
-            var authoritativeResult = _battleStub.Resolve(Run);
+            var battleRun = CasualPvpSystem.IsCasual(Run) ? CasualPvpSystem.CreateBattleCopy(Run) : Run;
+            var authoritativeResult = _battleStub.Resolve(battleRun);
             WriteBattleTurnDebugLog(authoritativeResult);
             SetPlayerHpDisplay(hpBeforeBattle);
             var visualResult = authoritativeResult;
@@ -4135,14 +4292,38 @@ namespace ProphecyCentury.UI
             result = authoritativeResult;
             if (!result.Victory && result.HpDelta < 0)
             {
-                yield return PlayWinnerStarsToPlayerHp(unitViews.Values.Distinct().Where(unit => unit != null && !unit.PlayerSide && !unit.Dead).ToList(), hpBeforeBattle, Run.playerHp);
+                yield return PlayWinnerStarsToPlayerHp(unitViews.Values.Distinct().Where(unit => unit != null && !unit.PlayerSide && !unit.Dead).ToList(), hpBeforeBattle, battleRun.playerHp);
             }
 
+            if (CasualPvpSystem.IsCasual(Run))
+            {
+                battleRun.casualPvpPendingReports = Run.casualPvpPendingReports;
+                ProphecyGameSession.Instance.RestoreRun(battleRun);
+                battleRewardFeedback = FormatPendingBattleRewardFeedback();
+            }
+            var casualReport = CasualPvpSystem.IsCasual(Run) ? new CasualPvpBattleReport
+            {
+                matchId = Run.casualPvpMatchId,
+                snapshotId = Run.casualPvpOpponent?.snapshotId,
+                requesterRunId = Run.casualPvpRunId,
+                round = Run.round,
+                victory = result.Victory,
+                hpDelta = result.HpDelta,
+                playerScore = result.PlayerScore,
+                enemyScore = result.EnemyScore,
+                reportedAtUtc = System.DateTime.UtcNow.ToString("O")
+            } : null;
+            if (casualReport != null) CasualPvpSystem.QueueReport(Run, casualReport);
             _flow.FinishBattlePhase();
             _flow.ResolveBattleOutcome(result);
+            if (CasualPvpSystem.IsCasual(Run))
+            {
+                if (!SaveCasualSettlement()) yield break;
+                if (casualReport != null) StartCoroutine(_casualPvpClient.FlushReports(Run));
+            }
             RuntimeSfxPlayer.PlayBattleResult(result.Victory);
             BattleUnitPickState battlePickReward = null;
-            if (result.Victory && Run != null && !WorldMapSystem.IsBossNodeType(explorationBattleNodeType))
+            if (result.Victory && Run != null && !CasualPvpSystem.IsCasual(Run) && !WorldMapSystem.IsBossNodeType(explorationBattleNodeType))
             {
                 battlePickReward = _flow.CreateBattleUnitPickReward(result.EnemyScore, explorationBattleNodeType);
             }
@@ -4182,6 +4363,45 @@ namespace ProphecyCentury.UI
             {
                 ShowGameResultModal(Run.state);
             }
+            else if (CasualPvpSystem.IsCasual(Run) && Run.state == "casual_milestone")
+            {
+                GetComponentInParent<CasualPvpUiController>()?.ShowMilestone(FinishCasualPvpAtMilestone, ContinueCasualPvpEndless);
+            }
+        }
+
+        private void FinishCasualPvpAtMilestone()
+        {
+            if (!_flow.FinishCasualPvpAtMilestone()) return;
+            GetComponentInParent<CasualPvpUiController>()?.HideOverlay();
+            if (!SaveCasualSettlement()) return;
+            RefreshView();
+            ShowGameResultModal("victory");
+        }
+
+        private void ShowCasualCheckpointFailure()
+        {
+            _battlePlaybackRunning = false;
+            GetComponentInParent<CasualPvpUiController>()?.ShowRecoveryRetry(
+                "保存失败，阵容仍保持锁定。请检查磁盘后重试。", StartBattle);
+            RefreshView();
+        }
+
+        private bool SaveCasualSettlement()
+        {
+            if (_saveGame.SaveCurrentRun()) return true;
+            _battlePlaybackRunning = false;
+            GetComponentInParent<CasualPvpUiController>()?.ShowRecoveryRetry(
+                "结算尚未保存。请检查磁盘后重试，勿退出游戏。",
+                () => { if (SaveCasualSettlement()) EnterLoadedRun(); });
+            return false;
+        }
+
+        private void ContinueCasualPvpEndless()
+        {
+            if (!_flow.ContinueCasualPvpAfterMilestone()) return;
+            GetComponentInParent<CasualPvpUiController>()?.HideOverlay();
+            if (!SaveCasualSettlement()) return;
+            RefreshView();
         }
 
         private IEnumerator PlayVisualRealtimeBattle(Dictionary<string, BattleStageUnitView> views, BattleStubResult result, string openingLine)
@@ -8759,6 +8979,11 @@ namespace ProphecyCentury.UI
             RuntimeSfxPlayer.PlaySaveLoad(success);
             if (success)
             {
+                if (CasualPvpSystem.IsCasual(Run))
+                {
+                    EnterLoadedRun();
+                    return;
+                }
                 _selectedHandIndex = -1;
                 _selectedBoardSlotId = null;
                 ShowRun();
@@ -8778,13 +9003,18 @@ namespace ProphecyCentury.UI
             StartRunIfNeeded();
             HideLegacyBoardInfoLabels();
             var data = ProphecyGameSession.Instance.Data;
+            RefreshHeroPortrait();
             EnsureWorldMapView();
             EnsureStartDayButton();
             if (goldLabel != null)
             {
                 goldLabel.text = string.Empty;
             }
-            var roundText = $"{Run.gold}    第 {Run.round} 回合";
+            var roundText = CasualPvpSystem.IsCasual(Run)
+                ? Run.casualPvpEndless
+                    ? $"{Run.gold}    休闲对战 · 无尽第 {Run.round} 回合"
+                    : $"{Run.gold}    休闲对战 · 第 {Run.round}/{CasualPvpSystem.SurvivalMilestoneRound} 回合"
+                : $"{Run.gold}    第 {Run.round} 回合";
             if (roundLabel != null)
             {
                 roundLabel.text = roundText;
@@ -8802,7 +9032,9 @@ namespace ProphecyCentury.UI
             SetPlayerHpDisplay(Run.playerHp);
             if (stateLabel != null)
             {
-                stateLabel.text = $"阶段：{FormatRunPhase()}";
+                stateLabel.text = CasualPvpSystem.IsCasual(Run)
+                    ? $"战绩：{Mathf.Max(0, Run.campaignWins)}胜{Mathf.Max(0, Run.campaignLosses)}负"
+                    : $"阶段：{FormatRunPhase()}";
             }
             RefreshShopMetaStars();
             RefreshShopActionLabels();
@@ -8828,8 +9060,21 @@ namespace ProphecyCentury.UI
             }
             RefreshCardLists();
             RefreshWorldMapView();
+            RefreshCasualPvpControls();
             EnsureBattleLogButton();
             RefreshBattleLogButton();
+        }
+
+        private void RefreshHeroPortrait()
+        {
+            if (_heroPortrait == null)
+            {
+                var root = runPanel != null ? runPanel.transform : GetUiSearchRoot();
+                _heroPortrait = FindDeepChild(root, "HeroPortrait")?.GetComponent<Image>();
+            }
+
+            var hero = ProphecyGameSession.Instance.Data.FindHero(Run?.heroId);
+            RuntimeUiBootstrap.ApplyHeroPortrait(_heroPortrait, Run?.heroId, hero?.portrait_glyph);
         }
 
         private int CalculateCurrentArmyPower()
@@ -8913,7 +9158,22 @@ namespace ProphecyCentury.UI
             _startDayButton.SetActive(visible);
             if (visible)
             {
+                var label = _startDayButton.GetComponentInChildren<Text>();
+                if (label != null) label.text = CasualPvpSystem.IsCasual(Run) ? "锁定阵容并匹配" : "白天探索";
                 _startDayButton.transform.SetAsLastSibling();
+            }
+        }
+
+        private void RefreshCasualPvpControls()
+        {
+            var casual = CasualPvpSystem.IsCasual(Run);
+            if (casual && _worldMapView != null) _worldMapView.gameObject.SetActive(false);
+            if (runPanel == null) return;
+            foreach (var buttonName in new[] { "BattleButton", "BattleButtonV2" })
+            {
+                var target = FindDeepChild(runPanel.transform, buttonName)?.GetComponent<Button>();
+                var label = target != null ? target.GetComponentInChildren<Text>() : null;
+                if (label != null) label.text = casual ? "锁定阵容并匹配" : "探索";
             }
         }
 
@@ -9034,7 +9294,9 @@ namespace ProphecyCentury.UI
             var victory = resultState == "victory";
             if (_gameResultTitleLabel != null)
             {
-                _gameResultTitleLabel.text = victory ? "游戏胜利" : "游戏失败";
+                _gameResultTitleLabel.text = CasualPvpSystem.IsCasual(Run)
+                    ? victory ? "休闲对战 · 生存完成" : "休闲对战 · 本局结束"
+                    : victory ? "游戏胜利" : "游戏失败";
                 _gameResultTitleLabel.color = victory ? new Color32(255, 226, 132, 255) : new Color32(255, 126, 126, 255);
             }
 
@@ -9081,9 +9343,11 @@ namespace ProphecyCentury.UI
 
             CreateGameResultButton(panel.transform, "重新开始", new Vector2(-155f, -205f), () =>
             {
+                var casual = CasualPvpSystem.IsCasual(Run);
                 _gameResultModal.SetActive(false);
                 ShowTitle();
-                OpenHeroSelection();
+                if (casual) GetComponentInParent<CasualPvpUiController>()?.OpenCasualSlots();
+                else OpenHeroSelection();
             });
             CreateGameResultButton(panel.transform, "返回标题", new Vector2(155f, -205f), () =>
             {
@@ -9124,6 +9388,18 @@ namespace ProphecyCentury.UI
             if (Run == null)
             {
                 return victory ? "通关完成。" : "战斗失败，本局结束。";
+            }
+
+            if (CasualPvpSystem.IsCasual(Run))
+            {
+                var stage = Run.casualPvpEndless ? "无尽挑战" : "十五回合生存";
+                var ending = victory ? "你选择带着当前成绩结束本局。" : "生命归零，本局结束。";
+                return $"{ending}\n\n"
+                    + $"阶段：{stage}\n"
+                    + $"到达回合：{Mathf.Max(1, Run.round)}\n"
+                    + $"最终生命：{Mathf.Max(0, Run.playerHp)} / 100\n"
+                    + $"战绩：{Mathf.Max(0, Run.campaignWins)}胜 {Mathf.Max(0, Run.campaignLosses)}负\n"
+                    + $"最终阵容战力：{CalculateCurrentArmyPower()}";
             }
 
             var clearedNodes = Run.worldMapNodes?.Count(node => node != null && node.isCleared) ?? 0;

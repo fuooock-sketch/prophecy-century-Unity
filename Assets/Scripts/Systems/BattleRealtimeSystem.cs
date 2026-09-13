@@ -421,7 +421,7 @@ namespace ProphecyCentury.Systems
 
                 var distance = Distance(attacker, target);
                 var attackRange = AttackRange(attacker, target);
-                if (distance > attackRange + AttackRangeSlack)
+                if (!HasPendingFirstAttackPounce(attacker) && distance > attackRange + AttackRangeSlack)
                 {
                     if (!attacker.DisableMovement && attacker.MoveLockRemaining <= 0f)
                     {
@@ -445,10 +445,31 @@ namespace ProphecyCentury.Systems
                 RealtimeBattleUnit actualTarget = target;
                 for (var repeat = 0; repeat < Math.Max(1, attacker.ConsecutiveAttacks) && attacker.IsAlive; repeat += 1)
                 {
-                    actualTarget = actualTarget != null && actualTarget.IsAlive ? actualTarget : PickTarget(attacker, defenders);
+                    var canPounce = repeat == 0 && HasPendingFirstAttackPounce(attacker);
+                    actualTarget = actualTarget != null && actualTarget.IsAlive
+                        && (canPounce || Distance(attacker, actualTarget) <= AttackRange(attacker, actualTarget) + AttackRangeSlack)
+                        ? actualTarget
+                        : PickTargetInAttackRange(attacker, defenders);
                     if (actualTarget == null)
                     {
                         break;
+                    }
+
+                    if (HasPendingFirstAttackPounce(attacker))
+                    {
+                        var skill = GetBattleSkills(attacker).First(item => item.kind == "first_attack_pounce_nearest_damage");
+                        actualTarget = PickTarget(attacker, defenders) ?? actualTarget;
+                        attacker.SkillCounters[skill.kind] = 1;
+                        attacker.AttackCount += 1;
+                        var pounceEvent = AddEvent(events, elapsed, "skill", attacker, actualTarget, 0, $"{attacker.Name} pounces {actualTarget.Name}");
+                        MovePouncerNextToTarget(attacker, actualTarget);
+                        attacker.CurrentTarget = actualTarget;
+                        attacker.AttackAnchorX = attacker.X;
+                        attacker.AttackAnchorY = attacker.Y;
+                        if (pounceEvent != null) pounceEvent.DestinationSlotId = attacker.SlotId;
+                        var pounceDamage = Math.Max(1, (int)Math.Round(CalculateDamage(attacker, actualTarget, random) * Math.Max(1f, skill.attackMultiplier)));
+                        DealDamage(attacker, actualTarget, pounceDamage, attackers, defenders, random, events, elapsed);
+                        continue;
                     }
 
                     attacker.AttackCount += 1;
@@ -496,6 +517,13 @@ namespace ProphecyCentury.Systems
                     }
                 }
             }
+        }
+
+        private static bool HasPendingFirstAttackPounce(RealtimeBattleUnit unit)
+        {
+            return unit.AttackCount == 0
+                && !unit.SkillCounters.ContainsKey("first_attack_pounce_nearest_damage")
+                && GetBattleSkills(unit).Any(skill => skill.kind == "first_attack_pounce_nearest_damage");
         }
 
         private static bool TryResolveFirstAttackBacklineSnipe(
@@ -644,6 +672,13 @@ namespace ProphecyCentury.Systems
 
         private static int ResolveAttackDamage(RealtimeBattleUnit attacker, RealtimeBattleUnit target, List<RealtimeBattleUnit> allies, List<RealtimeBattleUnit> enemies, Random random, List<BattleEvent> events, float elapsed, string attackMessage, bool allowForcedCounterattack = true)
         {
+            var fireRain = GetBattleSkills(attacker).FirstOrDefault(skill => skill.kind == "attack_fire_rain_area");
+            if (fireRain != null)
+            {
+                ResolveInstantFireRain(attacker, target, allies, enemies, random, fireRain, events, elapsed, allowForcedCounterattack);
+                return 0;
+            }
+
             var damage = CalculateDamage(attacker, target, random);
             if (attacker.FirstAttackDamageMultiplier > 0f)
             {
@@ -1845,7 +1880,7 @@ namespace ProphecyCentury.Systems
             return Math.Max(1, skill.value > 0 ? skill.value : fallbackStartCount);
         }
 
-        private static void ResolveInstantFireRain(RealtimeBattleUnit source, RealtimeBattleUnit centerTarget, List<RealtimeBattleUnit> sourceAllies, List<RealtimeBattleUnit> enemies, Random random, SkillDefinition skill, List<BattleEvent> events, float elapsed)
+        private static void ResolveInstantFireRain(RealtimeBattleUnit source, RealtimeBattleUnit centerTarget, List<RealtimeBattleUnit> sourceAllies, List<RealtimeBattleUnit> enemies, Random random, SkillDefinition skill, List<BattleEvent> events, float elapsed, bool allowForcedCounterattack = true)
         {
             if (source == null || centerTarget == null || skill == null)
             {
@@ -1856,10 +1891,10 @@ namespace ProphecyCentury.Systems
             var radius = Math.Max(1f, skill.radius) * 80f;
             var targets = enemies.Where(enemy => enemy.IsAlive && Distance(centerTarget.X, centerTarget.Y, enemy.X, enemy.Y) <= radius).ToList();
             var damages = targets.Select(target => Math.Max(1, (int)Math.Round(CalculateDamage(source, target, random) * Math.Max(1f, skill.attackMultiplier)))).ToList();
-            DealAreaDamageSimultaneously(source, targets, damages, sourceAllies, enemies, random, events, elapsed, $"{source.Name} 火雨命中");
+            DealAreaDamageSimultaneously(source, targets, damages, sourceAllies, enemies, random, events, elapsed, $"{source.Name} 火雨命中", allowForcedCounterattack);
         }
 
-        private static void DealAreaDamageSimultaneously(RealtimeBattleUnit source, List<RealtimeBattleUnit> targets, List<int> damages, List<RealtimeBattleUnit> sourceAllies, List<RealtimeBattleUnit> targetAllies, Random random, List<BattleEvent> events, float elapsed, string message)
+        private static void DealAreaDamageSimultaneously(RealtimeBattleUnit source, List<RealtimeBattleUnit> targets, List<int> damages, List<RealtimeBattleUnit> sourceAllies, List<RealtimeBattleUnit> targetAllies, Random random, List<BattleEvent> events, float elapsed, string message, bool allowForcedCounterattack = true)
         {
             if (source == null || targets == null || damages == null)
             {
@@ -1881,7 +1916,7 @@ namespace ProphecyCentury.Systems
                 var target = targets[index];
                 if (target != null && target.IsAlive)
                 {
-                    DealDamage(source, target, Math.Max(1, damages[index]), sourceAllies, targetAllies, random, events, elapsed);
+                    DealDamage(source, target, Math.Max(1, damages[index]), sourceAllies, targetAllies, random, events, elapsed, false, allowForcedCounterattack);
                 }
             }
         }

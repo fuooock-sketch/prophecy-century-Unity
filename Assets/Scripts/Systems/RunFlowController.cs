@@ -134,9 +134,16 @@ namespace ProphecyCentury.Systems
         public void ResolveRoundEndBeforeBattle()
         {
             var run = ProphecyGameSession.Instance.CurrentRun;
+            if (CasualPvpSystem.IsCasual(run) && run.casualPvpRoundEndResolvedRound == run.round) return;
             ManageEventResolver.ResolveRoundEnd(run);
             CaptureAbilityTrigger();
             TrySynthesizeAll(run);
+            if (CasualPvpSystem.IsCasual(run))
+            {
+                run.casualPvpRoundEndResolvedRound = run.round;
+                run.casualPvpPlayerSnapshot = CasualPvpSystem.CapturePlayerSnapshot(run);
+                CasualPvpSystem.MarkLocked(run);
+            }
         }
 
         public void SetBattlePhase()
@@ -161,6 +168,9 @@ namespace ProphecyCentury.Systems
                 return;
             }
 
+            // A committed casual result clears its opponent. Ignore duplicate callbacks.
+            if (CasualPvpSystem.IsCasual(run) && run.casualPvpOpponent == null) return;
+
             run.lastBattleSummary = result.Summary;
             run.battleHistory.Add(new BattleHistoryEntryState
             {
@@ -180,6 +190,12 @@ namespace ProphecyCentury.Systems
             }
 
             LogBattleResult(run, result);
+
+            if (CasualPvpSystem.IsCasual(run))
+            {
+                ResolveCasualPvpBattleOutcome(run, result);
+                return;
+            }
 
             if (result.Victory)
             {
@@ -231,6 +247,52 @@ namespace ProphecyCentury.Systems
             NextRound();
         }
 
+        private void ResolveCasualPvpBattleOutcome(RunState run, BattleStubResult result)
+        {
+            if (result.Victory) run.campaignWins += 1;
+            else run.campaignLosses += 1;
+
+            CasualPvpSystem.ClearOpponent(run);
+            if (run.playerHp <= 0)
+            {
+                run.playerHp = 0;
+                run.fateValue = 0;
+                run.state = "gameover";
+                run.phase = GamePhase.GameOver;
+                return;
+            }
+
+            run.fateValue = Math.Max(0, run.playerHp);
+            if (run.round == CasualPvpSystem.SurvivalMilestoneRound && !run.casualPvpMilestoneOffered)
+            {
+                run.casualPvpMilestoneOffered = true;
+                run.state = "casual_milestone";
+                run.phase = GamePhase.Settle;
+                return;
+            }
+
+            NextRound();
+        }
+
+        public bool ContinueCasualPvpAfterMilestone()
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            if (!CasualPvpSystem.IsCasual(run) || run.state != "casual_milestone" || run.playerHp <= 0) return false;
+            run.casualPvpEndless = true;
+            NextRound();
+            return true;
+        }
+
+        public bool FinishCasualPvpAtMilestone()
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            if (!CasualPvpSystem.IsCasual(run) || run.state != "casual_milestone" || run.playerHp <= 0) return false;
+            run.campaignCompleted = true;
+            run.state = "victory";
+            run.phase = GamePhase.Victory;
+            return true;
+        }
+
         public void NextRound()
         {
             var run = ProphecyGameSession.Instance.CurrentRun;
@@ -264,23 +326,33 @@ namespace ProphecyCentury.Systems
         }
 
 
+        private static bool CasualManageBlocked()
+        {
+            var run = ProphecyGameSession.Instance.CurrentRun;
+            return CasualPvpSystem.IsCasual(run) && (run.state != "manage" || run.phase != GamePhase.NightManage);
+        }
+
         public bool RefreshShop()
         {
+            if (CasualManageBlocked()) return false;
             return ShopSystem.RefreshShopForCost(ProphecyGameSession.Instance.CurrentRun);
         }
 
         public bool UpgradeShop()
         {
+            if (CasualManageBlocked()) return false;
             return ShopSystem.UpgradeShop(ProphecyGameSession.Instance.CurrentRun);
         }
 
         public bool ToggleShopLock()
         {
+            if (CasualManageBlocked()) return false;
             return ShopSystem.ToggleShopLock(ProphecyGameSession.Instance.CurrentRun);
         }
 
         public bool BuyUnit(int shopIndex)
         {
+            if (CasualManageBlocked()) return false;
             var run = ProphecyGameSession.Instance.CurrentRun;
             var success = ShopSystem.BuyFromShop(run, shopIndex);
             if (success)
@@ -296,6 +368,7 @@ namespace ProphecyCentury.Systems
 
         public bool DeployUnit(int handIndex, string boardSlotId = null, bool deferSynthesis = false)
         {
+            if (CasualManageBlocked()) return false;
             var run = ProphecyGameSession.Instance.CurrentRun;
             var success = BoardSystem.DeployFromHand(run, handIndex, boardSlotId);
             if (success)
@@ -323,6 +396,7 @@ namespace ProphecyCentury.Systems
 
         public int ResolveTargetedEntryPower(string sourceSlotId, string targetSlotId)
         {
+            if (CasualManageBlocked()) return 0;
             var run = ProphecyGameSession.Instance.CurrentRun;
             var source = run?.boardUnits.FirstOrDefault(unit => unit.boardSlotId == sourceSlotId);
             var target = BoardSystem.FindUnitOccupyingSlot(run, targetSlotId);
@@ -339,6 +413,7 @@ namespace ProphecyCentury.Systems
 
         public bool UseForestGemCard(int handIndex, string boardSlotId)
         {
+            if (CasualManageBlocked()) return false;
             var run = ProphecyGameSession.Instance.CurrentRun;
             var success = ManageEventResolver.UseForestGemCardOnBoardUnit(run, handIndex, boardSlotId);
             if (success)
@@ -396,6 +471,7 @@ namespace ProphecyCentury.Systems
 
         public bool ChooseGoldDeployReward(UnitDefinition definition)
         {
+            if (CasualManageBlocked()) return false;
             var run = ProphecyGameSession.Instance.CurrentRun;
             if (run == null || definition == null)
             {
@@ -510,11 +586,13 @@ namespace ProphecyCentury.Systems
 
 public bool MoveBoardUnit(string fromSlotId, string toSlotId)
         {
+            if (CasualManageBlocked()) return false;
             return BoardSystem.MoveBoardUnit(ProphecyGameSession.Instance.CurrentRun, fromSlotId, toSlotId);
         }
 
         public bool SellHandUnit(int handIndex)
         {
+            if (CasualManageBlocked()) return false;
             var run = ProphecyGameSession.Instance.CurrentRun;
             var target = handIndex >= 0 && handIndex < run.handCards.Count ? run.handCards[handIndex] : null;
             ManageEventResolver.ResolveSell(run, target);
@@ -531,6 +609,7 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
 
         public bool SellBoardUnit(string boardSlotId)
         {
+            if (CasualManageBlocked()) return false;
             var run = ProphecyGameSession.Instance.CurrentRun;
             var target = BoardSystem.FindUnitOccupyingSlot(run, boardSlotId);
             ManageEventResolver.ResolveSell(run, target);
@@ -539,7 +618,7 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
             if (success)
             {
                 ManageEventResolver.ResolveLeave(run, target, "sell");
-                ManageEventResolver.ResolveHeroBoardLeave(run, target);
+                ManageEventResolver.ResolveHeroBoardSold(run, target);
                 CaptureAbilityTrigger();
                 TrySynthesizeAll(run);
                 FlushPendingHandCards(run);
@@ -579,18 +658,7 @@ public bool MoveBoardUnit(string fromSlotId, string toSlotId)
 
         private bool TrySynthesizeAll(RunState run)
         {
-            var boardBefore = run?.boardUnits?.ToList() ?? new List<BoardUnitState>();
             var synthesized = SynthesisSystem.TrySynthesizeAll(run);
-            if (synthesized && run != null)
-            {
-                foreach (var removed in boardBefore.Where(unit => unit != null && !run.boardUnits.Contains(unit)))
-                {
-                    ManageEventResolver.ResolveHeroBoardLeave(run, removed);
-                }
-
-                CaptureAbilityTrigger();
-            }
-
             ManageEventResolver.RefreshBoardAuras(run);
             _synthesizedSinceLastConsume |= synthesized;
             if (synthesized)

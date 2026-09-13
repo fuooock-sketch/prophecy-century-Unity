@@ -17,6 +17,7 @@ namespace ProphecyCentury.Model
     public sealed class RunState
     {
         public int saveVersion;
+        public string gameMode;
         public string campaignId;
         public string heroId;
         public string state;
@@ -57,6 +58,17 @@ namespace ProphecyCentury.Model
         public ManageResourceState manageResources = new ManageResourceState();
         public BattleRewardState pendingBattleRewards = new BattleRewardState();
         public BattleUnitPickState pendingBattleUnitPick;
+        public string casualPvpRunId;
+        public bool casualPvpCheatUsed;
+        public bool casualPvpMilestoneOffered;
+        public bool casualPvpEndless;
+        public string casualPvpMatchId;
+        public string casualPvpMatchEndpoint;
+        public List<CasualPvpPendingReport> casualPvpPendingReports = new List<CasualPvpPendingReport>();
+        public int casualPvpRoundEndResolvedRound;
+        public CasualPvpSnapshotState casualPvpPlayerSnapshot;
+        public CasualPvpSnapshotState casualPvpOpponent;
+        public List<string> casualPvpRecentOpponentIds = new List<string>();
     }
 
     [Serializable]

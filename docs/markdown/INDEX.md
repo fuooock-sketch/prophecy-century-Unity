@@ -4,6 +4,10 @@
 
 ## Main References
 
+- `CASUAL_ASYNC_PVP_HANDOFF.md` - compact handoff context and restart instructions after the fifth delivery.
+- `CASUAL_ASYNC_PVP_DEVELOPMENT_STATUS.md` - staged delivery, verified checks, and remaining casual PVP acceptance work.
+- `CASUAL_ASYNC_PVP_MODE_DESIGN.md` - casual asynchronous mirror-PVP gameplay, local server, matchmaking, and data design.
+- `CASUAL_ASYNC_PVP_UI_FLOW_DESIGN.md` - entry, screen, navigation, UI states, and basic flow for casual asynchronous PVP.
 - `RUN_FLOW_DESIGN.md` - single-run gameplay flow and engineering state-machine reference.
 - `WORLD_MAP_CONTENT_CONFIG.md` - world map and node content configuration reference.
 - `ENEMY_PRESET_CONFIG.md` - enemy preset and monster configuration reference.
