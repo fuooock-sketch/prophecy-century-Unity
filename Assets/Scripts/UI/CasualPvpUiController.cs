@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using ProphecyCentury.Model;
 using ProphecyCentury.Systems;
@@ -181,21 +182,38 @@ namespace ProphecyCentury.UI
             _modeScreen = CreateFullScreen("GameModeSelectionScreen");
             CreateText("Title", _modeScreen.transform, "选择预言的方式", 54, TextAnchor.MiddleCenter, new Vector2(0.25f, 0.87f), new Vector2(0.75f, 0.97f), new Color32(239, 204, 126, 255));
             CreateText("Subtitle", _modeScreen.transform, "踏入既定征途，或与其他预言者留下的镜像交锋", 24, TextAnchor.MiddleCenter, new Vector2(0.2f, 0.81f), new Vector2(0.8f, 0.88f), new Color32(156, 205, 211, 255));
-            CreateModeCard("CampaignCard", new Vector2(0.12f, 0.25f), new Vector2(0.48f, 0.78f), "命运征途", "探索地图、挑战敌人\n完成一段完整战役", "选择战役", () =>
+            CreateModeCard("CampaignCard", new Vector2(0.12f, 0.25f), new Vector2(0.48f, 0.78f),
+                "命运征途", "探索地图、挑战敌人\n完成一段完整战役", "选择战役",
+                "Resources/Art/Mode/mode_campaign_adventure.jpeg", () =>
             {
                 _modeScreen.SetActive(false);
                 _campaignSaveMenu.OpenNewGame();
             });
-            CreateModeCard("CasualCard", new Vector2(0.52f, 0.25f), new Vector2(0.88f, 0.78f), "休闲对战", "异步镜像对战\n100 初始生命 · 15 回合里程碑\n之后可进入无尽挑战", "进入模式", OpenCasualSlots);
+            CreateModeCard("CasualCard", new Vector2(0.52f, 0.25f), new Vector2(0.88f, 0.78f),
+                "休闲对战", "异步镜像对战\n100 初始生命 · 15 回合里程碑\n之后可进入无尽挑战", "进入模式",
+                "Resources/Art/Mode/mode_casual_battle.jpeg", OpenCasualSlots);
             CreateButton("Back", _modeScreen.transform, "返回主菜单", new Vector2(0.42f, 0.08f), new Vector2(0.58f, 0.15f), ReturnToTitle);
             _modeScreen.SetActive(false);
         }
 
-        private void CreateModeCard(string name, Vector2 min, Vector2 max, string title, string description, string action, UnityEngine.Events.UnityAction callback)
+        private void CreateModeCard(string name, Vector2 min, Vector2 max, string title, string description, string action, string backgroundPath, UnityEngine.Events.UnityAction callback)
         {
             var card = CreatePanel(name, _modeScreen.transform, min, max, new Color32(14, 28, 46, 248));
-            CreateText("Title", card.transform, title, 42, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.68f), new Vector2(0.92f, 0.88f), new Color32(243, 213, 137, 255));
-            CreateText("Description", card.transform, description, 26, TextAnchor.MiddleCenter, new Vector2(0.1f, 0.29f), new Vector2(0.9f, 0.66f), new Color32(205, 223, 232, 255));
+            var background = CreatePanel("Background", card.transform, Vector2.zero, Vector2.one, Color.white);
+            ApplySpriteFromProjectPath(background.GetComponent<Image>(), backgroundPath);
+            background.GetComponent<Image>().raycastTarget = false;
+
+            var shade = CreatePanel("Shade", card.transform, Vector2.zero, Vector2.one, new Color32(3, 8, 16, 132));
+            shade.GetComponent<Image>().raycastTarget = false;
+
+            var lowerShade = CreatePanel("LowerShade", card.transform, new Vector2(0f, 0f), new Vector2(1f, 0.62f), new Color32(3, 7, 14, 178));
+            lowerShade.GetComponent<Image>().raycastTarget = false;
+
+            var rim = CreatePanel("Rim", card.transform, Vector2.zero, Vector2.one, new Color32(239, 204, 126, 68));
+            rim.GetComponent<Image>().raycastTarget = false;
+
+            CreateText("Title", card.transform, title, 46, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.65f), new Vector2(0.92f, 0.86f), new Color32(255, 228, 151, 255));
+            CreateText("Description", card.transform, description, 27, TextAnchor.MiddleCenter, new Vector2(0.1f, 0.28f), new Vector2(0.9f, 0.61f), new Color32(230, 240, 242, 255));
             CreateButton("Select", card.transform, action, new Vector2(0.28f, 0.09f), new Vector2(0.72f, 0.23f), callback);
         }
 
@@ -415,6 +433,25 @@ namespace ProphecyCentury.UI
             }
             CreateText("Label", obj.transform, label, 22, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one, Color.white);
             return button;
+        }
+
+        private static void ApplySpriteFromProjectPath(Image image, string relativeAssetPath)
+        {
+            if (image == null || string.IsNullOrWhiteSpace(relativeAssetPath)) return;
+            var fullPath = Path.Combine(Application.dataPath, relativeAssetPath);
+            if (!File.Exists(fullPath)) return;
+
+            var bytes = File.ReadAllBytes(fullPath);
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            if (!texture.LoadImage(bytes)) return;
+
+            texture.filterMode = FilterMode.Bilinear;
+            texture.anisoLevel = 2;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            image.sprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+            image.type = Image.Type.Simple;
+            image.preserveAspect = false;
+            image.color = Color.white;
         }
 
         private static Transform FindDeepChild(Transform root, string name)

@@ -109,6 +109,9 @@ namespace ProphecyCentury.UI
         private GameObject _gameResultModal;
         private Text _gameResultTitleLabel;
         private Text _gameResultContentLabel;
+        private InputField _gameResultLeaderboardNameInput;
+        private Button _gameResultLeaderboardSubmitButton;
+        private Text _gameResultLeaderboardStatusLabel;
         private GameObject _heroSelectionModal;
         private Transform _heroSelectionOptionsRoot;
         private Text _heroSelectionSubtitleLabel;
@@ -9305,6 +9308,7 @@ namespace ProphecyCentury.UI
                 _gameResultContentLabel.text = FormatGameResultContent(victory);
             }
 
+            RefreshLeaderboardSubmitControls(victory);
             _gameResultModal.SetActive(true);
             _gameResultModal.transform.SetAsLastSibling();
         }
@@ -9333,15 +9337,23 @@ namespace ProphecyCentury.UI
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
             panelRect.anchoredPosition = Vector2.zero;
-            panelRect.sizeDelta = new Vector2(780f, 520f);
+            panelRect.sizeDelta = new Vector2(780f, 650f);
             panel.GetComponent<Image>().color = new Color32(22, 28, 48, 252);
 
-            _gameResultTitleLabel = CreateAnchoredText(panel.transform, "Title", "游戏结束", 44, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.82f), new Vector2(0.92f, 0.94f));
-            _gameResultContentLabel = CreateAnchoredText(panel.transform, "Content", string.Empty, 22, TextAnchor.UpperLeft, new Vector2(0.1f, 0.25f), new Vector2(0.9f, 0.78f));
+            _gameResultTitleLabel = CreateAnchoredText(panel.transform, "Title", "游戏结束", 44, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.84f), new Vector2(0.92f, 0.95f));
+            _gameResultContentLabel = CreateAnchoredText(panel.transform, "Content", string.Empty, 22, TextAnchor.UpperLeft, new Vector2(0.1f, 0.36f), new Vector2(0.9f, 0.8f));
             _gameResultContentLabel.color = new Color32(230, 236, 248, 255);
             _gameResultContentLabel.verticalOverflow = VerticalWrapMode.Truncate;
 
-            CreateGameResultButton(panel.transform, "重新开始", new Vector2(-155f, -205f), () =>
+            var nameLabel = CreateAnchoredText(panel.transform, "LeaderboardNameLabel", "排行榜名字", 20, TextAnchor.MiddleLeft, new Vector2(0.1f, 0.27f), new Vector2(0.28f, 0.33f));
+            nameLabel.color = new Color32(205, 218, 224, 230);
+            _gameResultLeaderboardNameInput = CreateGameResultInput(panel.transform, "LeaderboardNameInput", "预言者", new Vector2(0.29f, 0.27f), new Vector2(0.58f, 0.33f));
+            _gameResultLeaderboardSubmitButton = CreateGameResultButton(panel.transform, "提交排行榜", new Vector2(178f, -130f), SubmitLeaderboardFromResult);
+            _gameResultLeaderboardSubmitButton.GetComponent<RectTransform>().sizeDelta = new Vector2(220f, 52f);
+            _gameResultLeaderboardStatusLabel = CreateAnchoredText(panel.transform, "LeaderboardStatus", string.Empty, 19, TextAnchor.MiddleCenter, new Vector2(0.1f, 0.18f), new Vector2(0.9f, 0.25f));
+            _gameResultLeaderboardStatusLabel.color = new Color32(166, 207, 211, 230);
+
+            CreateGameResultButton(panel.transform, "重新开始", new Vector2(-155f, -260f), () =>
             {
                 var casual = CasualPvpSystem.IsCasual(Run);
                 _gameResultModal.SetActive(false);
@@ -9349,7 +9361,7 @@ namespace ProphecyCentury.UI
                 if (casual) GetComponentInParent<CasualPvpUiController>()?.OpenCasualSlots();
                 else OpenHeroSelection();
             });
-            CreateGameResultButton(panel.transform, "返回标题", new Vector2(155f, -205f), () =>
+            CreateGameResultButton(panel.transform, "返回标题", new Vector2(155f, -260f), () =>
             {
                 _gameResultModal.SetActive(false);
                 ShowTitle();
@@ -9358,7 +9370,7 @@ namespace ProphecyCentury.UI
             _gameResultModal.SetActive(false);
         }
 
-        private void CreateGameResultButton(Transform parent, string label, Vector2 anchoredPosition, UnityEngine.Events.UnityAction callback)
+        private Button CreateGameResultButton(Transform parent, string label, Vector2 anchoredPosition, UnityEngine.Events.UnityAction callback)
         {
             var buttonObject = new GameObject(label + "Button", typeof(Image), typeof(Button));
             buttonObject.transform.SetParent(parent, false);
@@ -9376,6 +9388,89 @@ namespace ProphecyCentury.UI
             button.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
             button.onClick.AddListener(callback);
             CreateChildText(buttonObject.transform, label, 22, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero);
+            return button;
+        }
+
+        private static InputField CreateGameResultInput(Transform parent, string name, string value, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            var inputObject = new GameObject(name, typeof(Image), typeof(InputField));
+            inputObject.transform.SetParent(parent, false);
+            var rect = inputObject.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            inputObject.GetComponent<Image>().color = new Color32(6, 14, 24, 245);
+
+            var text = CreateAnchoredText(inputObject.transform, "Text", value, 22, TextAnchor.MiddleLeft, Vector2.zero, Vector2.one);
+            text.color = Color.white;
+            text.rectTransform.offsetMin = new Vector2(12f, 0f);
+            text.rectTransform.offsetMax = new Vector2(-12f, 0f);
+            var input = inputObject.GetComponent<InputField>();
+            input.textComponent = text;
+            input.text = value;
+            input.characterLimit = 12;
+            input.targetGraphic = inputObject.GetComponent<Image>();
+            return input;
+        }
+
+        private void RefreshLeaderboardSubmitControls(bool victory)
+        {
+            var available = victory && Run != null && (!CasualPvpSystem.IsCasual(Run) || Run.round >= CasualPvpSystem.SurvivalMilestoneRound);
+            var submitted = Run != null && (CasualPvpSystem.IsCasual(Run) ? Run.casualPvpLeaderboardSubmitted : Run.campaignLeaderboardSubmitted);
+            if (_gameResultLeaderboardNameInput != null)
+            {
+                _gameResultLeaderboardNameInput.gameObject.SetActive(available);
+                if (string.IsNullOrWhiteSpace(_gameResultLeaderboardNameInput.text)) _gameResultLeaderboardNameInput.text = "预言者";
+            }
+            if (_gameResultLeaderboardSubmitButton != null)
+            {
+                _gameResultLeaderboardSubmitButton.gameObject.SetActive(available);
+                _gameResultLeaderboardSubmitButton.interactable = available && !submitted;
+            }
+            if (_gameResultLeaderboardStatusLabel != null)
+            {
+                _gameResultLeaderboardStatusLabel.gameObject.SetActive(available);
+                _gameResultLeaderboardStatusLabel.text = !available
+                    ? string.Empty
+                    : submitted
+                        ? "本局成绩已提交排行榜"
+                        : $"可提交成绩：{ResolveLeaderboardScore()}";
+            }
+        }
+
+        private void SubmitLeaderboardFromResult()
+        {
+            if (Run == null) return;
+            var casual = CasualPvpSystem.IsCasual(Run);
+            if (casual && Run.round < CasualPvpSystem.SurvivalMilestoneRound)
+            {
+                return;
+            }
+            if (casual && Run.casualPvpLeaderboardSubmitted || !casual && Run.campaignLeaderboardSubmitted)
+            {
+                RefreshLeaderboardSubmitControls(true);
+                return;
+            }
+
+            var name = _gameResultLeaderboardNameInput != null ? _gameResultLeaderboardNameInput.text : "预言者";
+            var kind = casual ? LeaderboardKind.CasualPvp : LeaderboardKind.Campaign;
+            var score = ResolveLeaderboardScore();
+            var record = LeaderboardSystem.Submit(kind, name, score);
+            if (casual) Run.casualPvpLeaderboardSubmitted = true;
+            else Run.campaignLeaderboardSubmitted = true;
+            _saveGame.SaveCurrentRun();
+            if (_gameResultLeaderboardStatusLabel != null)
+            {
+                _gameResultLeaderboardStatusLabel.text = $"已提交：{record.playerName}  {record.score}";
+            }
+            RefreshLeaderboardSubmitControls(true);
+        }
+
+        private int ResolveLeaderboardScore()
+        {
+            var lastBattleScore = Run?.battleHistory?.LastOrDefault(item => item != null && item.victory)?.playerScore ?? 0;
+            return Mathf.Max(lastBattleScore, CalculateCurrentArmyPower());
         }
 
         private string FormatCurrentHeroName()

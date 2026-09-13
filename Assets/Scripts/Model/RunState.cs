@@ -37,6 +37,7 @@ namespace ProphecyCentury.Model
         public int campaignWins;
         public int campaignLosses;
         public bool campaignCompleted;
+        public bool campaignLeaderboardSubmitted;
         public string customChallengeId;
         public bool customChallengeGenerated;
         public bool isShopLocked;
@@ -62,6 +63,7 @@ namespace ProphecyCentury.Model
         public bool casualPvpCheatUsed;
         public bool casualPvpMilestoneOffered;
         public bool casualPvpEndless;
+        public bool casualPvpLeaderboardSubmitted;
         public string casualPvpMatchId;
         public string casualPvpMatchEndpoint;
         public List<CasualPvpPendingReport> casualPvpPendingReports = new List<CasualPvpPendingReport>();

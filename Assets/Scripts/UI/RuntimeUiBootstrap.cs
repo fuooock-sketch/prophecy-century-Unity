@@ -239,11 +239,31 @@ namespace ProphecyCentury.UI
                 var credits = CreateCreditsModal(root);
                 credits.SetActive(false);
             }
+            if (FindDeepChild(root, "LeaderboardModal") == null)
+            {
+                var leaderboard = CreateLeaderboardModal(root);
+                leaderboard.SetActive(false);
+            }
             if (FindDeepChild(title, "CreditsButton") == null)
             {
                 CreateButton("CreditsButton", title, "制作组", new Vector2(2050f, -636f), new Vector2(320f, 56f), () => ShowModal(root, "CreditsModal"));
                 StyleSecondaryButton(title.Find("CreditsButton"));
             }
+            if (FindDeepChild(title, "LeaderboardButton") == null)
+            {
+                CreateButton("LeaderboardButton", title, "排行榜", new Vector2(0f, 0f), new Vector2(180f, 44f), () => ShowLeaderboardModal(root));
+                StyleSecondaryButton(title.Find("LeaderboardButton"));
+            }
+            var leaderboardButton = FindDeepChild(title, "LeaderboardButton")?.GetComponent<Button>();
+            if (leaderboardButton != null)
+            {
+                leaderboardButton.onClick.RemoveAllListeners();
+                leaderboardButton.onClick.AddListener(RuntimeSfxPlayer.PlayClick);
+                leaderboardButton.onClick.AddListener(() => ShowLeaderboardModal(root));
+            }
+            var quitButtonTransform = FindDeepChild(title, "QuitGameButton");
+            PlaceTitleUtilityButton(leaderboardButton?.transform, 2160f);
+            PlaceTitleUtilityButton(quitButtonTransform, 2360f);
             var settingsButton = FindDeepChild(title, "SettingsButton")?.GetComponent<Button>();
             if (settingsButton != null)
             {
@@ -518,7 +538,9 @@ namespace ProphecyCentury.UI
             StyleSecondaryButton(titlePanel.transform.Find("SettingsButton"));
             CreateButton("CreditsButton", titlePanel.transform, "制作组", new Vector2(2050f, -636f), new Vector2(320f, 56f), () => { });
             StyleSecondaryButton(titlePanel.transform.Find("CreditsButton"));
-            CreateButton("QuitGameButton", titlePanel.transform, "退出游戏", new Vector2(2050f, -708f), new Vector2(320f, 56f), () => { });
+            CreateButton("LeaderboardButton", titlePanel.transform, "排行榜", new Vector2(2160f, -1212f), new Vector2(180f, 44f), () => { });
+            StyleSecondaryButton(titlePanel.transform.Find("LeaderboardButton"));
+            CreateButton("QuitGameButton", titlePanel.transform, "退出游戏", new Vector2(2360f, -1212f), new Vector2(180f, 44f), () => { });
             StyleSecondaryButton(titlePanel.transform.Find("QuitGameButton"));
 
             // 版本号
@@ -526,13 +548,15 @@ namespace ProphecyCentury.UI
             versionText.color = new Color32(120, 140, 160, 100);
             versionText.raycastTarget = false;
 
-            var names = new[] { "ContinueGameButton", "StartGameButton", "SettingsButton", "CreditsButton", "QuitGameButton" };
-            var yPositions = new[] { -380f, -472f, -564f, -636f, -708f };
+            var names = new[] { "ContinueGameButton", "StartGameButton", "SettingsButton", "CreditsButton" };
+            var yPositions = new[] { -380f, -472f, -564f, -636f };
             for (var index = 0; index < names.Length; index++)
             {
                 SetTitleCenteredRect(titlePanel.transform.Find(names[index]).GetComponent<RectTransform>(),
                     new Vector2(2050f, yPositions[index]), new Vector2(320f, index < 2 ? 72f : 56f));
             }
+            SetTitleCenteredRect(titlePanel.transform.Find("LeaderboardButton")?.GetComponent<RectTransform>(), new Vector2(2160f, -1212f), new Vector2(180f, 44f));
+            SetTitleCenteredRect(titlePanel.transform.Find("QuitGameButton")?.GetComponent<RectTransform>(), new Vector2(2360f, -1212f), new Vector2(180f, 44f));
             return titlePanel;
         }
 
@@ -542,6 +566,7 @@ namespace ProphecyCentury.UI
             WireButton(root, "StartGameButton", controller.OpenCampaignSelection);
             WireButton(root, "SettingsButton", () => ShowModal(root, "SettingsModal"));
             WireButton(root, "CreditsButton", () => ShowModal(root, "CreditsModal"));
+            WireButton(root, "LeaderboardButton", () => ShowLeaderboardModal(root));
             WireButton(root, "QuitGameButton", controller.ShowExitConfirmDialog);
         }
 
@@ -591,6 +616,7 @@ namespace ProphecyCentury.UI
             settingsModal.SetActive(false);
             var creditsModal = CreateCreditsModal(canvasObject.transform);
             creditsModal.SetActive(false);
+            EnsureAuxiliaryMenu(canvasObject.transform, controller);
 
             // ConfirmDialog
             ConfirmDialog.FindOrCreate(canvasObject.transform);
@@ -1200,6 +1226,24 @@ namespace ProphecyCentury.UI
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = center;
             rect.sizeDelta = size;
+        }
+
+        private static void PlaceTitleUtilityButton(Transform buttonTransform, float centerX)
+        {
+            if (buttonTransform == null)
+            {
+                return;
+            }
+
+            SetTitleCenteredRect(buttonTransform.GetComponent<RectTransform>(), new Vector2(centerX, -1212f), new Vector2(180f, 44f));
+            var label = buttonTransform.Find("Label")?.GetComponent<Text>();
+            if (label != null)
+            {
+                label.fontSize = 18;
+                label.resizeTextForBestFit = true;
+                label.resizeTextMinSize = 14;
+                label.resizeTextMaxSize = 18;
+            }
         }
 
         private static void CreateButton(string name, Transform parent, string label, Vector2 anchoredPosition, Vector2 size, UnityEngine.Events.UnityAction callback, string iconName = null)
@@ -1996,6 +2040,48 @@ namespace ProphecyCentury.UI
             CreateButton("BackButton", modal.transform, "返回主菜单", new Vector2(0f, -235f), new Vector2(220f, 58f), () => modal.SetActive(false));
             StylePrimaryButton(modal.transform.Find("BackButton"));
             return modal;
+        }
+
+        private static GameObject CreateLeaderboardModal(Transform parent)
+        {
+            var modal = CreatePanel("LeaderboardModal", parent, new Color32(5, 9, 18, 245), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-560f, -360f), new Vector2(560f, 360f));
+            CreatePanel("Inner", modal.transform, new Color32(12, 28, 45, 250), Vector2.zero, Vector2.one, new Vector2(8f, 8f), new Vector2(-8f, -8f));
+            var title = CreateText("Title", modal.transform, "排行榜", 42, TextAnchor.MiddleCenter, new Vector2(0.1f, 0.84f), new Vector2(0.9f, 0.95f), Vector2.zero, Vector2.zero);
+            title.color = new Color32(239, 204, 126, 255);
+
+            var campaignTitle = CreateText("CampaignTitle", modal.transform, "命运征途", 30, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.75f), new Vector2(0.48f, 0.82f), Vector2.zero, Vector2.zero);
+            campaignTitle.color = new Color32(255, 228, 151, 255);
+            var casualTitle = CreateText("CasualTitle", modal.transform, "休闲对战", 30, TextAnchor.MiddleCenter, new Vector2(0.52f, 0.75f), new Vector2(0.92f, 0.82f), Vector2.zero, Vector2.zero);
+            casualTitle.color = new Color32(255, 228, 151, 255);
+
+            var campaignList = CreateText("CampaignList", modal.transform, string.Empty, 24, TextAnchor.UpperLeft, new Vector2(0.09f, 0.19f), new Vector2(0.48f, 0.73f), Vector2.zero, Vector2.zero);
+            campaignList.color = new Color32(220, 232, 238, 255);
+            var casualList = CreateText("CasualList", modal.transform, string.Empty, 24, TextAnchor.UpperLeft, new Vector2(0.53f, 0.19f), new Vector2(0.92f, 0.73f), Vector2.zero, Vector2.zero);
+            casualList.color = new Color32(220, 232, 238, 255);
+
+            var hint = CreateText("Hint", modal.transform, "只记录本地成绩；排行榜按分数/战力从高到低排序", 20, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.11f), new Vector2(0.92f, 0.17f), Vector2.zero, Vector2.zero);
+            hint.color = new Color32(150, 199, 207, 220);
+            CreateButton("BackButton", modal.transform, "返回主菜单", new Vector2(0f, -300f), new Vector2(220f, 58f), () => modal.SetActive(false));
+            StylePrimaryButton(modal.transform.Find("BackButton"));
+            RefreshLeaderboardModal(modal.transform);
+            return modal;
+        }
+
+        private static void ShowLeaderboardModal(Transform parent)
+        {
+            var modal = FindDeepChild(parent, "LeaderboardModal");
+            if (modal == null) return;
+            RefreshLeaderboardModal(modal);
+            modal.gameObject.SetActive(true);
+            modal.SetAsLastSibling();
+        }
+
+        private static void RefreshLeaderboardModal(Transform modal)
+        {
+            var campaignList = FindDeepChild(modal, "CampaignList")?.GetComponent<Text>();
+            if (campaignList != null) campaignList.text = LeaderboardSystem.FormatBoard(LeaderboardKind.Campaign, 10);
+            var casualList = FindDeepChild(modal, "CasualList")?.GetComponent<Text>();
+            if (casualList != null) casualList.text = LeaderboardSystem.FormatBoard(LeaderboardKind.CasualPvp, 10);
         }
 
         private static void ShowModal(Transform parent, string name)
